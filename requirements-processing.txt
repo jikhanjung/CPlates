@@ -1,0 +1,6 @@
+# Offline processing only. Nothing here is shipped with the site.
+# pygplates is GPL-2.0-only; it runs here and its output geometry is not a work based on it
+# (GPLv2 section 0). See LICENSE-DATA.md.
+pygplates==1.0.0
+numpy
+pillow

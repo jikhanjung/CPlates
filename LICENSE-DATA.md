@@ -1,0 +1,35 @@
+# Data licence
+
+The code of CPlates is under the MIT licence (`LICENSE`). The data is not code, and its
+terms follow the sources it was made from.
+
+## Derived data this project publishes: CC BY 4.0
+
+The files `scripts/build_frames.py` writes under `site/data/` are computed from the
+plate model below and released under
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/):
+
+- the resolved plate boundaries and plate polygons for each age, the continental-crust
+  mask reconstructed to each age, and the packed rotation file, from
+  **Müller et al. (2022)**, whose Zenodo record (13636799) states CC BY 4.0.
+
+Attribution: "CPlates (PaleoBytes), derived from Müller et al. 2022", with the citation
+in `sources/plate-models/muller2022.json`. The page shows the citation, the licence and
+the authors' stated limits whenever the globe is open. The source's own CC BY licence
+still applies to what was derived from it.
+
+## Tools
+
+The topologies are resolved with **pygplates** 1.0.0, which is GPL-2.0-only (checked in
+the wheel's `COPYING` and package metadata on 2026-11-12). It runs only in the offline
+processing step and is not distributed with the site. Under GPLv2 section 0 the output of
+a program is covered only if it is itself a work based on the program; the geometry it
+returns is computed from the CC BY plate model, so the CC BY 4.0 terms above are not
+changed by it.
+
+## Source datasets
+
+The archives under `data/sources/` are not part of this repository. Each is pinned by a
+manifest under `sources/plate-models/` that records its URL, size, sha256, licence and
+citation; the terms are the publishers'. The licence entries were carried over from
+EarthThruTime3D (`sources/plate-models/`, `LICENSE-DATA.md` at be59c3a).

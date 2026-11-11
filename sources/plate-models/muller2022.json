@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "id": "muller2022",
+  "title": "Müller et al. (2022) tectonic-rules-based mantle reference frame since 1 Ga",
+  "short_title": "Müller et al. 2022",
+  "reference_frame": "optimised mantle",
+  "covers_ma": [
+    0,
+    1000
+  ],
+  "retrieved_at": "2026-09-13",
+  "citation": "Müller, R. D., Flament, N., Cannon, J., Tetley, M. G., Williams, S. E., Cao, X., Bodur, Ö. F., Zahirovic, S., and Merdith, A., 2022. A tectonic-rules-based mantle reference frame since 1 billion years ago – implications for supercontinent cycles and plate–mantle system evolution. Solid Earth, 13, 1127–1159.",
+  "doi": "10.5194/se-13-1127-2022",
+  "license": {
+    "name": "Creative Commons Attribution 4.0 International",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "statement": "The Zenodo record for this dataset states cc-by-4.0.",
+    "source": "https://zenodo.org/records/13636799",
+    "note": "Attribution and citation are required; publishing derived work needs no further consent."
+  },
+  "archive": {
+    "url": "https://zenodo.org/records/13636799/files/Muller_etal_2022_SE_v1.2.4.zip?download=1",
+    "path": "data/sources/plates/muller2022/archive.zip",
+    "bytes": 11629841,
+    "sha256": "add1f4975360ecd259517b99860f4fb0d176170d909333387e8022c69255bbcd",
+    "member_prefix": "",
+    "version": "1.2.4"
+  },
+  "members": [
+    {
+      "role": "rotation",
+      "name": "optimisation/1000_0_rotfile_MantleOpt.rot",
+      "bytes": 726823,
+      "sha256": "09ddb15a4bcfabc43e363d0582445d42cf06dd31ed39e5cbd528f304e1a3759f"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/250-0_plate_bounds.gpml",
+      "bytes": 34602994,
+      "sha256": "a99ce9fcaebe519be9629e0a34acd8e11c8b2c16b50932d0d437b24a802035e6"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/410-250_plate_bounds.gpml",
+      "bytes": 7474457,
+      "sha256": "534f82b0af219be3406627796512034c79c80e6c0376784c0645bdd63e674e55"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/1000-410-Topologies.gpml",
+      "bytes": 11904283,
+      "sha256": "c591b59549ed26c1e760070035270fed2cb8be5fd14086e02ad8a1d1d3220dbd"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/1000-410-Convergence.gpml",
+      "bytes": 1281860,
+      "sha256": "5d2b5a1fe6da8f98b97f3df31381808ba5c562ca5014e4cd08ad559cbfe6e0fd"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/1000-410-Divergence.gpml",
+      "bytes": 774064,
+      "sha256": "7ff9452ee8f90367926a873845c17f8a78f4abd83a6a42a19669ab5e7911007e"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/1000-410-Transforms.gpml",
+      "bytes": 1445476,
+      "sha256": "d18bceedc0beb5b791b125519d5e575e99caa1e02ed48b5977ee7175686c2dcf"
+    },
+    {
+      "role": "topologies",
+      "name": "Topologies/TopologyBuildingBlocks.gpml",
+      "bytes": 1116149,
+      "sha256": "60d1128e1d9ce02717f7f6f7b88c4a289a354bfdf94e52541f2aa28a1b9df0c1"
+    },
+    {
+      "role": "continents",
+      "name": "Continents/shapes_continents.gpml",
+      "bytes": 9588210,
+      "sha256": "423400a8268b2409eb39b4f0cb07933411cd664d1594e8fd0468c73ecc55c835"
+    },
+    {
+      "role": "readme",
+      "name": "README.txt",
+      "bytes": 13252,
+      "sha256": "7ffeca82443ae19f400d427e4bac7a2cb92e3020efad97df3a2b1dfc658be7c4"
+    }
+  ],
+  "notes": "The rotation file is the optimised mantle frame, which the archive's GPlates project loads by default; it is a complete rotation file on its own. The topology files are loaded together because topologies refer to sections defined in other files, TopologyBuildingBlocks among them. Manifest pinned from EarthThruTime3D sources/plate-models/muller2022.json at be59c3a, with the topology members added.",
+  "limitations": "The authors state that climate-sensitive analysis should use the palaeomagnetic frame, and repeat Merdith's warning against Pacific hotspot kinematics and analyses shorter than 5 Ma. Between 250 and 83 Ma the Pacific plates keep their relative motion to Africa from Young et al. (2019), which slightly alters their absolute position."
+}

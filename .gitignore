@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+# Source archives are pinned by manifests under sources/ and fetched, never committed.
+data/
+# Frames are built from the sources by scripts/build_frames.py.
+site/data/
+node_modules/
+test-results/
+playwright-report/
+.DS_Store
