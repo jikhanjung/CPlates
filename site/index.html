@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPlates — 판의 움직임</title>
+  <meta name="description" content="Plate boundaries and plate motion through time on a 3D globe, from the Müller et al. 2022 plate model.">
+  <link rel="stylesheet" href="css/site.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="globe" aria-label="3D globe"></canvas>
+
+  <header class="panel top" id="panel">
+    <div class="row">
+      <h1 data-t="heading">판의 움직임</h1>
+      <nav class="lang" aria-label="Language">
+        <button type="button" data-lang="ko">KO</button><span aria-hidden="true">|</span><button type="button" data-lang="en">EN</button>
+      </nav>
+    </div>
+    <p class="sub" data-t="subtitle"></p>
+    <div class="age-block">
+      <div class="age" id="age">0 Ma</div>
+      <div class="period" id="period"></div>
+    </div>
+
+    <section class="legend" aria-labelledby="legend-h">
+      <h2 id="legend-h" data-t="legend"></h2>
+      <ul>
+        <li><span class="sw line ridge"></span><span data-t="ridge"></span></li>
+        <li><span class="sw line subduction"><i></i><i></i><i></i></span><span data-t="subduction"></span></li>
+        <li><span class="sw line transform"></span><span data-t="transform"></span></li>
+        <li><span class="sw line other"></span><span data-t="other"></span></li>
+        <li><span class="sw land"></span><span data-t="land"></span></li>
+        <li><span class="sw plates"></span><span data-t="plateFill"></span></li>
+      </ul>
+    </section>
+
+    <section class="info" id="info" aria-live="polite">
+      <p class="hint" data-t="clickHint"></p>
+    </section>
+
+    <details class="source">
+      <summary data-t="sourceHeading"></summary>
+      <p id="source-body"></p>
+      <p id="source-frame"></p>
+      <p id="source-method"></p>
+      <p id="source-licence"></p>
+      <p class="caveat" data-t="reconstruction"></p>
+    </details>
+  </header>
+
+  <footer class="panel timeline">
+    <button type="button" id="play" class="play" aria-pressed="false"><span class="icon" aria-hidden="true">▶</span><span class="label" data-t="play"></span></button>
+    <div class="track">
+      <div class="periods" id="periods" aria-hidden="true"></div>
+      <input type="range" id="slider" min="0" max="250" step="1" value="250" aria-label="Age">
+      <div class="ends"><span id="oldest"></span><span id="youngest"></span></div>
+    </div>
+    <label class="speed"><span data-t="speed"></span>
+      <select id="speed">
+        <option value="4">×1</option>
+        <option value="8" selected>×2</option>
+        <option value="16">×4</option>
+      </select>
+    </label>
+    <div class="status" id="status"></div>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

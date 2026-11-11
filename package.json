@@ -1,0 +1,13 @@
+{
+  "name": "cplates",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor-three.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs"
+  },
+  "dependencies": {"three": "0.186.0"},
+  "devDependencies": {"@playwright/test": "1.58.2"}
+}

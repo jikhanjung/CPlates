@@ -19,4 +19,4 @@ EarthThruTime3D의 `devlog/` 규칙을 따르고, 번호는 이 저장소에서 
 
 ## 작업 기록
 
-(아직 없음)
+- [jikhanjung 001 — 첫 화면: Müller 2022 판 경계 지구본, 0–250 Ma](20261112_jikhanjung_001_mvp_plate_globe.md)
