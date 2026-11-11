@@ -12,12 +12,18 @@ the present, one frame per million years: ridges, subduction zones (with teeth o
 overriding plate) and transforms, a colour per plate, continental crust riding on the
 plates, and the speed and heading of the plate under any point you click.
 
+A second page, `/cambrian/`, follows Antarctica through the Cambrian (540–485 Ma): Gondwana
+moving with Merdith et al. (2021), today's Transantarctic Mountains carried back with their
+plate, the PaleoDEM sea depth there, and the geological record (Shackleton Limestone, Nelson
+Limestone, Ross orogen) marked apart from the models.
+
 ## Running it locally
 
 ```sh
 make setup      # Python 3.12 venv with pygplates, numpy, pillow; npm for Three.js and Playwright
-make fetch      # download and verify the pinned plate model (12 MB, not in git)
+make fetch      # download and verify the pinned sources (about 90 MB, not in git)
 make frames     # resolve the topologies into site/data/ (about 3 minutes, 26 MB)
+make cambrian   # the Cambrian Antarctica page's data (about 30 seconds, 7 MB)
 make serve      # http://127.0.0.1:8350/
 make test       # rotation tests, and the browser maths checked against pygplates
 ```
@@ -35,6 +41,10 @@ loaded from a CDN. See `devlog/` for the plan (jikhanjung P01) and work records.
 판 경계(해령, 섭입대, 변환 단층), 판마다 다른 색, 판을 따라 움직이는 대륙 지각을 보여 주고,
 지구본을 누르면 그 자리 판의 속도와 방향이 나옵니다. 화면은 한국어가 기본이고 KO | EN 으로
 바꿀 수 있습니다.
+
+`/cambrian/` 쪽에서는 캄브리아기(540–485 Ma) 동안 남극대륙이 곤드와나와 함께 움직이는 모습,
+지금의 남극종단산맥 자리가 당시 어디에 있었고 PaleoDEM 으로 얼마나 깊은 바다였는지, 그리고
+섀클턴 석회암 같은 관측 기록을 모델 결과와 구분해 보여 줍니다.
 
 ## Licence
 

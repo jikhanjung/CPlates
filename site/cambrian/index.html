@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPlates — 캄브리아기의 남극대륙</title>
+  <meta name="description" content="Antarctica through the Cambrian on a 3D globe: plate motion from Merdith et al. 2021, the Transantarctic Mountains carried back in time, and the PaleoDEM sea depth there.">
+  <link rel="stylesheet" href="../css/site.css">
+  <link rel="stylesheet" href="../css/cambrian.css">
+  <script type="importmap">
+    { "imports": { "three": "../vendor/three/three.module.js" } }
+  </script>
+</head>
+<body class="cambrian">
+  <canvas id="globe" aria-label="3D globe"></canvas>
+  <div id="labels" class="labels" aria-hidden="true"></div>
+
+  <header class="panel top wide" id="panel">
+    <div class="row">
+      <h1 data-t="heading"></h1>
+      <nav class="lang" aria-label="Language">
+        <button type="button" data-lang="ko">KO</button><span aria-hidden="true">|</span><button type="button" data-lang="en">EN</button>
+      </nav>
+    </div>
+    <p class="sub" data-t="subtitle"></p>
+    <a class="back" href="../" data-t="back"></a>
+
+    <div class="age-block">
+      <div class="age" id="age"></div>
+      <div class="period" id="period"></div>
+    </div>
+
+    <div class="modes" role="radiogroup" aria-label="View">
+      <button type="button" role="radio" data-mode="plates" data-t="modePlates"></button>
+      <button type="button" role="radio" data-mode="paleodem" data-t="modePaleodem"></button>
+    </div>
+    <p class="mode-note" id="mode-note"></p>
+
+    <div class="tools">
+      <label class="follow"><input type="checkbox" id="follow" checked> <span data-t="follow"></span></label>
+    </div>
+
+    <section class="legend" aria-labelledby="legend-h">
+      <h2 id="legend-h" data-t="legend"></h2>
+      <ul id="legend"></ul>
+    </section>
+
+    <section class="strip" aria-labelledby="strip-h">
+      <h2 id="strip-h" data-t="stripHeading"></h2>
+      <p class="note" data-t="stripNote"></p>
+      <canvas id="strip" width="300" height="170" role="img"></canvas>
+      <div class="strip-axis"><span data-t="stripNorth"></span><span data-t="stripSouth"></span></div>
+    </section>
+
+    <section class="obs" aria-labelledby="obs-h">
+      <h2 id="obs-h"><span class="badge observed" data-t="observedBadge"></span> <span data-t="obsHeading"></span></h2>
+      <ul id="observations"></ul>
+    </section>
+
+    <details class="source">
+      <summary data-t="sourceHeading"></summary>
+      <div id="sources"></div>
+    </details>
+  </header>
+
+  <footer class="panel timeline">
+    <button type="button" id="play" class="play" aria-pressed="false"><span class="icon" aria-hidden="true">▶</span><span class="label" data-t="play"></span></button>
+    <div class="track">
+      <div class="periods" id="periods" aria-hidden="true"></div>
+      <input type="range" id="slider" min="0" max="55" step="0.5" value="0" aria-label="Age">
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+      <div class="ends"><span id="oldest"></span><span id="youngest"></span></div>
+    </div>
+    <label class="speed"><span data-t="speed"></span>
+      <select id="speed">
+        <option value="1">1 Myr/s</option>
+        <option value="2" selected>2 Myr/s</option>
+        <option value="4">4 Myr/s</option>
+      </select>
+    </label>
+    <div class="status" id="status"></div>
+  </footer>
+
+  <script type="module" src="../js/cambrian.js"></script>
+</body>
+</html>

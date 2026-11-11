@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "id": "naturalearth",
+  "title": "Natural Earth 10 m physical geography regions, version 5.0.0",
+  "short_title": "Natural Earth",
+  "retrieved_at": "2026-09-25",
+  "citation": "Natural Earth, 10 m physical geography regions (ne_10m_geography_regions_polys), version 5.0.0, naturalearthdata.com",
+  "license": {
+    "name": "Public domain",
+    "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+    "statement": "All versions of Natural Earth raster and vector map data are in the public domain.",
+    "source": "https://www.naturalearthdata.com/about/terms-of-use/"
+  },
+  "archive": {
+    "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_geography_regions_polys.zip",
+    "path": "data/sources/datasets/naturalearth/archive.zip",
+    "bytes": 2038519,
+    "sha256": "cb7b9db200284ed1551f20eacc7f3333e9b5f311c19f7cb2670694529f688682",
+    "member_prefix": ""
+  },
+  "members": [
+    {
+      "role": "shape",
+      "name": "ne_10m_geography_regions_polys.shp",
+      "bytes": 3140764,
+      "sha256": "d7468f7967368ae2180a9d4cd4ed5de302ee53fb3615268a212ffeb3a33bf042"
+    },
+    {
+      "role": "shape",
+      "name": "ne_10m_geography_regions_polys.shx",
+      "bytes": 8476,
+      "sha256": "9235923e01fa16cff375e3c0baf0ecb6d253346c006a5ba3b1ab41f9fe52d2f0"
+    },
+    {
+      "role": "shape",
+      "name": "ne_10m_geography_regions_polys.dbf",
+      "bytes": 7233894,
+      "sha256": "142d853c15315e6c553ac9ca7665e65be80a1cbc821774688b143d4d4acf8801"
+    },
+    {
+      "role": "shape",
+      "name": "ne_10m_geography_regions_polys.prj",
+      "bytes": 145,
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4"
+    }
+  ],
+  "notes": "Used for the present-day outline of the Transantarctic Mountains (feature class Range/mtn). Archive pinned from EarthThruTime3D sources/mountain-ranges.json at be59c3a."
+}

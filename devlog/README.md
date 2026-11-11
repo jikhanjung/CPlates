@@ -19,4 +19,5 @@ EarthThruTime3D의 `devlog/` 규칙을 따르고, 번호는 이 저장소에서 
 
 ## 작업 기록
 
+- [jikhanjung 002 — 캄브리아기의 남극대륙: 판 모델, 남극종단산맥, 얕은 바다](20261112_jikhanjung_002_cambrian_antarctica.md)
 - [jikhanjung 001 — 첫 화면: Müller 2022 판 경계 지구본, 0–250 Ma](20261112_jikhanjung_001_mvp_plate_globe.md)

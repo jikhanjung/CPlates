@@ -1,0 +1,59 @@
+/* The Cambrian Antarctica page, on top of site.css. */
+:root {
+  --env-land: #b0c484;
+  --env-shallow: #8fe3ef;
+  --env-slope: #3f7fb0;
+  --env-deep: #1b3a6a;
+  --antarctica: #f3e7c6;
+  --gondwana: #b9a77f;
+  --other-land: #77736b;
+  --observed: #ff9f43;
+  --model: #9cc7ff;
+}
+
+.top.wide { width: 340px; }
+
+.modes { display: flex; gap: 4px; margin: 4px 0 4px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 3px; }
+.modes button { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; padding: 6px 4px; border-radius: 6px; cursor: pointer; }
+.modes button[aria-checked="true"] { background: #23324d; color: var(--text); font-weight: 700; }
+.modes button:focus-visible { outline: 2px solid #9cc7ff; }
+.mode-note { font-size: 12px; color: var(--muted); margin: 4px 0 8px; line-height: 1.4; }
+
+.tools { display: flex; gap: 12px; align-items: center; font-size: 12px; margin: 0 0 10px; }
+.follow { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--text); }
+
+.sw.fill { height: 12px; border-radius: 2px; }
+.sw.ring { height: 10px; border: 2px solid #fff6d8; border-radius: 3px; background: transparent; }
+.sw.diamond { width: 12px; height: 12px; transform: rotate(45deg); background: var(--observed); margin: 0 8px 0 8px; border: 1.5px solid #fff; }
+
+.strip { border-top: 1px solid var(--panel-line); padding-top: 10px; margin-bottom: 10px; }
+.strip .note { font-size: 11px; color: var(--muted); margin: 0 0 6px; line-height: 1.4; }
+#strip { width: 100%; height: auto; display: block; border-radius: 4px; background: #0b1220; }
+.strip-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.obs { border-top: 1px solid var(--panel-line); padding-top: 10px; }
+.obs ul { list-style: none; margin: 0; padding: 0; }
+.obs li { margin: 0 0 8px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--observed); font-size: 12px; line-height: 1.45; cursor: pointer; }
+.obs li.inactive { opacity: 0.5; }
+.obs li strong { font-size: 13px; }
+.obs li .when { color: var(--muted); }
+.obs li .says { color: var(--observed); font-weight: 600; }
+.obs li .refs { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; vertical-align: 1px; text-transform: none; letter-spacing: 0; }
+.badge.observed { background: var(--observed); color: #1a1208; }
+.badge.model { background: var(--model); color: #0b1220; }
+
+.source h3 { font-size: 12px; margin: 10px 0 2px; color: var(--text); }
+
+.ticks { position: relative; height: 6px; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 6px; background: var(--env-shallow); opacity: 0.8; }
+
+.labels { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.labels span { position: absolute; transform: translate(-50%, -50%); font-size: 12px; font-weight: 600; color: #f5f0e0; text-shadow: 0 1px 3px #000, 0 0 2px #000; white-space: nowrap; }
+.labels span.antarctic { color: #fff6d8; font-size: 13px; }
+.labels span.obs { color: var(--observed); font-size: 11px; transform: translate(10px, -50%); }
+
+@media (max-width: 640px) {
+  .top.wide { width: auto; }
+  .strip { display: none; }
+}

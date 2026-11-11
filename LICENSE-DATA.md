@@ -13,6 +13,20 @@ plate model below and released under
   mask reconstructed to each age, and the packed rotation file, from
   **Müller et al. (2022)**, whose Zenodo record (13636799) states CC BY 4.0.
 
+For the Cambrian Antarctica page (`scripts/build_cambrian.py`, `site/data/cambrian/`):
+
+- the triangulated continents, resolved plate boundaries and packed rotations from
+  **Merdith et al. (2021)**, CC BY 3.0 (EarthByte). Its rotation file is byte-identical to
+  the palaeomagnetic one in the Müller et al. 2022 Zenodo record, which states CC BY 4.0;
+- the coloured PaleoDEM grids and the heights read along the Transantarctic Mountains,
+  from **Scotese & Wright (2018)** PaleoDEMs, CC BY 4.0 (License.txt in the archive);
+- the packed PALEOMAP rotations, used to place points on those grids, from **Scotese
+  (2016)** PALEOMAP PaleoAtlas for GPlates, whose Zenodo record lists CC BY 4.0. Only the
+  rotation file and plate polygons are used, as in EarthThruTime3D;
+- the Transantarctic Mountains outline from **Natural Earth** (public domain);
+- the observation list `sources/observations/cambrian_antarctica.json`, this project's
+  compilation with its references, CC BY 4.0.
+
 Attribution: "CPlates (PaleoBytes), derived from Müller et al. 2022", with the citation
 in `sources/plate-models/muller2022.json`. The page shows the citation, the licence and
 the authors' stated limits whenever the globe is open. The source's own CC BY licence

@@ -84,6 +84,53 @@ function check(condition, message) { if (!condition) failures.push(message); }
   await page.close();
 }
 
+// The Cambrian Antarctica page.
+async function openCambrian(viewport, query) {
+  const page = await browser.newPage({ viewport });
+  page.on('pageerror', (error) => failures.push(`cambrian pageerror: ${error.message}`));
+  page.on('console', (message) => { if (message.type() === 'error') failures.push(`cambrian console: ${message.text()}`); });
+  await page.goto(`${base}cambrian/${query}`);
+  await page.waitForFunction(() => window.cplates?.state.data, null, { timeout: 60000 });
+  await page.waitForTimeout(2500);
+  return page;
+}
+{
+  const page = await openCambrian({ width: 1400, height: 900 }, '?age=520');
+  check((await page.locator('#period').innerText()).includes('캄브리아기'), 'Cambrian page should name the period');
+  check((await page.locator('#observations li').count()) === 3, 'three observations listed');
+  await page.screenshot({ path: 'test-results/cambrian-plates-520.png' });
+  await page.click('[data-mode="paleodem"]');
+  await page.waitForTimeout(800);
+  check((await page.locator('#mode-note').innerText()).includes('PALEOMAP'), 'PaleoDEM view should say its positions follow PALEOMAP');
+  await page.screenshot({ path: 'test-results/cambrian-paleodem-520.png' });
+  await page.click('[data-mode="plates"]');
+  // Play, then turn the view while it plays.
+  await page.evaluate(() => window.cplates.goTo(540));
+  await page.click('#play');
+  await page.waitForTimeout(1500);
+  const age = await page.evaluate(() => window.cplates.state.age);
+  check(age < 540 && age > 485, `Cambrian playback should move the age, at ${age}`);
+  const before = await page.evaluate(() => window.cplates.camera.position.toArray());
+  await page.mouse.move(900, 450);
+  await page.mouse.down();
+  await page.mouse.move(1050, 380, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => window.cplates.camera.position.toArray());
+  const still = await page.evaluate(() => window.cplates.state.playing);
+  check(still, 'dragging should not stop playback');
+  check(before.some((v, i) => Math.abs(v - after[i]) > 1e-3), 'dragging during Cambrian playback should turn the view');
+  check(!(await page.evaluate(() => window.cplates.state.follow)), 'dragging should switch off following');
+  await page.close();
+}
+{
+  const page = await openCambrian({ width: 390, height: 844 }, '?age=510&lang=en');
+  await page.screenshot({ path: 'test-results/cambrian-phone.png' });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  check(!overflow, 'Cambrian page: no horizontal scroll at phone width');
+  await page.close();
+}
+
 await browser.close();
 if (failures.length) {
   console.error(failures.join('\n'));

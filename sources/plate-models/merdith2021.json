@@ -1,0 +1,101 @@
+{
+  "schema_version": 2,
+  "id": "merdith2021",
+  "title": "Merdith et al. (2021) continuous full-plate motion model, 1 Ga to present",
+  "short_title": "Merdith et al. 2021",
+  "reference_frame": "palaeomagnetic",
+  "covers_ma": [
+    0,
+    1000
+  ],
+  "retrieved_at": "2026-09-13",
+  "citation": "Merdith, A. S., Williams, S. E., Collins, A. S., Tetley, M. G., Mulder, J. A., Blades, M. L., Young, A., Armistead, S. E., Cannon, J., Zahirovic, S., and Müller, R. D., 2021. Extending full-plate tectonic models into deep time: Linking the Neoproterozoic and the Phanerozoic. Earth-Science Reviews, 214, 103477.",
+  "license": {
+    "name": "Creative Commons Attribution 3.0 Unported",
+    "url": "https://creativecommons.org/licenses/by/3.0/",
+    "statement": "Data by the EarthByte Group is licensed under a Creative Commons Attribution 3.0 Unported License.",
+    "source": "https://www.earthbyte.org/gplates-2-5-software-and-data-sets/",
+    "note": "Attribution and citation are required. Unlike the PALEOMAP maps this project also uses, publishing derived work on a website needs no further consent."
+  },
+  "archive": {
+    "url": "https://www.earthbyte.org/webdav/ftp/Data_Collections/Merdith_etal_2021_ESR/SM2-Merdith_et_al_1_Ga_reconstruction_v1.2.4.zip",
+    "path": "data/sources/plates/merdith2021/archive.zip",
+    "bytes": 8617917,
+    "sha256": "ea247ec5f8975fb7e6034c8ec48704b11805fc6f520ee7526c5757b830386982",
+    "member_prefix": "SM2-Merdith_et_al_1_Ga_reconstruction_v1.2.4/"
+  },
+  "members": [
+    {
+      "role": "rotation",
+      "name": "1000_0_rotfile_Merdith_et_al.rot",
+      "bytes": 626670,
+      "sha256": "9ab561d7185c268bca654246240d21189be8d8b85ae1344cac6854305a6f2624"
+    },
+    {
+      "role": "topologies",
+      "name": "250-0_plate_boundaries_Merdith_et_al.gpml",
+      "bytes": 34602994,
+      "sha256": "a99ce9fcaebe519be9629e0a34acd8e11c8b2c16b50932d0d437b24a802035e6"
+    },
+    {
+      "role": "topologies",
+      "name": "410-250_plate_boundaries_Merdith_et_al.gpml",
+      "bytes": 7265820,
+      "sha256": "13282379456d4a0d7712baee1487f2c7bbbb803c84f849674c37f394c462959d"
+    },
+    {
+      "role": "topologies",
+      "name": "1000-410-Topologies_Merdith_et_al.gpml",
+      "bytes": 11799335,
+      "sha256": "d9e7ab96e4744814a757032d6511bc9672468420f8919cd07b85c5dca3d0ca5e"
+    },
+    {
+      "role": "topologies",
+      "name": "1000-410-Convergence_Merdith_et_al.gpml",
+      "bytes": 1303570,
+      "sha256": "28cbfeedcbd61cbf2d8e504eafdb92c599b7625e3c707795ccb9c71522c8eee9"
+    },
+    {
+      "role": "topologies",
+      "name": "1000-410-Divergence_Merdith_et_al.gpml",
+      "bytes": 786949,
+      "sha256": "820995e40cd4661846763fe0718a6c877e56cc9e1027f0d5f8963957dc5a1d46"
+    },
+    {
+      "role": "topologies",
+      "name": "1000-410-Transforms_Merdith_et_al.gpml",
+      "bytes": 1445329,
+      "sha256": "528f397813f4affcb3d67649092eeb2ee376e3a81d9f20c2614f518764ebf7b2"
+    },
+    {
+      "role": "topologies",
+      "name": "TopologyBuildingBlocks_Merdith_et_al.gpml",
+      "bytes": 1088679,
+      "sha256": "aa184f541fc1582ea37c0b68e4f3561c06ddcca4936f13f91aec904e9397967f"
+    },
+    {
+      "role": "continents",
+      "name": "shapes_continents.gpml",
+      "bytes": 9588210,
+      "sha256": "423400a8268b2409eb39b4f0cb07933411cd664d1594e8fd0468c73ecc55c835"
+    },
+    {
+      "role": "static_polygons",
+      "name": "shapes_static_polygons_Merdith_et_al.gpml",
+      "bytes": 23457286,
+      "sha256": "6775fdfc1a8d3e62c3c1105f5e824b7c04c70662ce668cf7abe71c25a12e7b52"
+    },
+    {
+      "role": "readme",
+      "name": "ReadMe_SM2.txt",
+      "bytes": 4611,
+      "sha256": "72aa978d9afb0f82ed75638ca75c8a028b0eb45bbcdd64512bc4648fc2d4cc2e"
+    }
+  ],
+  "limitations": "The authors state the model is in a purely palaeomagnetic reference frame and is unsuitable for Pacific hotspot kinematics or for analyses shorter than 5 Ma. Longitude in the Precambrian is weakly constrained by palaeomagnetism alone.",
+  "preferred": true,
+  "preferred_note": "Shown first: the palaeomagnetic frame is the one the authors point to for climate-sensitive reading, and it is the fairer comparison against the published maps.",
+  "menu_title": "Merdith 2021",
+  "doi": "10.1016/j.earscirev.2020.103477",
+  "notes": "Manifest pinned from EarthThruTime3D sources/plate-models/merdith2021.json at be59c3a, with the topology and static-polygon members added. The rotation file is byte-identical to Rotations/1000_0_rotfile.rot in the Müller et al. 2022 v1.2.4 Zenodo record (sha256 9ab561d7…, checked 2026-11-12), so the same palaeomagnetic frame is also available under CC BY 4.0 there."
+}

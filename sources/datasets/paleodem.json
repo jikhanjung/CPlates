@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "id": "paleodem",
+  "title": "PALEOMAP Paleodigital Elevation Models (PaleoDEMs) for the Phanerozoic, 1 degree grids",
+  "short_title": "Scotese & Wright 2018 PaleoDEM",
+  "covers_ma": [
+    485,
+    540
+  ],
+  "retrieved_at": "2026-09-12",
+  "citation": "Scotese, C. R., and Wright, N. M., 2018. PALEOMAP Paleodigital Elevation Models (PaleoDEMS) for the Phanerozoic. PALEOMAP Project. doi:10.5281/zenodo.5460860",
+  "doi": "10.5281/zenodo.5460860",
+  "license": {
+    "name": "Creative Commons Attribution 4.0 International",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "statement": "License.txt inside the archive states CC BY 4.0.",
+    "source": "https://zenodo.org/records/5460860"
+  },
+  "archive": {
+    "url": "https://zenodo.org/records/5460860/files/Scotese_Wright_2018_Maps_1-88_1degX1deg_PaleoDEMS_nc.zip?download=1",
+    "path": "data/sources/datasets/paleodem/archive.zip",
+    "bytes": 9302291,
+    "sha256": "7014767a168c28d3762f55117ebafcd0f6b6b90029a495e2d14fd23f94abc16d",
+    "member_prefix": "Scotese_Wright_2018_Maps_1-88_1degX1deg_PaleoDEMS_nc_v2/"
+  },
+  "members": [
+    {
+      "role": "grid",
+      "name": "Map88_PALEOMAP_1deg_Cambrian_Precambrian boundary_540Ma.nc",
+      "bytes": 46134,
+      "sha256": "e107804c578832b923ca7601789ebadf6b68bb3ea7d66e7fe318e7cc9e885a61"
+    },
+    {
+      "role": "grid",
+      "name": "Map87.5_PALEOMAP_1deg_Early_Cambrian_535Ma.nc",
+      "bytes": 47162,
+      "sha256": "3ac13c83dded94f724d975a86af826edee2e6d7d5221d4cce446834d13330c7c"
+    },
+    {
+      "role": "grid",
+      "name": "Map87_PALEOMAP_1deg_Early_Cambrian_530Ma.nc",
+      "bytes": 47329,
+      "sha256": "f5fc0c84b25a483f53ae0adc6e43e425f46e0e1aa80dc5b7230fc28180d4e128"
+    },
+    {
+      "role": "grid",
+      "name": "Map86.5_PALEOMAP_1deg_Early_Cambrian_525Ma.nc",
+      "bytes": 47064,
+      "sha256": "1b0ff3072a77deac2b503e48389bcb522f7bd55f9f4c56e503fb0037859d865e"
+    },
+    {
+      "role": "grid",
+      "name": "Map86_PALEOMAP_1deg_Early_Middle_Cambrian_boundary_520Ma.nc",
+      "bytes": 45429,
+      "sha256": "fd2442682597204eb948d6368006fbee4caaa63fdbd51093e2548fd767788095"
+    },
+    {
+      "role": "grid",
+      "name": "Map85_PALEOMAP_1deg_early_Middle_Cambrian_515Ma.nc",
+      "bytes": 47135,
+      "sha256": "dc767fd325096e6d62f688964aff21ef59150339fa540b80086f5a9801e3c9d6"
+    },
+    {
+      "role": "grid",
+      "name": "Map84.2_PALEOMAP_1deg_early_Middle_Cambrian_510Ma.nc",
+      "bytes": 47475,
+      "sha256": "9d815d1a3148f587818da5364d8955eb31cacc3db34cde254d33dc2402d20056"
+    },
+    {
+      "role": "grid",
+      "name": "Map84.1_PALEOMAP_1deg_late_Middle_Cambrian_505Ma.nc",
+      "bytes": 47070,
+      "sha256": "0b443bc5b6b14745017e61998ff74f9ab5532ac329f2e74a7b8c6f9c9baed261"
+    },
+    {
+      "role": "grid",
+      "name": "Map84_PALEOMAP_1deg_late_Middle_Cambrian_500Ma.nc",
+      "bytes": 45870,
+      "sha256": "297e725fb8bdbfd73a14642ce8235199b541bad5e815a70fb7def8fbedb7af94"
+    },
+    {
+      "role": "grid",
+      "name": "Map83.5_PALEOMAP_1deg_Late_Cambrian_495Ma.nc",
+      "bytes": 49200,
+      "sha256": "13d6eafe5b0b1b179143c6c0955466ab9d3a8ae9da89380d344d5bfadb29c9f2"
+    },
+    {
+      "role": "grid",
+      "name": "Map83_PALEOMAP_1deg_Late_Cambrian_490Ma.nc",
+      "bytes": 50457,
+      "sha256": "eac32acb9757c0fc44c7877806f82e966f730683f7929fb7565f780b5ba5425a"
+    },
+    {
+      "role": "grid",
+      "name": "Map82.5_PALEOMAP_1deg_Cambro-Ordovician_Boundary_485Ma.nc",
+      "bytes": 51545,
+      "sha256": "c61937182c76be7e5b91e329adb8543e5f3320611011e7d75fef3be8dc488a9b"
+    }
+  ],
+  "notes": "Only the twelve Cambrian grids (540 to 485 Ma, 5 Myr apart) are unpacked. Archive pinned from EarthThruTime3D sources/paleodem.json at be59c3a. The grids are in the PALEOMAP reconstruction (sources/plate-models/paleomap2016.json).",
+  "limitations": "Elevations and depths are the authors' reconstruction from palaeogeographic maps, not measurements; 1 degree cells (about 110 km)."
+}

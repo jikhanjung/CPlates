@@ -2,18 +2,22 @@
 PY ?= .venv/bin/python
 PORT ?= 8350
 
-.PHONY: setup fetch frames fixture test browser serve
+.PHONY: setup fetch frames cambrian fixture test browser serve
 
 setup:            ## Python 3.12 venv for the offline tools (pygplates has no 3.14 wheel)
 	uv venv .venv --python 3.12
 	uv pip install --python $(PY) -r requirements-processing.txt
 	npm install --no-audit --no-fund
 
-fetch:            ## download and verify the pinned plate model archive
-	$(PY) scripts/fetch_plate_model.py muller2022
+fetch:            ## download and verify the pinned archives (plate models, PaleoDEM, Natural Earth)
+	$(PY) scripts/fetch_plate_model.py muller2022 merdith2021 paleomap2016
+	$(PY) scripts/fetch_dataset.py paleodem naturalearth
 
 frames:           ## resolve topologies 0-250 Ma, 1 Myr apart, into site/data/
 	$(PY) scripts/build_frames.py muller2022 --from 0 --to 250 --step 1
+
+cambrian:         ## the Cambrian Antarctica page's data into site/data/cambrian/
+	$(PY) scripts/build_cambrian.py
 
 fixture:          ## pygplates reference values for tests/pygplates.test.mjs
 	$(PY) scripts/make_test_fixture.py muller2022

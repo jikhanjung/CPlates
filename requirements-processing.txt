@@ -4,3 +4,7 @@
 pygplates==1.0.0
 numpy
 pillow
+# scripts/build_cambrian.py: Natural Earth shapefile, PaleoDEM netCDF, triangulation.
+pyshp
+netCDF4
+mapbox-earcut

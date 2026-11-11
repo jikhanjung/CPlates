@@ -1,0 +1,54 @@
+{
+  "title": "Cambrian geological record along the Transantarctic Mountains",
+  "note": "Observations, not model output: rock units and their published ages and settings. Localities are approximate points chosen by this project to mark each area (about ±100 km); they are carried to the past with the plate under them, which is the model's part. Ages use the ICS chart v2023/09 for the series and stages the sources name. Compiled 2026-11-12.",
+  "items": [
+    {
+      "id": "shackleton",
+      "present": [158.5, -82.0],
+      "age": [521.0, 506.5],
+      "name": {"ko": "섀클턴 석회암", "en": "Shackleton Limestone"},
+      "where": {"ko": "중부 남극종단산맥, 버드 빙하–홀리오크 산맥 일대", "en": "Central Transantarctic Mountains, Byrd Glacier–Holyoake Range area"},
+      "what": {
+        "ko": "캄브리아기 제2세(3–4절)의 탄산염 대륙붕 퇴적층. 조간대에서 폭풍파 기저까지의 환경을 기록하고, 고배류(archaeocyath)–미생물 초(礁)를 포함한다. 위쪽은 대륙붕이 깊어진 뒤 조산 퇴적물에 덮인다.",
+        "en": "Cambrian Series 2 (Stages 3–4) carbonate shelf deposits, recording settings from intertidal to storm-wave base, with archaeocyath–microbial reefs. Its top records the shelf deepening and then burial under orogenic sediment."
+      },
+      "says": {"ko": "얕은 바다 (관측)", "en": "Shallow sea (observed)"},
+      "refs": [
+        "Debrenne, F., and Kruse, P. D., 1986. Shackleton Limestone archaeocyaths. Alcheringa, 10, 235–278.",
+        "Myrow, P. M., Pope, M. C., Goodge, J. W., Fischer, W., and Palmer, A. R., 2002. Depositional history of pre-Devonian strata and timing of Ross orogenic tectonism in the central Transantarctic Mountains, Antarctica. GSA Bulletin, 114, 1070–1088."
+      ]
+    },
+    {
+      "id": "nelson",
+      "present": [-56.0, -83.6],
+      "age": [504.5, 497.0],
+      "name": {"ko": "넬슨 석회암", "en": "Nelson Limestone"},
+      "where": {"ko": "펜서콜라 산맥, 넵튠 산맥", "en": "Neptune Range, Pensacola Mountains"},
+      "what": {
+        "ko": "중기 캄브리아기(먀오링절 중·후반) 탄산염층, 400 m 넘는 두께. 바닥은 육성 골짜기 메움 퇴적층이고 그 위가 얕은 바다 탄산염이다. 삼엽충은 오스트레일리아·중국 쪽과 가깝다.",
+        "en": "Middle Cambrian (mid to late Miaolingian) carbonates over 400 m thick, above a non-marine valley fill at the base. Its trilobites are close to Australian and Chinese forms."
+      },
+      "says": {"ko": "얕은 바다 (관측)", "en": "Shallow sea (observed)"},
+      "refs": [
+        "Palmer, A. R., and Gatehouse, C. G., 1972. Early and Middle Cambrian trilobites from Antarctica. U.S. Geological Survey Professional Paper 456-D.",
+        "Evans, K. R., Rowell, A. J., and Rees, M. N., 1995. Sea-level changes and stratigraphy of the Nelson Limestone (Middle Cambrian), Neptune Range, Antarctica."
+      ]
+    },
+    {
+      "id": "ross-arc",
+      "present": [162.0, -77.5],
+      "age": [520.0, 485.0],
+      "name": {"ko": "로스 조산대의 화성호 (그래닛 하버 관입암)", "en": "Ross orogen arc (Granite Harbour Intrusives)"},
+      "where": {"ko": "빅토리아 랜드", "en": "Victoria Land"},
+      "what": {
+        "ko": "고태평양 쪽 대륙 가장자리의 섭입으로 생긴 대륙 화성호. 북빅토리아 랜드에서 저어콘 U–Pb 연대로 약 520–480 Ma의 여러 마그마 활동이 나온다. 변형은 전기 캄브리아기에 시작됐다.",
+        "en": "A continental arc above subduction on the palaeo-Pacific margin. In northern Victoria Land, zircon U–Pb ages give magmatic pulses from about 520 to 480 Ma. Deformation began in the Early Cambrian."
+      },
+      "says": {"ko": "섭입대 위의 산맥이 자라는 중 (관측)", "en": "A mountain belt growing above subduction (observed)"},
+      "refs": [
+        "Goodge, J. W., 2020. Geological and tectonic evolution of the Transantarctic Mountains, from ancient craton to recent enigma. Gondwana Research, 80, 50–122.",
+        "Myrow, P. M., et al., 2002 (above)."
+      ]
+    }
+  ]
+}

@@ -72,3 +72,10 @@ export function velocity(model, plate, lonLat, age, interval = 1) {
   const speed = radians * EARTH_RADIUS_KM / interval / 10;
   return { speed, bearing: bearing(from, to), from, to };
 }
+
+// A rotation from rotation.js ([w, x, y, z] in geographic axes) as three.js wants it
+// ([x, y, z, w] in scene axes). The scene maps (X, Y, Z) to (X, Z, -Y), a proper
+// rotation, so the axis maps the same way and the angle is unchanged.
+export function sceneQuaternion([w, x, y, z]) {
+  return [x, z, -y, w];
+}
