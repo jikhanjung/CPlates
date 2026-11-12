@@ -287,6 +287,28 @@ async function openSection(viewport, query) {
     await page.locator('#inset').dblclick();
   }
   // The limestone: off by default, then on, with its thickness growing over 525–512 Ma.
+  // The box: drag the front handle inwards, and the section face moves with it.
+  {
+    const at = await page.evaluate(() => {
+      const c = window.cplates; const v = c.handles.front.position.clone().project(c.camera);
+      return [((v.x + 1) / 2) * innerWidth, ((1 - v.y) / 2) * innerHeight];
+    });
+    const cam = await page.evaluate(() => window.cplates.camera.position.toArray());
+    await page.mouse.move(at[0], at[1]);
+    await page.mouse.down();
+    await page.mouse.move(at[0], at[1] - 100, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => ({ crop: { ...window.cplates.state.crop }, cam: window.cplates.camera.position.toArray() }));
+    check(after.crop.j0 > 0, `dragging the front handle should move the face in, j0 = ${after.crop.j0}`);
+    check(cam.every((v, i) => Math.abs(v - after.cam[i]) < 1e-6), 'dragging a handle should not turn the view');
+    check((new URL(page.url()).searchParams.get('box') || '').split(',').length === 4, 'the address should remember the box');
+    check((await page.locator('#now').innerText()).includes('A–A′에서'), 'the panel should say where the face is');
+    await page.screenshot({ path: 'test-results/section-box-moved.png' });
+    await page.click('#reset-box');
+    await page.waitForTimeout(300);
+    check(await page.evaluate(() => window.cplates.state.crop.j0 === 0), 'reset should bring the face back to A–A′');
+  }
   await page.click('#show-limestone');
   await page.waitForTimeout(400);
   check(new URL(page.url()).searchParams.get('shackleton') === '1', 'the address should remember the limestone toggle');
