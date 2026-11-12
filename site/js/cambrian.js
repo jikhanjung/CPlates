@@ -16,7 +16,7 @@ import { LineSegments2 } from '../vendor/three/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from '../vendor/three/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from '../vendor/three/lines/LineMaterial.js';
 import { RotationModel, turn } from './rotation.js';
-import { toVector, sceneQuaternion } from './geo.js';
+import { toLonLat, toVector, sceneQuaternion } from './geo.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
 const BASE = '../data/cambrian/';
@@ -504,12 +504,82 @@ function update() {
   if (tamAt) anchors.push({ id: 'tam', where: tamAt, text: t().tam, className: 'antarctic' });
 
   if (state.follow) {
-    const east = data.labels.find((l) => l.key === 'eastAntarctica');
-    state.target = rotated(model, east[key], east.present[0], east.present[1], placeAge, cache);
+    const target = focusPoint();
+    // A jump (another view, another model, a far slider move) is taken at once; small
+    // steps, as in playback, are eased.
+    if (target && state.target && angleBetween(target, state.target) > 0.5) state.snap = true;
+    state.target = target;
   }
   renderAge();
   renderObservations();
   drawStrip();
+}
+
+// What "follow Antarctica" keeps in the middle: halfway between East Antarctica and the
+// middle of the Transantarctic Mountains band, both placed with the model of the view on
+// screen (Merdith in the plate view, PALEOMAP at the grid age in the PaleoDEM view),
+// so the band and the continent behind it are both in sight.
+function focusPoint(age = state.age, mode = state.mode) {
+  const data = state.data;
+  const plates = mode === 'plates';
+  const model = plates ? data.merdith : data.paleomap;
+  const key = plates ? 'm' : 'p';
+  const placeAge = plates ? age : nearestGrid(age);
+  const cache = new Map();
+  const east = data.labels.find((l) => l.key === 'eastAntarctica');
+  const middle = data.tam.centre[Math.floor(data.tam.centre.length / 2)];
+  const a = rotated(model, east[key], east.present[0], east.present[1], placeAge, cache);
+  const b = rotated(model, middle[key], middle.lon, middle.lat, placeAge, cache);
+  if (!a || !b) return a || b;
+  const va = toVector(...a);
+  const vb = toVector(...b);
+  return toLonLat(va.map((v, i) => v + vb[i]));
+}
+
+function angleBetween(a, b) {
+  const va = toVector(...a);
+  const vb = toVector(...b);
+  return Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+}
+
+// The part of the window the panels leave free: right of the side panel on a wide
+// screen, below it on a phone, and above the timeline.
+function visibleRect() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const panel = $('panel').getBoundingClientRect();
+  const timeline = document.querySelector('.timeline').getBoundingClientRect();
+  const rect = { left: 0, top: 0, right: W, bottom: Math.min(H, timeline.top) };
+  if (panel.width < W * 0.6) rect.left = panel.right;
+  else rect.top = panel.bottom;
+  return rect;
+}
+
+// Shift the picture so the globe's centre is the centre of the free part, and size the
+// view so the globe fits in it.
+let lastFrame = '';
+function frameView() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const r = visibleRect();
+  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join();
+  if (key === lastFrame) return;
+  lastFrame = key;
+  // 0.92: a little margin so the rim is not cut by the panels.
+  const free = 0.92 * Math.max(120, Math.min(r.right - r.left, r.bottom - r.top));
+  const across = Math.tan((35 / 2) * Math.PI / 180);
+  camera.fov = (2 * Math.atan((across * H) / free) * 180) / Math.PI;
+  camera.aspect = W / H;
+  const dx = (r.left + r.right) / 2 - W / 2;
+  const dy = (r.top + r.bottom) / 2 - H / 2;
+  camera.setViewOffset(W, H, -dx, -dy, W, H);
+  camera.updateProjectionMatrix();
+}
+
+// Where a point on the globe is drawn, in CSS pixels (for tests and labels).
+function screenOf(lonLat, radius = 1) {
+  const v = new THREE.Vector3(...toVector(lonLat[0], lonLat[1], radius)).project(camera);
+  return [((v.x + 1) / 2) * window.innerWidth, ((1 - v.y) / 2) * window.innerHeight];
 }
 
 // HTML labels, placed every frame and hidden on the far side.
@@ -782,7 +852,7 @@ function setPlaying(playing) {
 function setFollow(on) {
   state.follow = on;
   $('follow').checked = on;
-  if (on) update();
+  if (on) { state.flyOnce = false; update(); }
 }
 
 $('play').addEventListener('click', () => {
@@ -795,17 +865,13 @@ for (const button of document.querySelectorAll('[data-lang]')) {
   button.addEventListener('click', () => { state.lang = button.dataset.lang; keepLanguage(state.lang); applyLanguage(); });
 }
 for (const button of document.querySelectorAll('[data-mode]')) {
-  button.addEventListener('click', () => { state.mode = button.dataset.mode; applyLanguage(); });
+  button.addEventListener('click', () => { state.mode = button.dataset.mode; state.snap = true; applyLanguage(); });
 }
 
 function resize() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  renderer.setSize(width, height, false);
-  camera.aspect = width / height;
-  const across = Math.tan((35 / 2) * Math.PI / 180);
-  camera.fov = (2 * Math.atan(camera.aspect < 1 ? across / camera.aspect : across) * 180) / Math.PI;
-  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  lastFrame = '';
+  frameView();
 }
 window.addEventListener('resize', resize);
 
@@ -818,17 +884,28 @@ renderer.setAnimationLoop((now) => {
     const next = state.age - Number($('speed').value) * dt;
     if (next <= state.youngest) { goTo(state.youngest); setPlaying(false); } else { state.age = next; update(); }
   }
-  // Ease the camera towards the target (Antarctica, or a picked observation) when asked.
+  // Turn the camera towards the target (Antarctica, or a picked observation). The easing
+  // is by elapsed time, not by frame, so a slow renderer catches up just as fast.
+  frameView();
   if ((state.follow || state.flyOnce) && state.target) {
     const distance = camera.position.length();
     const want = new THREE.Vector3(...toVector(state.target[0], state.target[1], 1)).normalize();
     const have = camera.position.clone().normalize();
-    const step = have.lerp(want, state.flyOnce ? 0.12 : 0.06).normalize();
-    camera.position.copy(step.multiplyScalar(distance));
+    const elapsed = Math.min(0.5, (now - (state.lastCameraTime ?? now)) / 1000);
+    const share = state.snap ? 1 : 1 - Math.exp(-elapsed * (state.flyOnce ? 6 : 4));
+    state.snap = false;
+    const angle = have.angleTo(want);
+    if (angle > 1e-6) {
+      const axis = new THREE.Vector3().crossVectors(have, want).normalize();
+      if (axis.lengthSq() > 0.5) have.applyAxisAngle(axis, angle * share);
+      else have.copy(want);
+    }
+    camera.position.copy(have.multiplyScalar(distance));
     camera.up.set(0, 1, 0);
     camera.lookAt(0, 0, 0);
-    if (state.flyOnce && have.angleTo(want) < 0.01) state.flyOnce = false;
+    if (state.flyOnce && angle < 0.01) state.flyOnce = false;
   }
+  state.lastCameraTime = now;
   controls.update();
   renderer.render(scene, camera);
   placeLabels();
@@ -858,11 +935,11 @@ async function start() {
   state.age = Number.isFinite(asked) && asked >= state.youngest && asked <= state.oldest ? asked : state.oldest;
   applyLanguage();
   // Start looking straight at Antarctica.
-  const east = state.data.labels.find((l) => l.key === 'eastAntarctica');
-  const q = (state.mode === 'plates' ? state.data.merdith : state.data.paleomap).rotation(east[state.mode === 'plates' ? 'm' : 'p'], state.age);
-  if (q) camera.position.set(...toVector(...turn(q, east.present[0], east.present[1]), 3.4));
+  const start = focusPoint();
+  if (start) camera.position.set(...toVector(start[0], start[1], 3.4));
   camera.lookAt(0, 0, 0);
+  state.snap = true;
 }
 
 start();
-window.cplates = { state, goTo, camera, controls, setFollow };
+window.cplates = { state, goTo, camera, controls, setFollow, focusPoint, screenOf, visibleRect };

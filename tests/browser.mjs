@@ -131,6 +131,46 @@ async function openCambrian(viewport, query) {
   await page.close();
 }
 
+// "Follow Antarctica" keeps Antarctica and the Transantarctic Mountains band in the
+// middle of the part of the screen the panels leave free, in both views, at any age,
+// on a wide screen and on a phone.
+async function followCentred(page, label) {
+  const result = await page.evaluate(() => {
+    const c = window.cplates;
+    const [x, y] = c.screenOf(c.focusPoint());
+    const r = c.visibleRect();
+    return { x, y, r };
+  });
+  const { x, y, r } = result;
+  const cx = (r.left + r.right) / 2;
+  const cy = (r.top + r.bottom) / 2;
+  const w = r.right - r.left;
+  const h = r.bottom - r.top;
+  check(Math.abs(x - cx) < 0.12 * w && Math.abs(y - cy) < 0.12 * h,
+        `${label}: follow point at (${x.toFixed(0)}, ${y.toFixed(0)}), free area centre (${cx.toFixed(0)}, ${cy.toFixed(0)}) of ${w.toFixed(0)}×${h.toFixed(0)}`);
+}
+for (const [viewport, tag] of [[{ width: 1400, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'phone']]) {
+  const page = await openCambrian(viewport, '?age=540');
+  for (const mode of ['plates', 'paleodem']) {
+    await page.click(`[data-mode="${mode}"]`);
+    for (const age of [540, 515, 485]) {
+      await page.evaluate((a) => window.cplates.goTo(a), age);
+      await page.waitForTimeout(1200);
+      await followCentred(page, `${tag} ${mode} ${age} Ma`);
+      await page.screenshot({ path: `test-results/follow-${tag}-${mode}-${age}.png` });
+    }
+  }
+  // While playing, the camera keeps up.
+  await page.click('[data-mode="plates"]');
+  await page.evaluate(() => window.cplates.goTo(540));
+  await page.waitForTimeout(800);
+  await page.click('#play');
+  await page.waitForTimeout(2500);
+  await followCentred(page, `${tag} playing`);
+  await page.click('#play');
+  await page.close();
+}
+
 await browser.close();
 if (failures.length) {
   console.error(failures.join('\n'));
