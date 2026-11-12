@@ -116,3 +116,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 
 - 배포 전: `make test` 21개, 브라우저 점검 전체 통과. `deploy/deploy.sh 7e49aca`: 114 MB, `current -> releases/7e49aca`.
 - 배포 뒤: 쪽·코드 `no-cache`, `version.json` 7e49aca, earththrutime3d 200, cdgts 200. `tests/browser.mjs`를 https에 대고 전체 통과.
+
+## 재배포: 25990e4 (작은 지구본 세로 회전 방향)
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘."
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과. 디스크 여유 24 GB(릴리스 9개 남음).
+- `deploy/deploy.sh 25990e4`: 114 MB, `current -> releases/25990e4`(이전 7e49aca).
+- 배포 뒤: 쪽·코드 `no-cache`, `version.json` no-store 25990e4, 고친 `section.js`가 실려 있음.
+  earththrutime `/healthz` 200, cdgts.paleobytes.info 200. `tests/browser.mjs`를 https에 대고 전체 통과
+  (기준 주소는 끝에 `/`를 붙여야 한다: 빼면 `…infocambrian/`로 이어져 이름 풀이에 실패한다).
