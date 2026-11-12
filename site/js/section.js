@@ -20,6 +20,7 @@ import { RotationModel, turn } from './rotation.js';
 import { toVector } from './geo.js';
 import { continentalShare, crustKm, OCEANIC_CRUST_KM } from './isostasy.js';
 import { slabUV, slabSD, outsidePieces, insidePieces, carve } from './slabcut.js';
+import { MISMATCH_M, SLOPE_FOOT_M, heightAt, slopeFoot, smoothRows } from './trenchfit.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
 const BASE = '../data/section/';
@@ -70,6 +71,16 @@ const STRINGS = {
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
+    fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
+    fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
+    mismatchNote: '해구는 Merdith 2021, 지형은 PaleoDEM(PALEOMAP)에서 옵니다. 두 복원이 대륙 가장자리를 다른 곳에 두어, 빨간 해구 구간은 PaleoDEM의 대륙붕이나 육지 위에 놓입니다.',
+    lgMismatch: '해구가 PaleoDEM 대륙붕·육지 위 (두 모델 어긋남)', lgMerdithTrench: 'Merdith 2021의 원래 해구',
+    nowSite: '해구 자리', nowSiteMerdith: 'Merdith 해구 자리', siteValue: 'PaleoDEM {m} m', siteShelf: 'PaleoDEM {m} m · 대륙붕 (두 모델 어긋남)', siteLand: 'PaleoDEM {m} m · 육지 (두 모델 어긋남)',
+    nowFoot: '사면 발치', footValue: 'PaleoDEM −2,000 m 선까지 {km} km',
+    nowShare: '어긋남', shareValue: '상자 안 Merdith 해구의 {p}%가 PaleoDEM 대륙붕·육지 위',
+    nowFitted: '해구 위치', fittedValue: 'PaleoDEM −2,000 m 선에 맞춤 · Merdith 해구에서 {km} km',
+    fittedNone: '이 줄에는 맞출 −2,000 m 선이 없어 Merdith 자리 그대로',
+    interpBadge: '해석',
     limestoneLabel: '섀클턴 석회암 · 지금 두께 {km} km (모식)', limestoneNotYet: '섀클턴 석회암 분포 (아직 쌓이기 전)',
     slabLabel: '섭입하는 판 (슬랩, 모식)', wedgeLabel: '맨틀 쐐기 흐름 (모식)', underLabel: '슬랩 아래 흐름 (모식)',
     globeCaption: '지구본 · Merdith 2021 · {age} Ma', boxNote: '빨간 상자가 이 블록. 끌어서 돌리기, 휠로 확대, 더블클릭으로 처음 시점, 왼쪽 위 모서리로 크기.',
@@ -80,6 +91,7 @@ const STRINGS = {
       '지각 두께: 지표 높이에서 에어리 지각평형으로 계산한 모형값입니다(해수면에서 35 km, 밀도 2.8/3.3/1.03). PaleoDEM이 −1000 m보다 얕으면 대륙 지각, −2000 m보다 깊으면 7 km 해양 지각으로 보고 그 사이는 섞습니다. 대륙 가장자리의 얇아진 지각과 퇴적층은 표현하지 못합니다.',
       'Merdith 2021의 "Ross Orogen" 대륙 다각형은 410 Ma부터만 있어, 캄브리아기에는 모델이 남극종단산맥 가장자리를 동남극 대륙 지각 밖에 둡니다. 흰 점선이 그 경계입니다. PaleoDEM은 같은 곳에 얕은 대륙붕을 둡니다.',
       '섭입대와 맨틀 흐름: Merdith 2021의 섭입대가 단면을 지나는 곳에 45° 직선 슬랩을 그리고, 그 주위 맨틀 흐름을 코너 흐름 해석해(Batchelor 1967, McKenzie 1969)로 그립니다. 속도는 모델의 수렴 속도에 비례합니다. 실제 맨틀 모형이 아닙니다.',
+      '해구와 지형의 어긋남: 해구는 Merdith 2021, 지형은 PALEOMAP 위의 PaleoDEM이라 두 복원의 대륙 가장자리가 다릅니다. 해구 자리의 PaleoDEM이 −500 m보다 얕으면(대륙붕·육지) 그 구간을 빨갛게 그립니다. "해구를 PaleoDEM 지형에 맞추기"를 켜면 줄마다 가장 가까운 −2,000 m 선(사면 발치, 육지 쪽이 얕은 곳, 1,000 km 안)으로 옮기고 앞뒤 3줄로 고르게 합니다. 이 위치는 해석입니다.',
       '암석권 두께(대륙 160 km, 해양 90 km)는 모식값입니다.',
     ],
     period: '{epoch}',
@@ -118,6 +130,16 @@ const STRINGS = {
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
+    fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
+    fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
+    mismatchNote: 'The trench comes from Merdith 2021, the relief from PaleoDEM (PALEOMAP). The two reconstructions put the margin in different places, so the red stretches of trench lie on PaleoDEM shelf or land.',
+    lgMismatch: 'Trench on PaleoDEM shelf or land (the two models disagree)', lgMerdithTrench: 'Merdith 2021’s own trench',
+    nowSite: 'At the trench', nowSiteMerdith: 'At Merdith’s trench', siteValue: 'PaleoDEM {m} m', siteShelf: 'PaleoDEM {m} m · shelf (models disagree)', siteLand: 'PaleoDEM {m} m · land (models disagree)',
+    nowFoot: 'Slope foot', footValue: '{km} km to the PaleoDEM −2,000 m contour',
+    nowShare: 'Disagreement', shareValue: '{p}% of Merdith’s trench in the box lies on PaleoDEM shelf or land',
+    nowFitted: 'Trench position', fittedValue: 'fitted to PaleoDEM −2,000 m · {km} km from Merdith’s trench',
+    fittedNone: 'no −2,000 m contour to fit in this row: Merdith’s position',
+    interpBadge: 'Interpretation',
     limestoneLabel: 'Shackleton Limestone · {km} km so far (sketch)', limestoneNotYet: 'Shackleton Limestone area (not yet laid down)',
     slabLabel: 'Subducting plate (slab, sketch)', wedgeLabel: 'Mantle-wedge flow (sketch)', underLabel: 'Flow under the slab (sketch)',
     globeCaption: 'Globe · Merdith 2021 · {age} Ma', boxNote: 'Red box: this block. Drag to turn, wheel to zoom, double-click to reset, top-left corner to resize.',
@@ -128,6 +150,7 @@ const STRINGS = {
       'Crustal thickness: a model value from the surface height by Airy isostasy (35 km at sea level; densities 2.8/3.3/1.03). Shallower than −1000 m counts as continental crust, deeper than −2000 m as 7 km oceanic crust, blended between. Thinned margins and sediment are not represented.',
       'Merdith 2021’s “Ross Orogen” continental polygon only exists from 410 Ma, so in the Cambrian the model leaves the Transantarctic margin outside East Antarctica’s crust; the dashed white line marks that edge. PaleoDEM puts a shallow shelf there.',
       'Slab and mantle flow: a straight 45° slab where Merdith 2021’s subduction zone crosses the section, and the mantle flow around it from the analytic corner-flow solution (Batchelor 1967; McKenzie 1969), scaled by the model’s convergence rate. Not a mantle model.',
+      'Trench and relief disagree: the trench is Merdith 2021’s, the relief PaleoDEM’s on PALEOMAP, and the two put the margin in different places. Where PaleoDEM at the trench is shallower than −500 m (shelf or land) that stretch is drawn red. “Fit the trench to PaleoDEM relief” moves it, row by row, to the nearest −2,000 m contour (the slope foot, shallow side towards the overriding plate, within 1,000 km), smoothed over 3 rows either side. That position is an interpretation.',
       'Lithosphere thickness (160 km continental, 90 km oceanic) is schematic.',
     ],
     period: '{epoch}',
@@ -150,6 +173,8 @@ const state = {
   age: 540, oldest: 540, youngest: 460,
   playing: false, flow: true, boundaries: true, data: null,
   shackleton: ASKED.get('shackleton') === '1', limestoneKm: Number(ASKED.get('limestone')) || 2,
+  // Trench from Merdith 2021 as it is, or moved onto PaleoDEM's slope foot (?trench=paleodem).
+  fit: ASKED.get('trench') === 'paleodem',
 };
 const t = () => STRINGS[state.lang];
 
@@ -199,7 +224,12 @@ const translucent = (hex, opacity) => new THREE.MeshLambertMaterial({
   color: colour(hex), transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false });
 const lithosphereSolid = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#9a8c80', 0.55));
 const mantleSolid = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#c0582f', 0.35));
-const slabSheet = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#5b86a8', 0.6));
+// Coloured per vertex: red-tinted where the trench lies on PaleoDEM shelf or land.
+const slabSheet = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({
+  vertexColors: true, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+const SHEET_COLOUR = '#5b86a8';
+const SHEET_MISMATCH = '#b56a6a';
+const MISMATCH_COLOUR = '#ff6b6b';
 lithosphereSolid.renderOrder = 1;
 mantleSolid.renderOrder = 0;
 slabSheet.renderOrder = 2;
@@ -209,6 +239,8 @@ const streamlines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE
 streamlines.renderOrder = 4;
 const boundaryLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
 const cobLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.012, gapSize: 0.01 }));
+// Merdith's own trench, dashed grey, while the trench is fitted to PaleoDEM.
+const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
 const pin = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 12), new THREE.MeshBasicMaterial({ color: 0xff9f43 }));
@@ -219,7 +251,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -383,6 +415,38 @@ function displayTrench(age) {
   return { ...frame, s_km: s, transition: jump, rows };
 }
 
+// Where Merdith's trench sits on PaleoDEM, row by row (trenchfit.js): the height there,
+// whether that is shelf or land, and the distance to PaleoDEM's slope foot.
+const columnOf = (a) => (a - state.data.meta.along_km[0]) / state.data.meta.step_km;
+function trenchSites(trench, h, j0, j1) {
+  const { nx, step_km: step } = state.data.meta;
+  const rows = [];
+  let on = 0;
+  let shallow = 0;
+  for (let j = 0; j < (trench?.rows.length ?? 0); j++) {
+    const r = trench.rows[j];
+    if (!r || j < j0 || j > j1) { rows.push(null); continue; }
+    const heights = h.subarray(j * nx, (j + 1) * nx);
+    const col = columnOf(r.a);
+    const height = heightAt(heights, col);
+    const foot = r.na ? slopeFoot(heights, col, Math.sign(r.na), { window: 1000 / step }) : null;
+    const mismatch = height > MISMATCH_M;
+    rows.push({ height, mismatch, footKm: foot === null ? null : (foot - col) * step });
+    on++;
+    if (mismatch) shallow++;
+  }
+  return { rows, share: on ? shallow / on : 0 };
+}
+
+// The trench moved onto PaleoDEM's slope foot (an interpretation), smoothed across rows.
+function fitTrench(trench, sites) {
+  const shift = smoothRows(sites.rows.map((s) => (s ? s.footKm : null)), 3);
+  const rows = trench.rows.map((r, j) => (r && sites.rows[j] && shift[j] !== null
+    ? { ...r, a: r.a + shift[j], shift: shift[j] } : r));
+  const line = rows[lineRow()];
+  return { ...trench, rows, s_km: line ? line.a : trench.s_km, fitted: true };
+}
+
 // The box the viewer has cut: columns i0..i1 along A–A′, rows j0..j1 across. The front
 // row j0 is the section face. The data grid reaches some way beyond the A–A′ box
 // (meta.box, what the page opens with), so the box can be widened as well as narrowed.
@@ -433,13 +497,30 @@ for (const side of ['front', 'back', 'left', 'right']) {
   handleGroup.add(mesh);
 }
 scene.add(handleGroup);
+const handleBox = new THREE.Box3();
 function placeHandles(x0, x1, zf, zb, bottom) {
+  handleBox.min.set(x0, bottom, zb);
+  handleBox.max.set(x1, 0, zf);
   const y = bottom / 2;
   handles.front.position.set((x0 + x1) / 2, y, zf + 0.02);
   handles.back.position.set((x0 + x1) / 2, y, zb - 0.02);
   handles.left.position.set(x0 - 0.02, y, (zf + zb) / 2);
   handles.right.position.set(x1 + 0.02, y, (zf + zb) / 2);
 }
+// A handle the box stands in front of is hidden: the line from the camera to it passes
+// through the box first. Hidden handles are neither drawn nor picked.
+const sightRay = new THREE.Ray();
+const sightHit = new THREE.Vector3();
+function showHandles() {
+  for (const m of Object.values(handles)) {
+    const distance = camera.position.distanceTo(m.position);
+    sightRay.origin.copy(camera.position);
+    sightRay.direction.subVectors(m.position, camera.position).normalize();
+    const hit = sightRay.intersectBox(handleBox, sightHit);
+    m.visible = !hit || camera.position.distanceTo(hit) > distance - 1e-6;
+  }
+}
+const shownHandles = () => Object.values(handles).filter((m) => m.visible);
 
 {
   const ray = new THREE.Raycaster();
@@ -455,7 +536,7 @@ function placeHandles(x0, x1, zf, zb, bottom) {
   document.addEventListener('pointerdown', (event) => {
     if (event.target !== canvas || !state.data) return;
     ndc(event);
-    const hit = ray.intersectObjects(Object.values(handles))[0];
+    const hit = ray.intersectObjects(shownHandles())[0];
     if (!hit) return;
     event.stopPropagation();
     event.preventDefault();
@@ -469,7 +550,7 @@ function placeHandles(x0, x1, zf, zb, bottom) {
     if (!dragging) {
       if (!state.data) return;
       ndc(event);
-      const over = ray.intersectObjects(Object.values(handles))[0];
+      const over = ray.intersectObjects(shownHandles())[0];
       canvas.style.cursor = over ? 'grab' : '';
       for (const m of Object.values(handles)) m.scale.setScalar(m === over?.object ? 1.4 : 1);
       return;
@@ -512,8 +593,11 @@ function update() {
   const h = heightsAt(state.age);
   const depth = depthShownKm(state.ve);
   const bottom = yOf(-depth);
-  const trench = displayTrench(state.age);
+  const merdithTrench = displayTrench(state.age);
+  const sites = trenchSites(merdithTrench, h, cj0, cj1);
+  const trench = state.fit && merdithTrench ? fitTrench(merdithTrench, sites) : merdithTrench;
   state.trench = trench;
+  state.sites = sites;
   const k = Math.max(0, Math.min(meta.ages.length - 1, Math.round(meta.ages[0] - state.age)));
 
   // The main slab, row by row: where the eased trench crosses the row, the way to its
@@ -758,17 +842,32 @@ function update() {
     }
   }
   const rowsIn = (j) => trench && j >= cj0 && j <= cj1 && trench.rows[j] && inside(trench.rows[j].a, rowB(j));
+  // Where Merdith's trench lies on PaleoDEM shelf or land, the two models disagree: drawn
+  // red (unless the trench has been fitted to PaleoDEM).
+  const mismatchRow = (j) => !trench?.fitted && Boolean(sites.rows[j]?.mismatch);
   if (state.boundaries && trench) {
     const c = colour('#' + KINDS.subduction.toString(16).padStart(6, '0'));
+    const red = colour(MISMATCH_COLOUR);
     for (let j = cj0; j < cj1; j++) {
       if (!rowsIn(j) || !rowsIn(j + 1)) continue;
       const p = trench.rows[j];
       const q = trench.rows[j + 1];
+      const lc = mismatchRow(j) || mismatchRow(j + 1) ? red : c;
       lines.push(p.a / 1000, 0.004, -rowB(j) / 1000, q.a / 1000, 0.004, -rowB(j + 1) / 1000);
-      lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      lineColours.push(lc.r, lc.g, lc.b, lc.r, lc.g, lc.b);
     }
   }
   setGeometry(boundaryLines, lines, lineColours);
+  const own = [];
+  if (state.boundaries && trench?.fitted) {
+    const inBox = (j) => j >= cj0 && j <= cj1 && merdithTrench.rows[j] && inside(merdithTrench.rows[j].a, rowB(j));
+    for (let j = cj0; j < cj1; j++) {
+      if (!inBox(j) || !inBox(j + 1)) continue;
+      own.push(merdithTrench.rows[j].a / 1000, 0.006, -rowB(j) / 1000, merdithTrench.rows[j + 1].a / 1000, 0.006, -rowB(j + 1) / 1000);
+    }
+  }
+  setGeometry(merdithLine, own).computeBoundingSphere();
+  merdithLine.computeLineDistances();
 
   // The slab in 3D inside the box: from the eased trench rows, and under other subduction
   // pieces, 45° towards the overriding side, 90 km thick, down to the depth shown.
@@ -788,7 +887,14 @@ function update() {
   // The main slab: its top and base surfaces and the end where it starts, in the same
   // slab coordinates the layers were cut with, so the sheets line the gap exactly.
   const slabAt = (r, u, v) => { const [s, d] = slabSD(u, v, SLAB_DIP); return at(r.a + r.na * s, r.b + r.nb * s, r.top + d); };
-  const quad = (a, b, c, d) => sheet.push(...a, ...b, ...c, ...a, ...c, ...d);
+  const sheetColours = [];
+  const sheetColour = colour(SHEET_COLOUR);
+  const sheetMismatch = colour(SHEET_MISMATCH);
+  let quadColour = sheetColour;
+  const quad = (a, b, c, d) => {
+    sheet.push(...a, ...b, ...c, ...a, ...c, ...d);
+    for (let n = 0; n < 6; n++) sheetColours.push(quadColour.r, quadColour.g, quadColour.b);
+  };
   const sin = Math.sin(SLAB_DIP);
   const cos = Math.cos(SLAB_DIP);
   for (let j = cj0; j < cj1; j++) {
@@ -798,6 +904,7 @@ function update() {
     const uTop = (r) => Math.max(0, (depth - r.top) / sin);
     const uBase = (r) => Math.max(0, (depth - r.top - SLAB_KM * cos) / sin);
     const vEnd = (r) => Math.max(0, Math.min(SLAB_KM, (depth - r.top) / cos));
+    quadColour = mismatchRow(j) || mismatchRow(j + 1) ? sheetMismatch : sheetColour;
     quad(slabAt(p, 0, 0), slabAt(q, 0, 0), slabAt(q, uTop(q), 0), slabAt(p, uTop(p), 0));
     quad(slabAt(p, 0, vEnd(p)), slabAt(q, 0, vEnd(q)), slabAt(q, uBase(q), vEnd(q)), slabAt(p, uBase(p), vEnd(p)));
     quad(slabAt(p, 0, 0), slabAt(q, 0, 0), slabAt(q, 0, vEnd(q)), slabAt(p, 0, vEnd(p)));
@@ -816,7 +923,9 @@ function update() {
       }
     }
   }
-  setGeometry(slabSheet, sheet);
+  // The other subduction pieces' sheets, after the main slab's, take the plain colour.
+  while (sheetColours.length < sheet.length) sheetColours.push(sheetColour.r, sheetColour.g, sheetColour.b);
+  setGeometry(slabSheet, sheet, sheetColours);
 
   // Slab and flow on the face, where the eased trench crosses the face row.
   const sp = [];
@@ -1342,7 +1451,7 @@ function renderNow(height) {
     if (kind) {
       const b = document.createElement('span');
       b.className = `badge ${kind === 'sketch' ? 'model' : 'model'}`;
-      b.textContent = kind === 'sketch' ? t().sketchBadge : t().modelBadge;
+      b.textContent = { sketch: t().sketchBadge, interp: t().interpBadge }[kind] ?? t().modelBadge;
       dd.append(' ', b);
     }
     dl.append(dt, dd);
@@ -1353,7 +1462,21 @@ function renderNow(height) {
   const off = c ? c.j0 - lineRow() : 0;
   if (off) row(t().faceAt, format(off > 0 ? t().faceAtValue : t().faceAtOut, { km: Math.round(Math.abs(off) * state.data.meta.step_km) }));
   if (state.trench) {
-    row(t().nowTrench, format(t().km, { v: Math.round(Math.abs(state.trench.s_km)) }), 'model');
+    const fitted = Boolean(state.trench.fitted);
+    row(t().nowTrench, format(t().km, { v: Math.round(Math.abs(state.trench.s_km)) }), fitted ? 'interp' : 'model');
+    // Where the trench meets the face, and how it sits on PaleoDEM.
+    const j0 = c ? c.j0 : lineRow();
+    const site = state.sites?.rows[j0];
+    if (fitted) {
+      const shift = state.trench.rows[j0]?.shift;
+      row(t().nowFitted, shift === undefined ? t().fittedNone : format(t().fittedValue, { km: Math.round(Math.abs(shift)) }), 'interp');
+    }
+    if (site) {
+      const key = !site.mismatch ? 'siteValue' : site.height > 0 ? 'siteLand' : 'siteShelf';
+      row(fitted ? t().nowSiteMerdith : t().nowSite, format(t()[key], { m: Math.round(site.height) }), 'model');
+      if (!fitted && site.mismatch && site.footKm !== null) row(t().nowFoot, format(t().footValue, { km: Math.round(Math.abs(site.footKm)) }));
+    }
+    if (state.sites?.share > 0) row(t().nowShare, format(t().shareValue, { p: Math.round(state.sites.share * 100) }));
     if (state.trench.transition) {
       const tr = state.trench.transition;
       row('', format(t().trenchEased, { from: tr.from, to: tr.to, km: tr.min === tr.max ? tr.min : `${tr.min}–${tr.max}` }));
@@ -1365,6 +1488,9 @@ function renderNow(height) {
     row(t().nowTrench, t().nowNoTrench);
   }
   box.append(dl);
+  const note = $('fit-note');
+  note.textContent = state.fit ? t().fitNote : t().mismatchNote;
+  note.hidden = !state.fit && !(state.trench && state.sites?.share > 0);
 }
 
 function drawColumn() {
@@ -1443,14 +1569,16 @@ function renderLegend() {
   const items = [['fill', COLOURS.water, t().lgWater], ['fill', COLOURS.continental, t().lgContinental],
                  ['fill', COLOURS.oceanic, t().lgOceanic], ['fill', COLOURS.lithosphere, t().lgLithosphere],
                  ['fill', COLOURS.mantleTop, t().lgMantle], ['fill', COLOURS.slabMantle, t().lgSlab],
-                 ['dots', '', t().lgFlow], ['dash', '', t().lgCob]];
+                 ['dots', '', t().lgFlow], ['dash', '', t().lgCob],
+                 state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch]];
   const list = $('legend');
   list.replaceChildren();
   for (const [shape, c, text] of items) {
     const li = document.createElement('li');
     const sw = document.createElement('span');
     sw.className = `sw ${shape}`;
-    if (c) sw.style.background = c;
+    if (c && shape === 'fill') sw.style.background = c;
+    else if (c) sw.style.borderTopColor = c;
     const label = document.createElement('span');
     label.textContent = text;
     li.append(sw, label);
@@ -1547,8 +1675,11 @@ $('play').addEventListener('click', () => {
 $('slider').addEventListener('input', (e) => { setPlaying(false); goTo(state.oldest - Number(e.target.value)); });
 $('show-flow').addEventListener('change', (e) => { state.flow = e.target.checked; update(); });
 $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.target.checked; update(); });
+$('fit-trench').checked = state.fit;
+$('fit-trench').addEventListener('change', (e) => { state.fit = e.target.checked; keepParams(); renderLegend(); update(); });
 function keepParams() {
   const params = new URLSearchParams(location.search);
+  if (state.fit) params.set('trench', 'paleodem'); else params.delete('trench');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
   history.replaceState(null, '', `?${params}`);
@@ -1664,6 +1795,7 @@ renderer.setAnimationLoop((now) => {
   pin.scale.setScalar(Math.min(1, camera.position.distanceTo(pin.position) / 4));
   frameView();
   controls.update();
+  showHandles();
   renderer.render(scene, camera);
   renderInset();
   placeLabels();

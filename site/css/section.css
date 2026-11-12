@@ -33,6 +33,7 @@
 
 .sw.fill { height: 12px; border-radius: 2px; }
 .sw.dash { height: 0; border-top: 2px dashed #fff; }
+.sw.line { height: 0; border-top: 3px solid #fff; }
 .sw.dots { height: 8px; background: radial-gradient(circle, #ffe8b0 1.5px, transparent 2px) 0 0 / 7px 8px; }
 
 .source h3 { font-size: 12px; margin: 10px 0 2px; color: var(--text); }

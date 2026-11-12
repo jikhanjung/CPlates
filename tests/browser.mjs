@@ -319,7 +319,8 @@ async function openSection(viewport, query) {
     await page.click('#reset-box');
     await page.waitForTimeout(300);
     check(await page.evaluate(() => window.cplates.state.crop.j0 === window.cplates.state.data.meta.box.j0), 'reset should bring the face back to A–A′');
-    // Out as well as in: drag the right face beyond A′ and the front face off the line outwards.
+    // Out as well as in: drag the left face beyond A and the front face off the line outwards.
+    // (From this view the right face is behind the box, so its handle is hidden.)
     const drag = async (side, dx, dy) => {
       const p = await page.evaluate((s) => {
         const c = window.cplates; const v = c.handles[s].position.clone().project(c.camera);
@@ -331,17 +332,47 @@ async function openSection(viewport, query) {
       await page.mouse.up();
       await page.waitForTimeout(400);
     };
-    await drag('right', 120, 0);
+    check(await page.evaluate(() => !window.cplates.handles.right.visible && window.cplates.handles.front.visible),
+          'from the front, the side handles should be hidden behind the box and the front one shown');
+    // Turn to look from the A end: its handle comes out from behind the box.
+    await page.evaluate(() => { const c = window.cplates; c.camera.position.set(-7.5, 2.5, 3.5); c.controls.target.set(-1, -0.3, -0.9); c.controls.update(); });
+    await page.waitForTimeout(400);
+    check(await page.evaluate(() => window.cplates.handles.left.visible), 'from the A end, the left handle should show');
+    await drag('left', -60, 0);
     await drag('front', 0, 80);
     const out = await page.evaluate(() => ({ ...window.cplates.state.crop }));
-    check(out.i1 > home.i1, `dragging the right handle out should widen the box past A′: i1 ${home.i1} → ${out.i1}`);
+    check(out.i0 < home.i0, `dragging the left handle out should widen the box past A: i0 ${home.i0} → ${out.i0}`);
     check(out.j0 < home.j0, `dragging the front handle out should move the face off the line outwards: j0 ${home.j0} → ${out.j0}`);
     const asked = (new URL(page.url()).searchParams.get('box') || '').split(',').map(Number);
-    check(asked[2] < 0 && asked[1] > home.i1 - home.i0, `the address should count from the A–A′ box: ${asked}`);
+    check(asked[2] < 0 && asked[0] < 0, `the address should count from the A–A′ box: ${asked}`);
     check((await page.locator('#now').innerText()).includes('바깥쪽'), 'the panel should say the face is outside the line');
     await page.screenshot({ path: 'test-results/section-box-widened.png' });
     await page.click('#reset-box');
     await page.waitForTimeout(300);
+  }
+  // Handles on faces turned away from the camera are hidden by the box.
+  {
+    const shown = await page.evaluate(() => Object.fromEntries(Object.entries(window.cplates.handles).map(([k, m]) => [k, m.visible])));
+    check(shown.front && !shown.back, `from the front, the back handle should be hidden: ${JSON.stringify(shown)}`);
+  }
+  // Merdith's trench and PaleoDEM disagree: marked; and, on request, the trench fitted to PaleoDEM.
+  {
+    await page.evaluate(() => window.cplates.goTo(520));
+    await page.waitForTimeout(300);
+    const before = await page.evaluate(() => ({ share: window.cplates.state.sites.share, s: window.cplates.state.trench.s_km }));
+    check(before.share > 0.2 && before.share < 0.6, `520 Ma: part of Merdith's trench lies on PaleoDEM shelf, share ${before.share}`);
+    check((await page.locator('#legend').innerText()).includes('어긋남'), 'the legend should name the disagreement');
+    check(!(await page.locator('#fit-note').isHidden()), 'a note should explain the disagreement');
+    await page.click('#fit-trench');
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => ({ fitted: Boolean(window.cplates.state.trench.fitted), s: window.cplates.state.trench.s_km }));
+    check(after.fitted && Math.abs(after.s - before.s) > 20, `fitting should move the trench: ${before.s} → ${after.s}`);
+    check(new URL(page.url()).searchParams.get('trench') === 'paleodem', 'the address should remember the fitted trench');
+    check((await page.locator('#now').innerText()).includes('해석'), 'the fitted position should be marked as interpretation');
+    await page.screenshot({ path: 'test-results/section-trench-fitted.png' });
+    await page.click('#fit-trench');
+    await page.waitForTimeout(300);
+    check(new URL(page.url()).searchParams.get('trench') === null, 'turning it off should clear the address');
   }
   await page.click('#show-limestone');
   await page.waitForTimeout(400);
