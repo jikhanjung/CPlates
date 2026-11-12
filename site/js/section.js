@@ -65,6 +65,7 @@ const STRINGS = {
     cob: 'Merdith 대륙 경계',
     layerContinental: '대륙 지각', layerOceanic: '해양 지각', layerLithosphere: '맨틀 암석권 (판의 아랫부분)',
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
+    trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 약 {km} km 한 번에 옮겨집니다. 화면은 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     limestoneLabel: '섀클턴 석회암 · 지금 두께 {km} km (모식)', limestoneNotYet: '섀클턴 석회암 분포 (아직 쌓이기 전)',
     slabLabel: '섭입하는 판 (슬랩, 모식)', wedgeLabel: '맨틀 쐐기 흐름 (모식)', underLabel: '슬랩 아래 흐름 (모식)',
@@ -110,6 +111,7 @@ const STRINGS = {
     cob: 'Merdith crust edge',
     layerContinental: 'Continental crust', layerOceanic: 'Oceanic crust', layerLithosphere: 'Mantle lithosphere (lower part of the plate)',
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
+    trenchEased: 'In the model the trench moves about {km} km at once between {from} and {to} Ma; the screen eases it over 5 Myr either side (interpolation).',
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     limestoneLabel: 'Shackleton Limestone · {km} km so far (sketch)', limestoneNotYet: 'Shackleton Limestone area (not yet laid down)',
     slabLabel: 'Subducting plate (slab, sketch)', wedgeLabel: 'Mantle-wedge flow (sketch)', underLabel: 'Flow under the slab (sketch)',
@@ -180,9 +182,20 @@ const slab = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMater
 // Antarctica as a solid: relief on top, the base of the crust underneath, walls between.
 const base = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour('#8f6f52'), side: THREE.DoubleSide }));
 const walls = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+// Below the crust, as translucent solids across the whole box: the mantle lithosphere and
+// the mantle under it, each its own colour; and the slab as a 3D sheet under every
+// subduction zone in the box.
+const translucent = (hex, opacity) => new THREE.MeshLambertMaterial({
+  color: colour(hex), transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false });
+const lithosphereSolid = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#9a8c80', 0.55));
+const mantleSolid = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#c0582f', 0.35));
+const slabSheet = new THREE.Mesh(new THREE.BufferGeometry(), translucent('#5b86a8', 0.6));
+lithosphereSolid.renderOrder = 1;
+mantleSolid.renderOrder = 0;
+slabSheet.renderOrder = 2;
 const box = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
 const streamlines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
-  color: colour(COLOURS.flow), transparent: true, opacity: 0.22, depthTest: false }));
+  color: colour(COLOURS.flow), transparent: true, opacity: 0.22 }));
 streamlines.renderOrder = 4;
 const boundaryLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
 const cobLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.012, gapSize: 0.01 }));
@@ -192,11 +205,11 @@ const pin = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 12), new THREE.Mes
 pin.rotation.x = Math.PI;
 // Tracers fade in and out (alpha in the colour attribute) instead of popping.
 const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({
-  vertexColors: true, size: 3.2, sizeAttenuation: false, transparent: true, depthTest: false }));
+  vertexColors: true, size: 3.2, sizeAttenuation: false, transparent: true }));
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(top, base, walls, box, water, face, slab, boundaryLines, cobLines, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -283,6 +296,45 @@ function trenchInBlock(age) {
   return inside.reduce((a, b) => (Math.abs(a.s_km) < Math.abs(b.s_km) ? a : b));
 }
 
+// The trench on the line, eased in time. Between Myr frames it is interpolated; where the
+// model moves it by more than 100 km from one Myr to the next (491→490 Ma here, about
+// 440 km), the move is spread over 10 Myr centred on the step. That migration is the
+// screen's interpolation, not the model's, and the page says so while it runs.
+const JUMP_KM = 100;
+const JUMP_WINDOW = 5;
+let trenchSeries = null;
+function seriesAt(age) {
+  const { ages } = state.data.meta;
+  const position = ages[0] - age;
+  const k0 = Math.max(0, Math.min(ages.length - 1, Math.floor(position)));
+  const k1 = Math.min(ages.length - 1, k0 + 1);
+  const a = trenchSeries[k0];
+  const b = trenchSeries[k1];
+  if (!a || !b) return (a || b)?.s_km ?? null;
+  return a.s_km + (b.s_km - a.s_km) * (position - k0);
+}
+function displayTrench(age) {
+  const { ages } = state.data.meta;
+  if (!trenchSeries) trenchSeries = ages.map((a) => trenchInBlock(a));
+  const frame = trenchInBlock(age);
+  if (!frame) return null;
+  let s = seriesAt(age);
+  let transition = null;
+  for (let k = 0; k + 1 < ages.length; k++) {
+    const a = trenchSeries[k];
+    const b = trenchSeries[k + 1];
+    if (!a || !b || Math.abs(b.s_km - a.s_km) < JUMP_KM) continue;
+    const middle = (ages[k] + ages[k + 1]) / 2;
+    if (Math.abs(age - middle) > JUMP_WINDOW) continue;
+    const before = seriesAt(middle + JUMP_WINDOW);
+    const after = seriesAt(middle - JUMP_WINDOW);
+    const f = (middle + JUMP_WINDOW - age) / (2 * JUMP_WINDOW);
+    s = before + (after - before) * f * f * (3 - 2 * f);
+    transition = { from: ages[k], to: ages[k + 1], km: Math.round(Math.abs(b.s_km - a.s_km)) };
+  }
+  return { ...frame, s_km: s, shift: s - frame.s_km, transition };
+}
+
 let flow = null;
 function update() {
   const data = state.data;
@@ -292,6 +344,9 @@ function update() {
   const h = heightsAt(state.age);
   const depth = depthShownKm(state.ve);
   const bottom = yOf(-depth);
+  const trench = displayTrench(state.age);
+  state.trench = trench;
+  const shiftOf = (piece) => (piece.k === 'subduction' && trench ? trench.shift : 0);
 
   // Antarctica only: grid points on an Antarctic plate whose rock is continental (Merdith's
   // mask, or PaleoDEM shallower than −1000 m). Other continents in the box are left out.
@@ -357,6 +412,54 @@ function update() {
     wallColours.push(...ca, ...cb, ...cb, ...ca, ...cb, ...ca);
   }
   setGeometry(walls, wall, wallColours);
+
+  // Mantle lithosphere: from the base of the crust to a schematic depth (160 km under
+  // continental crust, 90 km under oceanic), smoothed over ±3 cells; the mantle below it to
+  // the depth shown. Each is a solid: its lower surface plus the block's back and end walls
+  // (the front is the section face).
+  const shareGrid = new Float32Array(nx * ny);
+  for (let n = 0; n < nx * ny; n++) shareGrid[n] = continentalShare(h[n]);
+  const lithBase = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      let sum = 0;
+      let count = 0;
+      for (let jj = Math.max(0, j - 3); jj <= Math.min(ny - 1, j + 3); jj++) {
+        for (let ii = Math.max(0, i - 3); ii <= Math.min(nx - 1, i + 3); ii++) { sum += shareGrid[jj * nx + ii]; count++; }
+      }
+      const f = sum / count;
+      const crustBase = low[(j * nx + i) * 3 + 1];
+      lithBase.push(xAt(i), Math.max(bottom, Math.min(crustBase, yOf(-(f * 160 + (1 - f) * 90)))), zAt(j));
+    }
+  }
+  const floor = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) floor.push(xAt(i), bottom, zAt(j));
+  const gridIndex = [];
+  for (let j = 0; j < ny - 1; j++) {
+    for (let i = 0; i < nx - 1; i++) {
+      const a = j * nx + i;
+      gridIndex.push(a, a + 1, a + nx, a + 1, a + nx + 1, a + nx);
+    }
+  }
+  // A solid between an upper and a lower grid surface: the lower surface, and walls on the
+  // back (last row) and both ends.
+  const solid = (upper, lower) => {
+    const p = [];
+    for (let t = 0; t < gridIndex.length; t += 3) {
+      for (const v of [gridIndex[t], gridIndex[t + 1], gridIndex[t + 2]]) p.push(lower[v * 3], lower[v * 3 + 1], lower[v * 3 + 2]);
+    }
+    const side = (a, b) => {
+      const ua = upper.slice(a * 3, a * 3 + 3); const ub = upper.slice(b * 3, b * 3 + 3);
+      const la = lower.slice(a * 3, a * 3 + 3); const lb = lower.slice(b * 3, b * 3 + 3);
+      p.push(...ua, ...ub, ...lb, ...ua, ...lb, ...la);
+    };
+    for (let i = 0; i < nx - 1; i++) side((ny - 1) * nx + i, (ny - 1) * nx + i + 1);
+    for (let j = 0; j < ny - 1; j++) { side(j * nx, (j + 1) * nx); side(j * nx + nx - 1, (j + 1) * nx + nx - 1); }
+    return p;
+  };
+  setGeometry(lithosphereSolid, solid(low, lithBase));
+  setGeometry(mantleSolid, solid(lithBase, floor));
+  state.solids = { lithosphere: true, mantle: lithBase.some((v, n) => n % 3 === 1 && v > bottom + 1e-6) };
   const outline = [];
   if (state.shackleton) {
     const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && data.lens[j * nx + i] > 0;
@@ -463,20 +566,53 @@ function update() {
   if (state.boundaries && boundaryFrame_) {
     for (const piece of boundaryFrame_.pieces) {
       const c = colour('#' + KINDS[piece.k].toString(16).padStart(6, '0'));
+      const dx = shiftOf(piece);
       for (let n = 0; n + 3 < piece.xy.length; n += 2) {
-        const ha = heightOn(piece.xy[n], piece.xy[n + 1]);
-        const hb = heightOn(piece.xy[n + 2], piece.xy[n + 3]);
+        const ha = heightOn(piece.xy[n] + dx, piece.xy[n + 1]);
+        const hb = heightOn(piece.xy[n + 2] + dx, piece.xy[n + 3]);
         if (ha === null || hb === null) continue;
-        lines.push(piece.xy[n] / 1000, 0.004, -piece.xy[n + 1] / 1000, piece.xy[n + 2] / 1000, 0.004, -piece.xy[n + 3] / 1000);
+        lines.push((piece.xy[n] + dx) / 1000, 0.004, -piece.xy[n + 1] / 1000, (piece.xy[n + 2] + dx) / 1000, 0.004, -piece.xy[n + 3] / 1000);
         lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
       }
     }
   }
   setGeometry(boundaryLines, lines, lineColours);
 
+  // The slab in 3D: under each subduction piece in the box, a sheet dipping at 45° towards
+  // the overriding side (left of the piece for polarity L, right for R), its top and its
+  // underside 90 km below, down to the depth shown.
+  const sheet = [];
+  if (boundaryFrame_) {
+    const [a0, a1] = meta.along_km;
+    const [b0, b1] = meta.across_km;
+    const run = depth / Math.tan(SLAB_DIP);
+    const thick = SLAB_KM / Math.sin(SLAB_DIP);
+    const at = (a, b, d) => [a / 1000, yOf(-d), -b / 1000];
+    for (const piece of boundaryFrame_.pieces) {
+      if (piece.k !== 'subduction' || !piece.p) continue;
+      const sign = piece.p === 'L' ? 1 : -1;
+      for (let n = 0; n + 3 < piece.xy.length; n += 2) {
+        const [pa0, pb, qa0, qb] = piece.xy.slice(n, n + 4);
+        const pa = pa0 + shiftOf(piece);
+        const qa = qa0 + shiftOf(piece);
+        if ([pa, qa].some((a) => a < a0 || a > a1) || [pb, qb].some((b) => b < b0 || b > b1)) continue;
+        const len = Math.hypot(qa - pa, qb - pb) || 1;
+        // left of travel in (along, across) is (−Δacross, Δalong)
+        const na = (-(qb - pb) / len) * sign;
+        const nb = ((qa - pa) / len) * sign;
+        for (const offset of [0, thick]) {
+          const p0 = at(pa - na * offset, pb - nb * offset, 0);
+          const q0 = at(qa - na * offset, qb - nb * offset, 0);
+          const p1 = at(pa + na * (run - offset), pb + nb * (run - offset), depth);
+          const q1 = at(qa + na * (run - offset), qb + nb * (run - offset), depth);
+          sheet.push(...p0, ...q0, ...q1, ...p0, ...q1, ...p1);
+        }
+      }
+    }
+  }
+  setGeometry(slabSheet, sheet);
+
   // Slab and flow, where Merdith has a subduction zone on the line.
-  const trench = trenchInBlock(state.age);
-  state.trench = trench;
   const sp = [];
   const sc = [];
   if (trench) {
@@ -820,7 +956,10 @@ function placeLabels() {
   }
   const box = $('labels');
   const seen = new Set();
+  // Labels on the section face only make sense from in front of it (z > 0).
+  const behind = camera.position.z < 0;
   for (const a of anchors) {
+    if (behind && ['layer', 'boundary', 'depth'].includes(a.cls)) continue;
     seen.add(a.id);
     let node = labelNodes.get(a.id);
     if (!node) { node = document.createElement('span'); box.append(node); labelNodes.set(a.id, node); }
@@ -896,6 +1035,10 @@ function renderNow(height) {
   row(t().nowCrust, format(t().km, { v: crustKm(height).toFixed(0) }), 'model');
   if (state.trench) {
     row(t().nowTrench, format(t().km, { v: Math.round(Math.abs(state.trench.s_km)) }), 'model');
+    if (state.trench.transition) {
+      const tr = state.trench.transition;
+      row('', format(t().trenchEased, { from: tr.from, to: tr.to, km: tr.km }));
+    }
     if (state.trench.rate_cm_yr !== null) {
       row(t().nowRate, format(t().rate, { v: (state.trench.rate_cm_yr * state.trench.over_side).toFixed(1) }), 'model');
     }
