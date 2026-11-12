@@ -120,6 +120,56 @@ def sample_grid(grid, lon, lat):
     return top * (1 - fy) + bottom * fy
 
 
+def trench_rows(pieces, ny, step_km, across0_km, crossings):
+    """Per block row, the main trench's along-position (km) and the unit vector (along,
+    across) towards its overriding side, or None where it does not cross the row.
+
+    The main trench is the one the A–A′ line meets nearest the margin (as on the face);
+    rows are followed outwards from the line, each taking the crossing nearest the last.
+    Pieces that make up the main trench are marked "main" so the page can draw the
+    interpolated line instead of them.
+    """
+    candidates = []  # per row: list of (a, na, nb, piece index)
+    for j in range(ny):
+        b = across0_km + j * step_km
+        found = []
+        for index, piece in enumerate(pieces):
+            if piece["k"] != "subduction" or piece["p"] not in ("L", "R"):
+                continue
+            xy = piece["xy"]
+            sign = 1 if piece["p"] == "L" else -1
+            for n in range(0, len(xy) - 3, 2):
+                a1, b1, a2, b2 = xy[n:n + 4]
+                if (b1 - b) * (b2 - b) > 0 or b1 == b2:
+                    continue
+                f = (b - b1) / (b2 - b1)
+                a = a1 + (a2 - a1) * f
+                length = math.hypot(a2 - a1, b2 - b1) or 1.0
+                na, nb = -(b2 - b1) / length * sign, (a2 - a1) / length * sign
+                found.append((a, na, nb, index))
+        candidates.append(found)
+    main = [c for c in crossings if c["over_side"]]
+    if not main:
+        return [None] * ny
+    start = min(main, key=lambda c: abs(c["s_km"]))["s_km"]
+    rows = [None] * ny
+    previous = start
+    used = set()
+    for j in range(ny):
+        options = candidates[j]
+        if not options:
+            continue
+        a, na, nb, index = min(options, key=lambda o: abs(o[0] - previous))
+        if abs(a - previous) > 600:
+            continue
+        rows[j] = [round(a, 1), round(na, 4), round(nb, 4)]
+        used.add(index)
+        previous = a
+    for index in used:
+        pieces[index]["main"] = True
+    return rows
+
+
 def main():
     section = json.loads((ROOT / "sources/sections/tam_a.json").read_text())
     OUT.mkdir(parents=True, exist_ok=True)
@@ -298,7 +348,13 @@ def main():
                     crossings.append({"s_km": round(s * EARTH_KM * math.pi / 180, 1),
                                       "over_side": int(side), "over": over, "under": under,
                                       "rate_cm_yr": rate})
-        lines[str(t)] = {"pieces": pieces, "trenches": crossings}
+        # The main trench row by row: for each row of the block (constant distance across),
+        # where the subduction zone nearest the Transantarctic margin crosses it, and the
+        # horizontal direction towards its overriding side. The page interpolates these points
+        # in time, so the whole line moves smoothly, not just where it crosses A–A′.
+        rows = trench_rows(pieces, ny, step * EARTH_KM * math.pi / 180,
+                           section["across_deg"][0] * EARTH_KM * math.pi / 180, crossings)
+        lines[str(t)] = {"pieces": pieces, "trenches": crossings, "rows": rows}
         print(f"{t} Ma: {len(pieces)} boundary pieces, trenches "
               f"{[(c['s_km'], c['over_side'], c['rate_cm_yr']) for c in crossings]}", flush=True)
 

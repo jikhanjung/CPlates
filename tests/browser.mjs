@@ -268,6 +268,24 @@ async function openSection(viewport, query) {
   check(s.flow > 100, `520 Ma at 5×: mantle-flow particles should be moving, got ${s.flow}`);
   check((await page.locator('#now').innerText()).includes('섀클턴 석회암'), '520 Ma: the Shackleton Limestone is being laid down');
   check(await page.evaluate(() => window.cplates.globeShown() === 520), 'the small globe should show the 520 Ma frame');
+  // The small globe: drag inside turns it, the top-left corner resizes it.
+  {
+    const box = await page.locator('#inset').boundingBox();
+    const before = await page.evaluate(() => window.cplates.globeCamera.position.toArray());
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 20, { steps: 6 });
+    await page.mouse.up();
+    const after = await page.evaluate(() => window.cplates.globeCamera.position.toArray());
+    check(before.some((v, i) => Math.abs(v - after[i]) > 0.05), 'dragging in the small globe should turn it');
+    await page.mouse.move(box.x + 4, box.y + 4);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 60, box.y - 60, { steps: 6 });
+    await page.mouse.up();
+    const grown = await page.locator('#inset').boundingBox();
+    check(grown.width > box.width + 30, `dragging the corner should grow the globe: ${box.width} → ${grown.width}`);
+    await page.locator('#inset').dblclick();
+  }
   // The limestone: off by default, then on, with its thickness growing over 525–512 Ma.
   await page.click('#show-limestone');
   await page.waitForTimeout(400);

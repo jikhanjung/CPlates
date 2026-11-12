@@ -65,11 +65,11 @@ const STRINGS = {
     cob: 'Merdith 대륙 경계',
     layerContinental: '대륙 지각', layerOceanic: '해양 지각', layerLithosphere: '맨틀 암석권 (판의 아랫부분)',
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
-    trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 약 {km} km 한 번에 옮겨집니다. 화면은 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
+    trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 (선을 따라) 약 {km} km 한 번에 옮겨집니다. 화면은 해구선의 각 점을 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     limestoneLabel: '섀클턴 석회암 · 지금 두께 {km} km (모식)', limestoneNotYet: '섀클턴 석회암 분포 (아직 쌓이기 전)',
     slabLabel: '섭입하는 판 (슬랩, 모식)', wedgeLabel: '맨틀 쐐기 흐름 (모식)', underLabel: '슬랩 아래 흐름 (모식)',
-    globeCaption: '지구본 · Merdith 2021 · {age} Ma', boxNote: '빨간 상자가 이 블록입니다.',
+    globeCaption: '지구본 · Merdith 2021 · {age} Ma', boxNote: '빨간 상자가 이 블록. 끌어서 돌리기, 휠로 확대, 더블클릭으로 처음 시점, 왼쪽 위 모서리로 크기.',
     sourceHeading: '자료와 방법',
     methods: [
       '블록은 동남극(Merdith 2021 판 802)에 고정한 격자입니다. 각 나이에 격자의 각 점에 어느 판의 암석이 있는지를 Merdith 2021 프레임에서 찾습니다.',
@@ -111,11 +111,11 @@ const STRINGS = {
     cob: 'Merdith crust edge',
     layerContinental: 'Continental crust', layerOceanic: 'Oceanic crust', layerLithosphere: 'Mantle lithosphere (lower part of the plate)',
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
-    trenchEased: 'In the model the trench moves about {km} km at once between {from} and {to} Ma; the screen eases it over 5 Myr either side (interpolation).',
+    trenchEased: 'In the model the trench moves about {km} km (along its length) at once between {from} and {to} Ma; the screen eases each point of the line over 5 Myr either side (interpolation).',
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     limestoneLabel: 'Shackleton Limestone · {km} km so far (sketch)', limestoneNotYet: 'Shackleton Limestone area (not yet laid down)',
     slabLabel: 'Subducting plate (slab, sketch)', wedgeLabel: 'Mantle-wedge flow (sketch)', underLabel: 'Flow under the slab (sketch)',
-    globeCaption: 'Globe · Merdith 2021 · {age} Ma', boxNote: 'The red box is this block.',
+    globeCaption: 'Globe · Merdith 2021 · {age} Ma', boxNote: 'Red box: this block. Drag to turn, wheel to zoom, double-click to reset, top-left corner to resize.',
     sourceHeading: 'Data and methods',
     methods: [
       'The block is a grid fixed to East Antarctica (plate 802 of Merdith 2021). At each age, the Merdith 2021 frame tells whose rock is at each grid point.',
@@ -302,37 +302,72 @@ function trenchInBlock(age) {
 // screen's interpolation, not the model's, and the page says so while it runs.
 const JUMP_KM = 100;
 const JUMP_WINDOW = 5;
-let trenchSeries = null;
-function seriesAt(age) {
+
+// A value per Myr frame (or null), read at a fractional age: linear between frames, and
+// across a step larger than JUMP_KM eased over JUMP_WINDOW Myr either side of it.
+function eased(series, age) {
   const { ages } = state.data.meta;
-  const position = ages[0] - age;
-  const k0 = Math.max(0, Math.min(ages.length - 1, Math.floor(position)));
-  const k1 = Math.min(ages.length - 1, k0 + 1);
-  const a = trenchSeries[k0];
-  const b = trenchSeries[k1];
-  if (!a || !b) return (a || b)?.s_km ?? null;
-  return a.s_km + (b.s_km - a.s_km) * (position - k0);
-}
-function displayTrench(age) {
-  const { ages } = state.data.meta;
-  if (!trenchSeries) trenchSeries = ages.map((a) => trenchInBlock(a));
-  const frame = trenchInBlock(age);
-  if (!frame) return null;
-  let s = seriesAt(age);
-  let transition = null;
+  const at = (a) => {
+    const position = ages[0] - a;
+    const k0 = Math.max(0, Math.min(ages.length - 1, Math.floor(position)));
+    const k1 = Math.min(ages.length - 1, k0 + 1);
+    const v0 = series[k0];
+    const v1 = series[k1];
+    if (v0 === null || v1 === null) return v0 ?? v1;
+    return v0 + (v1 - v0) * (position - k0);
+  };
   for (let k = 0; k + 1 < ages.length; k++) {
-    const a = trenchSeries[k];
-    const b = trenchSeries[k + 1];
-    if (!a || !b || Math.abs(b.s_km - a.s_km) < JUMP_KM) continue;
+    const v0 = series[k];
+    const v1 = series[k + 1];
+    if (v0 === null || v1 === null || Math.abs(v1 - v0) < JUMP_KM) continue;
     const middle = (ages[k] + ages[k + 1]) / 2;
     if (Math.abs(age - middle) > JUMP_WINDOW) continue;
-    const before = seriesAt(middle + JUMP_WINDOW);
-    const after = seriesAt(middle - JUMP_WINDOW);
+    const before = at(middle + JUMP_WINDOW);
+    const after = at(middle - JUMP_WINDOW);
+    if (before === null || after === null) break;
     const f = (middle + JUMP_WINDOW - age) / (2 * JUMP_WINDOW);
-    s = before + (after - before) * f * f * (3 - 2 * f);
-    transition = { from: ages[k], to: ages[k + 1], km: Math.round(Math.abs(b.s_km - a.s_km)) };
+    return { value: before + (after - before) * f * f * (3 - 2 * f), jump: { from: ages[k], to: ages[k + 1], km: Math.round(Math.abs(v1 - v0)) } };
   }
-  return { ...frame, s_km: s, shift: s - frame.s_km, transition };
+  return { value: at(age), jump: null };
+}
+
+// Per block row: the main trench's along-position and the direction to its overriding side,
+// each eased in time, so the whole trench line moves smoothly.
+let rowSeries = null;
+function trenchRows(age) {
+  const { meta, boundaries } = state.data;
+  if (!rowSeries) {
+    rowSeries = [];
+    for (let j = 0; j < meta.ny; j++) {
+      const pick = (c) => meta.ages.map((a) => boundaries[String(a)]?.rows?.[j]?.[c] ?? null);
+      rowSeries.push({ a: pick(0), na: pick(1), nb: pick(2) });
+    }
+  }
+  let jump = null;
+  const [a0, a1] = meta.along_km;
+  const rows = rowSeries.map((r) => {
+    const a = eased(r.a, age);
+    if (a.value === null) return null;
+    if (a.value < a0 || a.value > a1) return null; // outside the box
+    if (a.jump) {
+      // How far the model moves the trench in that one step varies along it: keep the range.
+      jump = jump ? { ...jump, min: Math.min(jump.min, a.jump.km), max: Math.max(jump.max, a.jump.km) }
+                  : { ...a.jump, min: a.jump.km, max: a.jump.km };
+    }
+    const na = eased(r.na, age).value;
+    const nb = eased(r.nb, age).value;
+    const len = Math.hypot(na, nb) || 1;
+    return { a: a.value, na: na / len, nb: nb / len };
+  });
+  return { rows, jump };
+}
+
+function displayTrench(age) {
+  const frame = trenchInBlock(age);
+  if (!frame) return null;
+  const { rows, jump } = trenchRows(age);
+  const s = rows[0] ? rows[0].a : frame.s_km;
+  return { ...frame, s_km: s, transition: jump, rows };
 }
 
 let flow = null;
@@ -346,7 +381,6 @@ function update() {
   const bottom = yOf(-depth);
   const trench = displayTrench(state.age);
   state.trench = trench;
-  const shiftOf = (piece) => (piece.k === 'subduction' && trench ? trench.shift : 0);
 
   // Antarctica only: grid points on an Antarctic plate whose rock is continental (Merdith's
   // mask, or PaleoDEM shallower than −1000 m). Other continents in the box are left out.
@@ -566,14 +600,26 @@ function update() {
   if (state.boundaries && boundaryFrame_) {
     for (const piece of boundaryFrame_.pieces) {
       const c = colour('#' + KINDS[piece.k].toString(16).padStart(6, '0'));
-      const dx = shiftOf(piece);
+      if (piece.main) continue; // drawn from the eased rows below
       for (let n = 0; n + 3 < piece.xy.length; n += 2) {
-        const ha = heightOn(piece.xy[n] + dx, piece.xy[n + 1]);
-        const hb = heightOn(piece.xy[n + 2] + dx, piece.xy[n + 3]);
+        const ha = heightOn(piece.xy[n], piece.xy[n + 1]);
+        const hb = heightOn(piece.xy[n + 2], piece.xy[n + 3]);
         if (ha === null || hb === null) continue;
-        lines.push((piece.xy[n] + dx) / 1000, 0.004, -piece.xy[n + 1] / 1000, (piece.xy[n + 2] + dx) / 1000, 0.004, -piece.xy[n + 3] / 1000);
+        lines.push(piece.xy[n] / 1000, 0.004, -piece.xy[n + 1] / 1000, piece.xy[n + 2] / 1000, 0.004, -piece.xy[n + 3] / 1000);
         lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
       }
+    }
+  }
+  // The main trench, from its eased row points.
+  const rowB = (j) => meta.across_km[0] + j * meta.step_km;
+  if (state.boundaries && trench) {
+    const c = colour('#' + KINDS.subduction.toString(16).padStart(6, '0'));
+    for (let j = 0; j + 1 < ny; j++) {
+      const p = trench.rows[j];
+      const q = trench.rows[j + 1];
+      if (!p || !q) continue;
+      lines.push(p.a / 1000, 0.004, -rowB(j) / 1000, q.a / 1000, 0.004, -rowB(j + 1) / 1000);
+      lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
     }
   }
   setGeometry(boundaryLines, lines, lineColours);
@@ -582,31 +628,38 @@ function update() {
   // the overriding side (left of the piece for polarity L, right for R), its top and its
   // underside 90 km below, down to the depth shown.
   const sheet = [];
+  const run = depth / Math.tan(SLAB_DIP);
+  const thick = SLAB_KM / Math.sin(SLAB_DIP);
+  const at = (a, b, d) => [a / 1000, yOf(-d), -b / 1000];
+  const panel = (pa, pb, qa, qb, pna, pnb, qna, qnb) => {
+    for (const offset of [0, thick]) {
+      const p0 = at(pa - pna * offset, pb - pnb * offset, 0);
+      const q0 = at(qa - qna * offset, qb - qnb * offset, 0);
+      const p1 = at(pa + pna * (run - offset), pb + pnb * (run - offset), depth);
+      const q1 = at(qa + qna * (run - offset), qb + qnb * (run - offset), depth);
+      sheet.push(...p0, ...q0, ...q1, ...p0, ...q1, ...p1);
+    }
+  };
+  if (trench) {
+    for (let j = 0; j + 1 < ny; j++) {
+      const p = trench.rows[j];
+      const q = trench.rows[j + 1];
+      if (p && q) panel(p.a, rowB(j), q.a, rowB(j + 1), p.na, p.nb, q.na, q.nb);
+    }
+  }
   if (boundaryFrame_) {
     const [a0, a1] = meta.along_km;
     const [b0, b1] = meta.across_km;
-    const run = depth / Math.tan(SLAB_DIP);
-    const thick = SLAB_KM / Math.sin(SLAB_DIP);
-    const at = (a, b, d) => [a / 1000, yOf(-d), -b / 1000];
     for (const piece of boundaryFrame_.pieces) {
-      if (piece.k !== 'subduction' || !piece.p) continue;
+      if (piece.k !== 'subduction' || !piece.p || piece.main) continue;
       const sign = piece.p === 'L' ? 1 : -1;
       for (let n = 0; n + 3 < piece.xy.length; n += 2) {
-        const [pa0, pb, qa0, qb] = piece.xy.slice(n, n + 4);
-        const pa = pa0 + shiftOf(piece);
-        const qa = qa0 + shiftOf(piece);
+        const [pa, pb, qa, qb] = piece.xy.slice(n, n + 4);
         if ([pa, qa].some((a) => a < a0 || a > a1) || [pb, qb].some((b) => b < b0 || b > b1)) continue;
         const len = Math.hypot(qa - pa, qb - pb) || 1;
-        // left of travel in (along, across) is (−Δacross, Δalong)
         const na = (-(qb - pb) / len) * sign;
         const nb = ((qa - pa) / len) * sign;
-        for (const offset of [0, thick]) {
-          const p0 = at(pa - na * offset, pb - nb * offset, 0);
-          const q0 = at(qa - na * offset, qb - nb * offset, 0);
-          const p1 = at(pa + na * (run - offset), pb + nb * (run - offset), depth);
-          const q1 = at(qa + na * (run - offset), qb + nb * (run - offset), depth);
-          sheet.push(...p0, ...q0, ...q1, ...p0, ...q1, ...p1);
-        }
+        panel(pa, pb, qa, qb, na, nb, na, nb);
       }
     }
   }
@@ -803,6 +856,11 @@ const boxInside = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.L
   color: 0xff6b6b, transparent: true, opacity: 0.7, depthTest: false }));
 globeScene.add(globeBoundaries, boxOnGlobe, boxInside);
 
+// The small globe's size and view: dragged in the box to turn it, wheel to zoom, the
+// top-left corner to resize, double-click to go back to following the block.
+const globeView = { manual: false, distance: 4.4, size: null };
+try { globeView.size = Number(localStorage.getItem('cplates-globe-size')) || null; } catch { /* optional */ }
+
 const globeFrames = new Map();
 let globeShown = null;
 async function globeFrame(age) {
@@ -843,13 +901,14 @@ async function updateGlobe() {
     }
     setGeometry(boxOnGlobe, top_);
     setGeometry(boxInside, inner);
-    // Look at the middle of the box.
-    const centre = new THREE.Vector3();
-    for (const [lon, lat] of outline) centre.add(new THREE.Vector3(...toVector(lon, lat)));
-    centre.normalize();
-    globeCamera.position.copy(centre.multiplyScalar(4.4));
-    globeCamera.up.set(0, 1, 0);
-    globeCamera.lookAt(0, 0, 0);
+    // Look at the middle of the box, unless the viewer has turned the globe by hand.
+    if (!globeView.manual) {
+      const centre = new THREE.Vector3();
+      for (const [lon, lat] of outline) centre.add(new THREE.Vector3(...toVector(lon, lat)));
+      globeCamera.position.copy(centre.normalize().multiplyScalar(globeView.distance));
+      globeCamera.up.set(0, 1, 0);
+      globeCamera.lookAt(0, 0, 0);
+    }
   }
   if (globeShown === age) return;
   const frame = await globeFrame(age).catch(() => null);
@@ -878,7 +937,9 @@ function insetRect() {
   const W = window.innerWidth;
   const H = window.innerHeight;
   const timeline = document.querySelector('.timeline').getBoundingClientRect();
-  const size = W < 640 ? 130 : Math.min(230, Math.round(W * 0.2));
+  const fallback = W < 640 ? 130 : Math.min(230, Math.round(W * 0.2));
+  const limit = Math.max(120, Math.min(W - 32, timeline.top - 40));
+  const size = Math.round(Math.min(limit, Math.max(100, globeView.size ?? fallback)));
   return { left: W - size - 16, top: timeline.top - size - 12, size };
 }
 
@@ -897,6 +958,48 @@ function renderInset() {
   renderer.render(globeScene, globeCamera);
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+}
+
+{
+  const node = $('inset');
+  const grip = $('inset-grip');
+  let drag = null;
+  node.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    node.setPointerCapture(event.pointerId);
+    const r = insetRect();
+    drag = { mode: event.target === grip ? 'resize' : 'turn', x: event.clientX, y: event.clientY, size: r.size };
+  });
+  node.addEventListener('pointermove', (event) => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (drag.mode === 'resize') {
+      // The globe sits bottom-right, so dragging its top-left corner up or left grows it.
+      globeView.size = drag.size - Math.max(dx, dy);
+      try { localStorage.setItem('cplates-globe-size', String(Math.round(insetRect().size))); } catch { /* optional */ }
+      return;
+    }
+    globeView.manual = true;
+    const position = globeCamera.position;
+    position.applyAxisAngle(new THREE.Vector3(0, 1, 0), -dx * 0.008);
+    const right = new THREE.Vector3().crossVectors(globeCamera.up, position).normalize();
+    const tilted = position.clone().applyAxisAngle(right, dy * 0.008);
+    if (Math.abs(tilted.y) < 0.97 * tilted.length()) position.copy(tilted);
+    globeCamera.lookAt(0, 0, 0);
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+  });
+  const end = () => { drag = null; };
+  node.addEventListener('pointerup', end);
+  node.addEventListener('pointercancel', end);
+  node.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    globeView.distance = Math.min(9, Math.max(1.6, globeView.distance * (event.deltaY > 0 ? 1.1 : 0.9)));
+    globeCamera.position.setLength(globeView.distance);
+  }, { passive: false });
+  node.addEventListener('dblclick', () => { globeView.manual = false; globeView.distance = 4.4; updateGlobe(); });
 }
 
 // ---------- labels ----------
@@ -1037,7 +1140,7 @@ function renderNow(height) {
     row(t().nowTrench, format(t().km, { v: Math.round(Math.abs(state.trench.s_km)) }), 'model');
     if (state.trench.transition) {
       const tr = state.trench.transition;
-      row('', format(t().trenchEased, { from: tr.from, to: tr.to, km: tr.km }));
+      row('', format(t().trenchEased, { from: tr.from, to: tr.to, km: tr.min === tr.max ? tr.min : `${tr.min}–${tr.max}` }));
     }
     if (state.trench.rate_cm_yr !== null) {
       row(t().nowRate, format(t().rate, { v: (state.trench.rate_cm_yr * state.trench.over_side).toFixed(1) }), 'model');
@@ -1368,5 +1471,5 @@ async function start() {
 }
 
 start();
-window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeShown: () => globeShown,
+window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, globeShown: () => globeShown,
   flowCount: () => particles.life.filter((v) => v > 0).length };
