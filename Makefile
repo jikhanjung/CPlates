@@ -13,14 +13,15 @@ fetch:            ## download and verify the pinned archives (plate models, Pale
 	$(PY) scripts/fetch_plate_model.py muller2022 merdith2021 paleomap2016
 	$(PY) scripts/fetch_dataset.py paleodem naturalearth
 
-frames:           ## resolve topologies 0-250 Ma, 1 Myr apart, into site/data/
-	$(PY) scripts/build_frames.py muller2022 --from 0 --to 250 --step 1
+frames:           ## resolve topologies 0-540 Ma, 1 Myr apart, for both plate models, into site/data/
+	$(PY) scripts/build_frames.py merdith2021 --from 0 --to 540 --step 1
+	$(PY) scripts/build_frames.py muller2022 --from 0 --to 540 --step 1
 
-cambrian:         ## the Cambrian Antarctica page's data into site/data/cambrian/
+cambrian:         ## the Cambrian Antarctica page's data into site/data/cambrian/ (after `make frames`)
 	$(PY) scripts/build_cambrian.py
 
 fixture:          ## pygplates reference values for tests/pygplates.test.mjs
-	$(PY) scripts/make_test_fixture.py muller2022
+	$(PY) scripts/make_test_fixture.py merdith2021 muller2022
 
 test:
 	node --test tests/*.test.mjs

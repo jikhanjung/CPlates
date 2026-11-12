@@ -15,7 +15,7 @@ COMMIT=$(git rev-parse --short=7 "${1:-HEAD}")
 
 # The site must be exactly the commit's, and the data must be built.
 git diff --quiet "$COMMIT" -- site || { echo "site/ differs from $COMMIT; commit or check out first" >&2; exit 1; }
-for f in site/data/muller2022/model.json site/data/cambrian/meta.json; do
+for f in site/data/merdith2021/model.json site/data/muller2022/model.json site/data/cambrian/meta.json; do
   [ -f "$f" ] || { echo "missing $f: run make frames cambrian" >&2; exit 1; }
 done
 

@@ -14,8 +14,8 @@ Two reconstructions are used, and the page keeps them apart:
 
 Outputs in site/data/cambrian/:
   continents.json      triangulated continents, grouped by plate and lifetime
-  boundaries.json      resolved plate boundaries, one entry per Myr
-  rotations-merdith.json, rotations-paleomap.json   packed rotations for the browser
+  rotations-paleomap.json   packed PALEOMAP rotations for the browser
+  (Merdith rotations and boundaries: site/data/merdith2021/ from scripts/build_frames.py)
   tam.json             the Transantarctic Mountains band, its centre line, and the PaleoDEM
                        height under each centre-line point at each grid age
   observations.json    sources/observations/cambrian_antarctica.json with plate IDs
@@ -37,7 +37,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fetch_plate_model as plates  # noqa: E402
-from build_frames import KINDS, flat, rotations  # noqa: E402
+from build_frames import rotations  # noqa: E402
 
 OUT = ROOT / "site/data/cambrian"
 DATASETS = ROOT / "data/sources/datasets"
@@ -211,29 +211,6 @@ def build_continents(rotation_model):
     return out
 
 
-def build_boundaries(rotation_model):
-    topologies = pygplates.FeaturesFunctionArgument(files("merdith2021", "topologies")).get_features()
-    frames = {}
-    for age in range(OLDEST, YOUNGEST - 1, -1):
-        resolved, sections = [], []
-        pygplates.resolve_topologies(topologies, rotation_model, resolved, float(age), sections,
-                                     resolve_topology_types=pygplates.ResolveTopologyType.boundary)
-        pieces = []
-        for section in sections:
-            feature = section.get_feature()
-            kind = KINDS.get(feature.get_feature_type().get_name(), "other")
-            polarity = ""
-            if kind == "subduction":
-                value = feature.get_enumeration(pygplates.PropertyName.gpml_subduction_polarity, "Unknown")
-                polarity = {"Left": "L", "Right": "R"}.get(value, "")
-            for piece in section.get_shared_sub_segments():
-                c = flat(piece.get_resolved_geometry())
-                if len(c) >= 4:
-                    pieces.append({"k": kind, "p": polarity, "c": c})
-        frames[str(age)] = pieces
-    return frames
-
-
 def tam_outline():
     reader = shapefile.Reader(str(DATASETS / "naturalearth/ne_10m_geography_regions_polys"))
     fields = [f[0] for f in reader.fields[1:]]
@@ -369,9 +346,9 @@ def main():
 
     print("continents")
     write("continents.json", build_continents(merdith))
-    print("boundaries")
-    write("boundaries.json", build_boundaries(merdith))
-    for model, out in (("merdith2021", "rotations-merdith.json"), ("paleomap2016", "rotations-paleomap.json")):
+    # Merdith boundaries and rotations come from scripts/build_frames.py merdith2021
+    # (site/data/merdith2021/), which the main page also uses.
+    for model, out in (("paleomap2016", "rotations-paleomap.json"),):
         write(out, {"anchor": 0, "sequences": rotations(
             [Path(p).read_text(errors="replace") for p in files(model, "rotation")])})
 

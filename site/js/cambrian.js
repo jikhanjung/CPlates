@@ -20,6 +20,7 @@ import { toLonLat, toVector, sceneQuaternion } from './geo.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
 const BASE = '../data/cambrian/';
+const MERDITH = '../data/merdith2021/';
 const ENV = {
   land: '#b0c484', shallow: '#8fe3ef', slope: '#3f7fb0', deep: '#1b3a6a',
 };
@@ -52,7 +53,7 @@ const STRINGS = {
     title: 'CPlates — 캄브리아기의 남극대륙',
     heading: '캄브리아기의 남극대륙',
     subtitle: '540–485 Ma, 곤드와나 가장자리의 남극과 지금의 남극종단산맥',
-    back: '← 판의 움직임 (0–250 Ma)',
+    back: '← 판의 움직임 (현생누대, 같은 나이로)',
     age: '{age} Ma',
     play: '재생', pause: '일시정지', speed: '속도',
     modePlates: '판 모델 (Merdith 2021)',
@@ -104,7 +105,7 @@ const STRINGS = {
     title: 'CPlates — Antarctica in the Cambrian',
     heading: 'Antarctica in the Cambrian',
     subtitle: '540–485 Ma: Antarctica on the edge of Gondwana, and where today’s Transantarctic Mountains were',
-    back: '← Plate motion (0–250 Ma)',
+    back: '← Plate motion (Phanerozoic, same age)',
     age: '{age} Ma',
     play: 'Play', pause: 'Pause', speed: 'Speed',
     modePlates: 'Plate model (Merdith 2021)',
@@ -278,14 +279,14 @@ function threeQuaternion(q) {
 // ---------- data ----------
 
 async function load() {
-  const names = ['meta', 'continents', 'boundaries', 'rotations-merdith', 'rotations-paleomap',
-                 'tam', 'observations', 'labels'];
-  const values = await Promise.all(names.map((name) => fetch(`${BASE}${name}.json`).then((r) => {
-    if (!r.ok) throw new Error(name);
-    return r.json();
-  })));
+  const names = ['meta', 'continents', 'rotations-paleomap', 'tam', 'observations', 'labels'];
+  const get = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.json(); });
+  // Merdith rotations and plate boundaries are the main page's (data/merdith2021/), not copies.
+  const [merdith, ...values] = await Promise.all([get(`${MERDITH}rotations.json`),
+                                                  ...names.map((name) => get(`${BASE}${name}.json`))]);
   const data = Object.fromEntries(names.map((name, i) => [name, values[i]]));
-  data.merdith = new RotationModel(data['rotations-merdith']);
+  data.merdith = new RotationModel(merdith);
+  data.boundaries = new Map();
   data.paleomap = new RotationModel(data['rotations-paleomap']);
   data.grids = new Map();
   await Promise.all(data.meta.grid_ages.map(async (age) => {
@@ -385,12 +386,28 @@ function placeTam(model, key, age) {
   return rotated(model, middle[key], middle.lon, middle.lat, age, cache);
 }
 
+// One Myr frame of the main page's Merdith boundaries; fetched once, kept (JSON only, a few
+// tens of kB each, 56 frames for the whole page).
+function boundaryPieces(age) {
+  const cache = state.data.boundaries;
+  if (cache.has(age)) return cache.get(age);
+  cache.set(age, null);
+  fetch(`${MERDITH}frames/${age}.json`).then((r) => r.json()).then((frame) => {
+    cache.set(age, frame.boundaries);
+    if (Math.round(state.age) === age) { shownBoundaries = null; boundaryFrame(state.age); }
+  }).catch(() => cache.delete(age));
+  return null;
+}
+
 let shownBoundaries = null;
 function boundaryFrame(age) {
-  const key = `${state.mode}:${Math.round(age)}`;
+  const rounded = Math.round(age);
+  const key = `${state.mode}:${rounded}`;
   if (shownBoundaries === key) return;
+  const pieces = boundaryPieces(rounded);
+  if (!pieces) return;
   shownBoundaries = key;
-  const frame = state.data.boundaries[String(Math.round(age))] ?? [];
+  const frame = pieces;
   const positions = { ridge: [], subduction: [], transform: [], other: [] };
   const triangles = [];
   for (const piece of frame) {
@@ -617,6 +634,7 @@ function stageAt(age) {
 
 function renderAge() {
   const age = state.age;
+  $('back').href = `../?age=${Math.round(age)}&frame=merdith2021`;
   $('age').textContent = format(t().age, { age: age.toFixed(1) });
   const [, , epoch, stage, colour] = stageAt(age);
   const inCambrian = age <= 538.8 && age > 486.85;
@@ -926,6 +944,13 @@ async function start() {
   state.youngest = state.data.meta.youngest;
   $('slider').max = String(state.oldest - state.youngest);
   buildContinents(state.data.continents);
+  // Fetch the boundary frames in the background, from the start of the timeline.
+  (async () => {
+    for (let age = state.oldest; age >= state.youngest; age -= 1) {
+      boundaryPieces(age);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+  })();
   for (const item of state.data.observations.items) {
     const marker = new THREE.Mesh(markerShape, new THREE.MeshBasicMaterial({ color: 0xff9f43, transparent: true }));
     markers.set(item.id, marker);

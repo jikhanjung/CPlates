@@ -6,17 +6,18 @@ terms follow the sources it was made from.
 ## Derived data this project publishes: CC BY 4.0
 
 The files `scripts/build_frames.py` writes under `site/data/` are computed from the
-plate model below and released under
+plate models below and released under
 [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/):
 
 - the resolved plate boundaries and plate polygons for each age, the continental-crust
-  mask reconstructed to each age, and the packed rotation file, from
-  **Müller et al. (2022)**, whose Zenodo record (13636799) states CC BY 4.0.
+  mask reconstructed to each age, and the packed rotation file, for each of two models:
+  **Merdith et al. (2021)** (`site/data/merdith2021/`, CC BY 3.0, EarthByte) and
+  **Müller et al. (2022)** (`site/data/muller2022/`, Zenodo record 13636799, CC BY 4.0).
 
 For the Cambrian Antarctica page (`scripts/build_cambrian.py`, `site/data/cambrian/`):
 
-- the triangulated continents, resolved plate boundaries and packed rotations from
-  **Merdith et al. (2021)**, CC BY 3.0 (EarthByte). Its rotation file is byte-identical to
+- the triangulated continents from **Merdith et al. (2021)** (its boundaries and rotations
+  are the main page's `site/data/merdith2021/`), CC BY 3.0 (EarthByte). Its rotation file is byte-identical to
   the palaeomagnetic one in the Müller et al. 2022 Zenodo record, which states CC BY 4.0;
 - the coloured PaleoDEM grids and the heights read along the Transantarctic Mountains,
   from **Scotese & Wright (2018)** PaleoDEMs, CC BY 4.0 (License.txt in the archive);
@@ -27,7 +28,7 @@ For the Cambrian Antarctica page (`scripts/build_cambrian.py`, `site/data/cambri
 - the observation list `sources/observations/cambrian_antarctica.json`, this project's
   compilation with its references, CC BY 4.0.
 
-Attribution: "CPlates (PaleoBytes), derived from Müller et al. 2022", with the citation
+Attribution: "CPlates (PaleoBytes), derived from <source>" naming the model or dataset, with the citation
 in `sources/plate-models/muller2022.json`. The page shows the citation, the licence and
 the authors' stated limits whenever the globe is open. The source's own CC BY licence
 still applies to what was derived from it.

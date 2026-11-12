@@ -21,7 +21,7 @@ from fetch_plate_model import manifest, member_path  # noqa: E402
 # Antarctica, South America, Nazca.
 POINTS = [(701, 20.0, 5.0), (101, -100.0, 45.0), (501, 78.0, 22.0), (801, 134.0, -25.0),
           (901, -155.0, 19.5), (802, 0.0, -80.0), (201, -60.0, -15.0), (911, -90.0, -20.0)]
-AGES = [0, 10, 50, 100, 150, 200, 250]
+AGES = [0, 10, 50, 100, 150, 200, 250, 300, 400, 500, 540]
 
 
 def main(model="muller2022"):
@@ -59,4 +59,5 @@ def main(model="muller2022"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    for name in sys.argv[1:] or ["merdith2021", "muller2022"]:
+        main(name)

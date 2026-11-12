@@ -4,7 +4,7 @@
 // three.js (X, Z, -Y): a proper rotation, so north is up, east is to the right seen from
 // outside, and handedness is kept. Everything else goes through these two functions.
 
-import { conjugate, turn } from './rotation.js';
+import { conjugate, multiply, turn } from './rotation.js';
 
 const TO_RADIANS = Math.PI / 180;
 const TO_DEGREES = 180 / Math.PI;
@@ -52,9 +52,10 @@ export function toPresent(model, plate, lonLat, age) {
   return q ? turn(conjugate(q), lonLat[0], lonLat[1]) : null;
 }
 
-// Velocity of the plate at a point, averaged over the 1 Myr leading up to `age`
-// (from age + 1 to age), which is what pygplates' stage rotation gives for the same
-// interval. Returns speed in cm/yr and the bearing the point is moving towards.
+// Velocity of the plate at a point at `age`, from the stage rotation over the 1 Myr
+// leading up to it (age + 1 → age), as pygplates.calculate_velocities gives it: the
+// stage's angular velocity crossed with the point. Returns speed in cm/yr and the
+// bearing the point is moving towards.
 export function velocity(model, plate, lonLat, age, interval = 1) {
   let older = age + interval;
   let younger = age;
@@ -62,15 +63,30 @@ export function velocity(model, plate, lonLat, age, interval = 1) {
     older = age;
     younger = age - interval;
   }
+  const qOld = model.rotation(plate, older);
+  const qYoung = model.rotation(plate, younger);
   const present = toPresent(model, plate, lonLat, age);
-  if (!present) return null;
-  const from = reconstruct(model, plate, present, older);
-  const to = reconstruct(model, plate, present, younger);
-  if (!from || !to) return null;
-  const radians = distance(from, to);
-  // km per Myr equals mm per year; one more factor of ten gives cm/yr.
-  const speed = radians * EARTH_RADIUS_KM / interval / 10;
-  return { speed, bearing: bearing(from, to), from, to };
+  if (!qOld || !qYoung || !present) return null;
+  let [w, x, y, z] = multiply(qYoung, conjugate(qOld));
+  if (w < 0) { w = -w; x = -x; y = -y; z = -z; }
+  const half = Math.acos(Math.min(1, w));
+  const at = reconstruct(model, plate, present, younger);
+  const lon = at[0] * TO_RADIANS;
+  const lat = at[1] * TO_RADIANS;
+  const p = [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)];
+  const s = Math.sin(half);
+  if (s < 1e-15) return { speed: 0, bearing: 0, at };
+  const rate = (2 * half) / interval; // radians per Myr
+  const axis = [x / s, y / s, z / s];
+  const v = [axis[1] * p[2] - axis[2] * p[1], axis[2] * p[0] - axis[0] * p[2], axis[0] * p[1] - axis[1] * p[0]]
+    .map((c) => c * rate);
+  const east = [-Math.sin(lon), Math.cos(lon), 0];
+  const north = [-Math.sin(lat) * Math.cos(lon), -Math.sin(lat) * Math.sin(lon), Math.cos(lat)];
+  const ve = v[0] * east[0] + v[1] * east[1];
+  const vn = v[0] * north[0] + v[1] * north[1] + v[2] * north[2];
+  // radians per Myr × km = km per Myr = mm/yr; a tenth of that is cm/yr.
+  const speed = Math.hypot(ve, vn) * EARTH_RADIUS_KM / 10;
+  return { speed, bearing: (Math.atan2(ve, vn) * TO_DEGREES + 360) % 360, at };
 }
 
 // A rotation from rotation.js ([w, x, y, z] in geographic axes) as three.js wants it

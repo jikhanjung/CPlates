@@ -31,6 +31,14 @@ h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: 
 
 .back { display: inline-block; font-size: 12px; color: #9cc7ff; margin: 0 0 6px; text-decoration: none; }
 .back:hover { text-decoration: underline; }
+.back.here { color: var(--accent); font-weight: 600; }
+
+/* Segmented switch: the reference frame here, the view on the Cambrian page. */
+.seg, .modes { display: flex; gap: 4px; margin: 4px 0 4px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 3px; }
+.seg button, .modes button { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; padding: 6px 4px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-checked="true"], .modes button[aria-checked="true"] { background: #23324d; color: var(--text); font-weight: 700; }
+.seg button:focus-visible, .modes button:focus-visible { outline: 2px solid #9cc7ff; }
+.frame-note { font-size: 12px; color: var(--muted); margin: 2px 0 8px; line-height: 1.4; }
 
 .lang { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .lang button { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 2px 4px; }

@@ -7,10 +7,13 @@ It builds on [EarthThruTime3D](https://github.com/jikhanjung/EarthThruTime3D), w
 the palaeogeographic surface through time. CPlates focuses on the plates themselves: their
 boundaries, rotations and motion through time, shown on a 3D globe.
 
-Status: first screen. The globe shows the plates of Müller et al. (2022) from 250 Ma to
-the present, one frame per million years: ridges, subduction zones (with teeth on the
-overriding plate) and transforms, a colour per plate, continental crust riding on the
-plates, and the speed and heading of the plate under any point you click.
+Status: the globe shows the plates through the Phanerozoic, 540 Ma to the present, one
+frame per million years: ridges, subduction zones (with teeth on the overriding plate) and
+transforms, a colour per plate, continental crust riding on the plates, and the speed and
+heading of the plate under any point you click. Two plate models can be switched without
+losing the age or the view: Merdith et al. (2021), palaeomagnetic frame (default), and
+Müller et al. (2022), mantle frame (`?frame=muller2022`). They share relative plate motions
+and differ in where the plates sit on the globe.
 
 A second page, `/cambrian/`, follows Antarctica through the Cambrian (540–485 Ma): Gondwana
 moving with Merdith et al. (2021), today's Transantarctic Mountains carried back with their
@@ -22,8 +25,8 @@ Limestone, Ross orogen) marked apart from the models.
 ```sh
 make setup      # Python 3.12 venv with pygplates, numpy, pillow; npm for Three.js and Playwright
 make fetch      # download and verify the pinned sources (about 90 MB, not in git)
-make frames     # resolve the topologies into site/data/ (about 3 minutes, 26 MB)
-make cambrian   # the Cambrian Antarctica page's data (about 30 seconds, 7 MB)
+make frames     # resolve the topologies, both models, 0–540 Ma (about 25 minutes, ~110 MB)
+make cambrian   # the Cambrian Antarctica page's data (about 30 seconds, ~3 MB)
 make serve      # http://127.0.0.1:8350/
 make test       # rotation tests, and the browser maths checked against pygplates
 ```
@@ -37,8 +40,9 @@ loaded from a CDN. See `devlog/` for the plan (jikhanjung P01) and work records.
 시간에 따른 고지리 지표면을 다루는 EarthThruTime3D 를 참고하되, 판 자체(경계, 회전,
 이동)를 3D 지구본에서 보여 주는 데 집중합니다.
 
-지금은 첫 화면이 있습니다. Müller et al. (2022) 판 모델로 250 Ma 부터 현재까지 1백만 년마다
-판 경계(해령, 섭입대, 변환 단층), 판마다 다른 색, 판을 따라 움직이는 대륙 지각을 보여 주고,
+현생누대(540 Ma 부터 현재까지)를 1백만 년마다 보여 줍니다. 기준틀은 Merdith et al. (2021, 고지자기)이
+기본이고 Müller et al. (2022, 맨틀)로 바꿔 볼 수 있습니다(`?frame=muller2022`). 두 모델은 판의 상대
+운동이 같고 판이 놓인 절대 위치만 다릅니다. 판 경계(해령, 섭입대, 변환 단층), 판마다 다른 색, 판을 따라 움직이는 대륙 지각을 보여 주고,
 지구본을 누르면 그 자리 판의 속도와 방향이 나옵니다. 화면은 한국어가 기본이고 KO | EN 으로
 바꿀 수 있습니다.
 

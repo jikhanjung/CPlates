@@ -17,8 +17,24 @@ import {
   STRINGS, PERIODS, periodAt, plateName, compass, format, initialLanguage, keepLanguage,
 } from './i18n.js';
 
-const MODEL = 'muller2022';
-const BASE = `data/${MODEL}/`;
+// Two plate models with the same plates and boundaries (byte-identical for 0–250 Ma) but
+// different absolute frames. Merdith 2021 (palaeomagnetic) is the default.
+const MODELS = ['merdith2021', 'muller2022'];
+const DEFAULT_MODEL = 'merdith2021';
+const base = (model) => `data/${model}/`;
+// Frames are 2048×1024 bitmaps (8 MB each once decoded), so only those near the age on
+// screen are kept, and only those just ahead of it are fetched.
+const KEEP_FRAMES = 40;
+const AHEAD = 12;
+const BEHIND = 3;
+
+// Read once, before renderAge() starts rewriting the address bar.
+const ASKED = new URLSearchParams(location.search);
+
+function initialModel() {
+  const asked = ASKED.get('frame');
+  return MODELS.includes(asked) ? asked : DEFAULT_MODEL;
+}
 const LINE_RADIUS = 1.003;
 const TOOTH_RADIUS = 1.0035;
 const COLORS = { ridge: 0xff5a4e, subduction: 0xffd23f, transform: 0x3ddc97, other: 0xb8c0cc };
@@ -27,18 +43,18 @@ const WIDTHS = { ridge: 2.6, subduction: 2.6, transform: 2.0, other: 1.2 };
 const $ = (id) => document.getElementById(id);
 const state = {
   lang: initialLanguage(),
-  meta: null,
-  rotations: null,
-  ages: [],
-  maxAge: 250,
+  model: initialModel(),
+  models: {},
+  maxAge: 540,
   age: 0,
   shown: null,
-  frames: new Map(),
-  pending: new Map(),
+  shownModel: null,
   playing: false,
   pin: null,
   pixels: null,
 };
+
+const current = () => state.models[state.model];
 
 // ---------- scene ----------
 
@@ -247,9 +263,10 @@ function plateColour(id) {
 }
 
 function showFrame(age) {
-  const frame = state.frames.get(age);
+  const frame = current()?.frames.get(age);
   if (!frame) return false;
   state.shown = age;
+  state.shownModel = state.model;
   for (const texture of [plateTexture, landTexture]) {
     texture.image = frame.bitmap;
     texture.flipY = false;
@@ -287,49 +304,107 @@ function showFrame(age) {
 
 // ---------- loading ----------
 
-async function loadFrame(age) {
-  if (state.frames.has(age)) return state.frames.get(age);
-  if (state.pending.has(age)) return state.pending.get(age);
+async function ensureModel(model) {
+  if (state.models[model]) return state.models[model];
+  const [meta, rotations] = await Promise.all([
+    fetch(`${base(model)}model.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
+    fetch(`${base(model)}rotations.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
+  ]);
+  state.models[model] = { meta, rotations: new RotationModel(rotations), frames: new Map(), pending: new Map() };
+  return state.models[model];
+}
+
+function forget(entry) {
+  // Drop the frames farthest from the age on screen, never the one shown.
+  if (entry.frames.size <= KEEP_FRAMES) return;
+  const ages = [...entry.frames.keys()].sort((a, b) => Math.abs(b - state.age) - Math.abs(a - state.age));
+  for (const age of ages) {
+    if (entry.frames.size <= KEEP_FRAMES) break;
+    if (age === state.shown && entry === current()) continue;
+    entry.frames.get(age).bitmap.close?.();
+    entry.frames.delete(age);
+  }
+}
+
+async function loadFrame(age, model = state.model) {
+  const entry = state.models[model];
+  if (entry.frames.has(age)) return entry.frames.get(age);
+  if (entry.pending.has(age)) return entry.pending.get(age);
   const name = `${age}`;
   const promise = (async () => {
     const [json, blob] = await Promise.all([
-      fetch(`${BASE}frames/${name}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      fetch(`${BASE}frames/${name}.png`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }),
+      fetch(`${base(model)}frames/${name}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch(`${base(model)}frames/${name}.png`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }),
     ]);
     // No colour conversion: the red channel is an index, not a colour.
     const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
     const frame = { json, bitmap, plateById: new Map(json.plates.map(([index, id, raw]) => [id, { index, id, raw }])) };
-    state.frames.set(age, frame);
-    state.pending.delete(age);
-    updateStatus();
+    entry.frames.set(age, frame);
+    entry.pending.delete(age);
+    forget(entry);
     return frame;
   })();
-  promise.catch(() => state.pending.delete(age));
-  state.pending.set(age, promise);
+  promise.catch(() => entry.pending.delete(age));
+  entry.pending.set(age, promise);
   return promise;
 }
 
-async function preload(order) {
-  let next = 0;
-  const worker = async () => {
-    while (next < order.length) {
-      const age = order[next++];
-      try { await loadFrame(age); } catch { /* shown when that age is asked for */ }
-    }
-  };
-  await Promise.all(Array.from({ length: 6 }, worker));
+// A small queue: the frames just ahead in playback (towards the present) and a few behind.
+const queue = [];
+let active = 0;
+function prefetchAround(age) {
+  queue.length = 0;
+  const entry = current();
+  if (!entry) return;
+  const wanted = [];
+  for (let d = 1; d <= AHEAD; d++) wanted.push(age - d);
+  for (let d = 1; d <= BEHIND; d++) wanted.push(age + d);
+  for (const a of wanted) {
+    if (a >= 0 && a <= state.maxAge && !entry.frames.has(a) && !entry.pending.has(a)) queue.push([state.model, a]);
+  }
+  pump();
+}
+function pump() {
+  while (active < 4 && queue.length) {
+    const [model, age] = queue.shift();
+    active += 1;
+    loadFrame(age, model).catch(() => {}).finally(() => { active -= 1; pump(); });
+  }
 }
 
 async function goTo(age) {
   state.age = age;
   renderAge();
-  if (state.frames.has(age)) { showFrame(age); return; }
-  try {
-    await loadFrame(age);
-    if (state.age === age) showFrame(age);
-  } catch {
-    setStatus(format(t().error, { age }));
+  const model = state.model;
+  if (current().frames.has(age)) {
+    showFrame(age);
+  } else {
+    updateStatus();
+    try {
+      await loadFrame(age, model);
+      if (state.age === age && state.model === model) showFrame(age);
+    } catch {
+      setStatus(format(t().error, { age }));
+    }
   }
+  updateStatus();
+  prefetchAround(age);
+}
+
+async function setModel(model) {
+  if (!MODELS.includes(model) || model === state.model) return;
+  try {
+    await ensureModel(model);
+  } catch {
+    setStatus(t().noData);
+    return;
+  }
+  // Same age, same camera: only the reconstruction under them changes.
+  state.model = model;
+  state.pixels = null;
+  renderFrame();
+  renderSource();
+  await goTo(state.age);
 }
 
 // ---------- picking and the pin ----------
@@ -345,7 +420,7 @@ function pixelsOf(frame) {
 }
 
 function plateAt(lon, lat) {
-  const frame = state.frames.get(state.shown);
+  const frame = current()?.frames.get(state.shown);
   if (!frame) return null;
   const { width, height, data } = pixelsOf(frame);
   const x = Math.min(width - 1, Math.floor(((lon + 180) / 360) * width));
@@ -378,7 +453,7 @@ function pick(lonLat) {
     renderInfo();
     return;
   }
-  const present = toPresent(state.rotations, plate.id, lonLat, state.shown);
+  const present = toPresent(current().rotations, plate.id, lonLat, state.shown);
   state.pin = present ? { plate: plate.id, raw: plate.raw, present } : { missing: true };
   updatePin();
 }
@@ -400,8 +475,8 @@ function updatePin() {
     renderInfo();
     return;
   }
-  const where = reconstruct(state.rotations, pin.plate, pin.present, state.shown);
-  const frame = state.frames.get(state.shown);
+  const where = reconstruct(current().rotations, pin.plate, pin.present, state.shown);
+  const frame = current()?.frames.get(state.shown);
   const entry = frame?.plateById.get(pin.plate);
   globeMaterial.uniforms.selected.value = entry ? entry.index : -1;
   if (!where) {
@@ -412,7 +487,7 @@ function updatePin() {
     return;
   }
   pin.where = where;
-  pin.velocity = velocity(state.rotations, pin.plate, where, state.shown);
+  pin.velocity = velocity(current().rotations, pin.plate, where, state.shown);
   if (entry) pin.raw = entry.raw;
   pinDot.position.copy(vec(where[0], where[1], 1.004));
   const v = pin.velocity;
@@ -480,7 +555,7 @@ function renderInfo() {
         format(t().towards, { bearing: Math.round(pin.velocity.bearing), compass: compass(pin.velocity.bearing, state.lang) }));
   }
   box.append(list);
-  if (pin.velocity) add('p', t().velocityNote, 'note');
+  if (pin.velocity) add('p', format(t().velocityNote, { frame: t().frameShort[state.model] }), 'note');
   if (!pin.where) add('p', t().pinGone, 'note');
 }
 
@@ -495,6 +570,21 @@ function renderAge() {
   period.append(swatch, document.createTextNode(`${t().periods[name]} · ${format(t().ageLong, { age })}`));
   $('slider').value = String(state.maxAge - age);
   $('slider').setAttribute('aria-valuetext', format(t().age, { age }));
+  // The Cambrian page covers 540–485 Ma in more detail, on Merdith 2021.
+  const link = $('to-cambrian');
+  link.href = age >= 485 && age <= 540 ? `cambrian/?age=${age}` : 'cambrian/';
+  link.classList.toggle('here', age >= 485 && age <= 540);
+  const params = new URLSearchParams(location.search);
+  params.set('age', String(age));
+  params.set('frame', state.model);
+  history.replaceState(null, '', `?${params}`);
+}
+
+function renderFrame() {
+  for (const button of document.querySelectorAll('[data-frame]')) {
+    button.setAttribute('aria-checked', String(button.dataset.frame === state.model));
+  }
+  $('frame-note').textContent = t().frameNote[state.model];
 }
 
 function renderPeriods() {
@@ -510,7 +600,7 @@ function renderPeriods() {
     span.title = t().periods[name];
     const label = document.createElement('b');
     label.textContent = t().periods[name];
-    if (from - to > 20) span.append(label);
+    if (from - to > 25) span.append(label);
     bar.append(span);
   }
   $('oldest').textContent = format(t().age, { age: state.maxAge });
@@ -518,7 +608,7 @@ function renderPeriods() {
 }
 
 function renderSource() {
-  const meta = state.meta;
+  const meta = current()?.meta;
   if (!meta) return;
   const body = $('source-body');
   body.replaceChildren(document.createTextNode(format(t().sourceBody, { citation: meta.citation }) + ' '));
@@ -529,7 +619,7 @@ function renderSource() {
     link.rel = 'noopener';
     body.append(link);
   }
-  $('source-frame').textContent = t().sourceFrame;
+  $('source-frame').textContent = t().sourceFrame[state.model];
   $('source-method').textContent = format(t().sourceMethod, { version: meta.built_with.replace('pygplates ', '') });
   const licence = $('source-licence');
   licence.replaceChildren();
@@ -537,7 +627,7 @@ function renderSource() {
   link.href = meta.license_url;
   link.textContent = meta.license;
   link.rel = 'noopener';
-  const [before, after] = t().licence.split('{licence}');
+  const [before, after] = format(t().licence, { title: meta.title }).split('{licence}');
   licence.append(document.createTextNode(before), link, document.createTextNode(after ?? ''));
 }
 
@@ -545,10 +635,14 @@ function applyLanguage() {
   document.documentElement.lang = state.lang;
   document.title = t().title;
   for (const node of document.querySelectorAll('[data-t]')) node.textContent = t()[node.dataset.t];
-  for (const button of document.querySelectorAll('[data-lang]')) {
+  for (const button of document.querySelectorAll('[data-frame]')) {
+  button.addEventListener('click', () => setModel(button.dataset.frame));
+}
+for (const button of document.querySelectorAll('[data-lang]')) {
     button.setAttribute('aria-current', String(button.dataset.lang === state.lang));
   }
   setPlaying(state.playing);
+  renderFrame();
   renderAge();
   renderPeriods();
   renderSource();
@@ -560,9 +654,7 @@ let statusOverride = null;
 function setStatus(text) { statusOverride = text; $('status').textContent = text; }
 function updateStatus() {
   if (statusOverride) return;
-  const total = state.ages.length;
-  const done = state.frames.size;
-  $('status').textContent = total && done < total ? format(t().loaded, { done, total }) : '';
+  $('status').textContent = state.shown !== state.age || state.shownModel !== state.model ? t().loading : '';
 }
 
 // ---------- playback ----------
@@ -598,10 +690,10 @@ function tick(now) {
     if (now - lastStep >= 1000 / perSecond) {
       if (state.age <= 0) {
         setPlaying(false);
-      } else if (state.frames.has(state.age - 1)) {
+      } else if (current().frames.has(state.age - 1)) {
         lastStep = now;
         goTo(state.age - 1);
-      } else {
+      } else if (!current().pending.has(state.age - 1)) {
         loadFrame(state.age - 1).catch(() => setPlaying(false));
       }
     }
@@ -632,29 +724,21 @@ async function start() {
   resize();
   applyLanguage();
   try {
-    const [meta, rotations] = await Promise.all([
-      fetch(`${BASE}model.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
-      fetch(`${BASE}rotations.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
-    ]);
-    state.meta = meta;
-    state.rotations = new RotationModel(rotations);
-    state.ages = meta.ages;
-    state.maxAge = Math.max(...meta.ages);
+    await ensureModel(state.model);
   } catch {
     setStatus(t().noData);
     return;
   }
+  const meta = current().meta;
+  state.maxAge = Math.max(...meta.ages);
   $('slider').max = String(state.maxAge);
-  const asked = Number(new URLSearchParams(location.search).get('age'));
-  const first = Number.isFinite(asked) && state.ages.includes(asked) ? asked : 0;
+  const asked = ASKED.has('age') ? Number(ASKED.get('age')) : NaN;
+  const first = Number.isFinite(asked) && meta.ages.includes(asked) ? asked : 0;
   applyLanguage();
   await goTo(first);
-  // Frames the player will need first: from the oldest towards the present.
-  const order = [...state.ages].sort((a, b) => b - a);
-  preload(order).then(updateStatus);
 }
 
 start();
 
 // For tests and for looking around from the console.
-window.cplates = { state, goTo, pick, camera, controls };
+window.cplates = { state, goTo, pick, setModel, camera, controls };

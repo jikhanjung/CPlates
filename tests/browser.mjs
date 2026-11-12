@@ -64,7 +64,7 @@ function check(condition, message) { if (!condition) failures.push(message); }
   await page.click('#play');
   await page.waitForTimeout(1500);
   const playing = await page.evaluate(() => window.cplates.state.age);
-  check(playing < 250 && playing > 0, `playback should have started from 250 Ma and moved, at ${playing}`);
+  check(playing < 540 && playing > 0, `playback should have started from 540 Ma and moved, at ${playing}`);
   const before = await page.evaluate(() => window.cplates.camera.position.toArray());
   await page.mouse.move(700, 450);
   await page.mouse.down();
@@ -74,6 +74,60 @@ function check(condition, message) { if (!condition) failures.push(message); }
   const after = await page.evaluate(() => window.cplates.camera.position.toArray());
   check(before.some((value, index) => Math.abs(value - after[index]) > 1e-3), 'dragging during playback should turn the view');
   await page.click('#play');
+  await page.close();
+}
+
+// The Phanerozoic, and the switch between reference frames.
+{
+  const page = await open({ width: 1400, height: 900 }, '?age=500');
+  check((await page.locator('#period').innerText()).includes('캄브리아기'), '500 Ma should be Cambrian');
+  const link = page.locator('#to-cambrian');
+  check((await link.getAttribute('href')) === 'cambrian/?age=500', 'Cambrian link should carry the age');
+  check((await page.locator('[data-frame="merdith2021"]').getAttribute('aria-checked')) === 'true', 'Merdith 2021 is the default');
+  await page.evaluate(() => { window.cplates.camera.position.set(1.5, -2.0, 2.8); window.cplates.controls.update(); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.cplates.pick([20, -20]));
+  const before = await page.evaluate(() => ({ cam: window.cplates.camera.position.toArray(), pin: window.cplates.state.pin }));
+  await page.screenshot({ path: 'test-results/frame-merdith-500.png' });
+  await page.click('[data-frame="muller2022"]');
+  await page.waitForFunction(() => window.cplates.state.shownModel === 'muller2022', null, { timeout: 30000 });
+  await page.waitForTimeout(500);
+  const after = await page.evaluate(() => ({ cam: window.cplates.camera.position.toArray(), pin: window.cplates.state.pin,
+                                             age: window.cplates.state.age, url: location.search }));
+  check(after.age === 500, `switching frames should keep the age, got ${after.age}`);
+  check(before.cam.every((v, i) => Math.abs(v - after.cam[i]) < 1e-6), 'switching frames should keep the camera');
+  check(after.url.includes('frame=muller2022'), `URL should name the frame, got ${after.url}`);
+  check((await page.locator('#frame-note').innerText()).includes('맨틀'), 'the frame note should say mantle frame');
+  check(after.pin?.plate === before.pin?.plate && after.pin?.where && before.pin?.where &&
+        (Math.abs(after.pin.where[0] - before.pin.where[0]) + Math.abs(after.pin.where[1] - before.pin.where[1]) > 0.5),
+        'the picked point should stay on its plate and move with the frame');
+  await page.screenshot({ path: 'test-results/frame-muller-500.png' });
+  await page.close();
+}
+{
+  const page = await open({ width: 1400, height: 900 }, '?frame=muller2022&age=100');
+  check((await page.locator('[data-frame="muller2022"]').getAttribute('aria-checked')) === 'true', '?frame=muller2022 should select Müller 2022');
+  check((await page.evaluate(() => window.cplates.state.shownModel)) === 'muller2022', '?frame=muller2022 should draw Müller frames');
+  await page.close();
+}
+// What a first visit downloads.
+{
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  let bytes = 0;
+  let firstFrameBytes = null;
+  const files = new Set();
+  page.on('response', async (response) => {
+    try { const body = await response.body(); bytes += body.length; files.add(response.url()); } catch { /* redirects */ }
+  });
+  const started = Date.now();
+  await page.goto(base);
+  await page.waitForFunction(() => window.cplates?.state.shown === 0, null, { timeout: 30000 });
+  const firstMs = Date.now() - started;
+  firstFrameBytes = bytes;
+  await page.waitForTimeout(4000);
+  console.log(`first visit: first frame after ${firstMs} ms and ${(firstFrameBytes / 1e6).toFixed(2)} MB (uncompressed); ` +
+              `${(bytes / 1e6).toFixed(2)} MB in ${files.size} files after 4 s idle`);
+  check(bytes < 8e6, `a first visit should stay under 8 MB, got ${(bytes / 1e6).toFixed(1)} MB`);
   await page.close();
 }
 
