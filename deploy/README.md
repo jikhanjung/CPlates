@@ -15,9 +15,17 @@ dolfinid의 다른 서비스(Docker + nginx 프록시)와 달리 백업할 운�
 
 ## 배포
 
+규칙(devdocs guides/web/deployment.md §10–11, 2026-11-12 사용자 결정):
+- GitHub main에 있는 커밋만 배포한다. `deploy.sh`가 먼저 `git fetch`와 `git merge-base --is-ancestor`로
+  확인하고, 아니면 멈춘다. "배포해줘"만 있고 push 이야기가 없으면 push가 먼저 필요하다고 알리고 답을 받는다.
+- `deploy.sh`는 바꿔 끼운 뒤 https로 스모크(쪽 200, `version.json`이 그 커밋)를 하고, 통과하면
+  `deploy/prune.sh`로 이전 릴리스를 지금 것 + 2개만 남긴다(`CPLATES_PRUNE=0`이면 건너뜀).
+  `deploy/prune.sh --dry-run`으로 지울 목록만 볼 수 있다.
+
 ```sh
 make test                                   # node 시험
 make serve & make browser                   # 로컬 브라우저 점검
+git push origin main                        # 배포할 커밋이 main에 있어야 함
 deploy/deploy.sh <commit>                   # site/가 그 커밋과 같고 site/data가 있어야 함
 # 서버 안 확인 (DNS 전)
 ssh dolfinid 'curl -s -H "Host: cplates.nopeoplestime.info" http://127.0.0.1/version.json'
