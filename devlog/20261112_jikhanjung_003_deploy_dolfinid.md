@@ -126,3 +126,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - 배포 뒤: 쪽·코드 `no-cache`, `version.json` no-store 25990e4, 고친 `section.js`가 실려 있음.
   earththrutime `/healthz` 200, cdgts.paleobytes.info 200. `tests/browser.mjs`를 https에 대고 전체 통과
   (기준 주소는 끝에 `/`를 붙여야 한다: 빼면 `…infocambrian/`로 이어져 이름 풀이에 실패한다).
+
+## 재배포: c417757 (상자 넓히기, 슬랩 자리 비우기, 해구–지형 어긋남 표시와 맞춤 보기, 가린 핸들 숨김)
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘."
+
+- 배포 전: node 시험 30개, 브라우저 점검 전체 통과. 단면 자료를 넓은 격자(213×117)로 다시 빌드했다. 디스크 여유 23 GB.
+- `deploy/deploy.sh c417757`: 119 MB, `current -> releases/c417757`(이전 25990e4).
+- 배포 뒤: `/`, `/section/`, `/cambrian/`, 새 JS(slabcut.js, trenchfit.js), 단면 자료 200, meta 213×117·box 확인,
+  `version.json` c417757. 자료는 버전 꼬리표를 붙여 받으므로 1시간 캐시에 옛 격자가 남지 않는다.
+  earththrutime 200, cdgts.paleobytes.info 200. `tests/browser.mjs`를 https에 대고 전체 통과.
