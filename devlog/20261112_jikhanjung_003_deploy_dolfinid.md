@@ -68,3 +68,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - 배포 뒤: https `/`, `/cambrian/`, `/section/`, 단면 자료와 새 JS 200. `version.json` 236fb99.
   earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
 - push는 하지 않았다(origin/main은 077c25b). 배포한 커밋은 아직 GitHub에 없다.
+
+## 재배포: bb1afb1 (남극대륙만 3D, 작은 지구본, 섀클턴 석회암)
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘."
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과. 디스크 여유 25 GB.
+- `deploy/deploy.sh bb1afb1`: 114 MB, `current -> releases/bb1afb1`(이전 236fb99, f6b01c9, cc9901d 남김).
+- 배포 뒤: https `/`, `/cambrian/`, `/section/`, 새 자료(region.bin, shackleton.bin) 200. `version.json` bb1afb1.
+  earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
+- push는 하지 않았다.
