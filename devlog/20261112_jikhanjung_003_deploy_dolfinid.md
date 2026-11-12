@@ -91,3 +91,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   - reload 직후 잠깐은 옛 워커가 응답해 헤더가 없었고, 다시 확인해 적용을 확인했다.
 - 배포 뒤: https `version.json` 2736d00. earththrutime3d 200, cdgts 200. http → https 301.
   `tests/browser.mjs`를 https 주소에 대고 전체 통과.
+
+## 재배포: 6838391 (반투명 맨틀 암석권·맨틀, 3D 슬랩, 해구 위치 보간)
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘"
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과. 디스크 여유 25 GB.
+- `deploy/deploy.sh 6838391`: 114 MB, `current -> releases/6838391`.
+- 배포 뒤: https 쪽·코드 `no-cache` 헤더 유지, `version.json` 6838391, earththrutime3d 200, cdgts 200.
+  `tests/browser.mjs`를 https 주소에 대고 전체 통과.
+- 서버의 릴리스 디렉터리가 여섯 개(약 600 MB)로 늘었다. 오래된 릴리스를 지우는 규칙은 아직 없다.
