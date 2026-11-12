@@ -9,3 +9,6 @@ node_modules/
 test-results/
 playwright-report/
 .DS_Store
+
+# shared guides: local symlink to ../devdocs/guides (devdocs is private)
+.guides
