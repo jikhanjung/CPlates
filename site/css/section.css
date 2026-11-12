@@ -44,6 +44,12 @@
 .labels span.obs { color: var(--observed); }
 .labels span.layer { transform: translate(0, -50%); font-size: 13px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,0.6); }
 .labels span.boundary { transform: translate(0, -110%); font-size: 11px; font-weight: 600; color: #ffe8b0; }
+.labels span.outcrop { font-size: 11px; font-weight: 700; }
+/* The two units' names can fall on the same spot: the lower one goes a line up. */
+.labels span.outcrop.lower { color: #5fd3ff; transform: translate(-50%, -210%); }
+.labels span.outcrop.upper { color: #ffb347; }
+.labels span.outcrop.sec { font-size: 10px; font-weight: 600; color: #ffe8b0; }
+.tools label.outcrops span { color: #ffd59a; font-weight: 600; }
 .labels span.scale { transform: translate(0, -50%); font-size: 11px; font-weight: 700; color: #fff; }
 .labels span.depth { font-size: 10px; font-weight: 500; color: var(--muted); transform: translate(-100%, -50%); }
 

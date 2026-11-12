@@ -71,6 +71,10 @@ const STRINGS = {
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
+    showOutcrops: '버드층군 노두 (Myrow 2002)',
+    outcropNote: '지금 드러난 노두를 Myrow et al. 2002의 지질도(Fig. 1)에서 눈으로 따라 그린 대략의 윤곽입니다(몇 km 오차). 얼음과 침식이 남긴 범위라 그 시대에 쌓인 범위가 아닙니다. 하늘색은 하부 버드층군(섀클턴 석회암), 주황은 상부 버드층군(홀리오크·스타샷·더글러스층, 이 축척에서는 나뉘지 않음)이고, 쌓이던 시기에 밝게 보입니다.',
+    lgOutcropLower: '하부 버드층군 노두 (섀클턴 석회암, Myrow 2002)', lgOutcropUpper: '상부 버드층군 노두 (홀리오크·스타샷·더글러스, Myrow 2002)',
+    outcropSections: '측정 단면 S1·S2·HR (Myrow 2002)',
     fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
     fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
     mismatchNote: '해구는 Merdith 2021, 지형은 PaleoDEM(PALEOMAP)에서 옵니다. 두 복원이 대륙 가장자리를 다른 곳에 두어, 빨간 해구 구간은 PaleoDEM의 대륙붕이나 육지 위에 놓입니다.',
@@ -130,6 +134,10 @@ const STRINGS = {
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
+    showOutcrops: 'Byrd Group outcrops (Myrow 2002)',
+    outcropNote: 'Today’s outcrop, traced by eye from the geologic map of Myrow et al. 2002 (fig. 1) and simplified (a few km). It is what ice and erosion leave exposed, not where the units were laid down. Light blue: lower Byrd Group (Shackleton Limestone); orange: upper Byrd Group (Holyoake, Starshot and Douglas formations, not separated at that scale). Each is bright while it was being laid down.',
+    lgOutcropLower: 'Lower Byrd Group outcrop (Shackleton Limestone, Myrow 2002)', lgOutcropUpper: 'Upper Byrd Group outcrop (Holyoake, Starshot, Douglas; Myrow 2002)',
+    outcropSections: 'Measured sections S1, S2, HR (Myrow 2002)',
     fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
     fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
     mismatchNote: 'The trench comes from Merdith 2021, the relief from PaleoDEM (PALEOMAP). The two reconstructions put the margin in different places, so the red stretches of trench lie on PaleoDEM shelf or land.',
@@ -175,6 +183,7 @@ const state = {
   shackleton: ASKED.get('shackleton') === '1', limestoneKm: Number(ASKED.get('limestone')) || 2,
   // Trench from Merdith 2021 as it is, or moved onto PaleoDEM's slope foot (?trench=paleodem).
   fit: ASKED.get('trench') === 'paleodem',
+  outcrops: ASKED.get('outcrops') === '1',
 };
 const t = () => STRINGS[state.lang];
 
@@ -246,6 +255,9 @@ const scaleBar = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.Li
 const SCALE_STEPS = [1, 2, 5, 10, 20, 50, 100, 200];
 // The step nearest a quarter of a scene unit tall: 10 km at the default 25×.
 const scaleKm = (ve) => SCALE_STEPS.reduce((a, b) => (Math.abs(Math.log((b * ve) / 250)) < Math.abs(Math.log((a * ve) / 250)) ? b : a));
+// Byrd Group outcrops (Myrow et al. 2002), draped on the surface.
+const outcropLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
+const OUTCROP_COLOURS = { lower: '#5fd3ff', upper: '#ffb347' };
 const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -257,7 +269,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, outcropLines, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -768,6 +780,59 @@ function update() {
     }
     if (sw) state.limestoneAt = [sx / sw, Math.max(0, sy) + 0.07, sz / sw];
   }
+
+  // Byrd Group outcrops: each outline draped on the surface, inside the box; bright while
+  // its unit was being laid down.
+  const drape = [];
+  const drapeColours = [];
+  state.outcropLabels = [];
+  if (state.outcrops && meta.outcrops) {
+    const [ka, kb] = [xAt(ci0) * 1000, xAt(ci1) * 1000];
+    const [kc, kd] = [meta.across_km[0] + cj0 * meta.step_km, meta.across_km[0] + cj1 * meta.step_km];
+    const inBox = (a, b) => a >= ka && a <= kb && b >= kc && b <= kd;
+    const surfaceAt = (a, b) => {
+      const col = Math.max(0, Math.min(nx - 1.001, (a - meta.along_km[0]) / meta.step_km));
+      const row = Math.max(0, Math.min(ny - 1.001, (b - meta.across_km[0]) / meta.step_km));
+      const [i, j] = [Math.floor(col), Math.floor(row)];
+      const [fi, fj] = [col - i, row - j];
+      const v = (jj, ii) => h[jj * nx + ii];
+      const z = (v(j, i) * (1 - fi) + v(j, i + 1) * fi) * (1 - fj) + (v(j + 1, i) * (1 - fi) + v(j + 1, i + 1) * fi) * fj;
+      return Math.max(0, yOf(z / 1000)) + 0.006;
+    };
+    const best = {};
+    for (const o of meta.outcrops.outlines) {
+      const unit = meta.outcrops.units[o.unit];
+      const active = state.age <= unit.age[0] && state.age >= unit.age[1];
+      const c = colour(OUTCROP_COLOURS[o.unit]);
+      if (!active) c.lerp(colour('#707070'), 0.55);
+      let [sa, sb, n] = [0, 0, 0];
+      for (let k = 0; k < o.ab.length; k++) {
+        const [a0, b0] = o.ab[k];
+        const [a1, b1] = o.ab[(k + 1) % o.ab.length];
+        const steps = Math.max(1, Math.ceil(Math.hypot(a1 - a0, b1 - b0) / 5));
+        for (let q = 0; q < steps; q++) {
+          const [pa, pb] = [a0 + ((a1 - a0) * q) / steps, b0 + ((b1 - b0) * q) / steps];
+          const [qa, qb] = [a0 + ((a1 - a0) * (q + 1)) / steps, b0 + ((b1 - b0) * (q + 1)) / steps];
+          if (!inBox(pa, pb) || !inBox(qa, qb)) continue;
+          drape.push(pa / 1000, surfaceAt(pa, pb), -pb / 1000, qa / 1000, surfaceAt(qa, qb), -qb / 1000);
+          drapeColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
+          sa += pa; sb += pb; n++;
+        }
+      }
+      if (n && (!best[o.unit] || n > best[o.unit].n)) best[o.unit] = { n, a: sa / n, b: sb / n };
+    }
+    for (const [unit, at] of Object.entries(best)) {
+      state.outcropLabels.push({ id: `outcrop-${unit}`, at: [at.a / 1000, surfaceAt(at.a, at.b) + 0.05, -at.b / 1000],
+                                 text: meta.outcrops.units[unit].name[state.lang], cls: `outcrop ${unit}` });
+    }
+    const secs = meta.outcrops.sections.filter((x) => inBox(...x.ab));
+    if (secs.length) {
+      const a = secs.reduce((m, x) => m + x.ab[0], 0) / secs.length;
+      const b = secs.reduce((m, x) => m + x.ab[1], 0) / secs.length;
+      state.outcropLabels.push({ id: 'outcrop-sections', at: [a / 1000, surfaceAt(a, b) + 0.02, -b / 1000], text: t().outcropSections, cls: 'outcrop sec' });
+    }
+  }
+  setGeometry(outcropLines, drape, drapeColours);
 
   // Sea level and the box, at the box's extent.
   const x0 = xAt(ci0);
@@ -1402,6 +1467,7 @@ function placeLabels() {
       anchors.push({ id: 'moho', at: [x + 0.55, pr.crustBottomY[n], faceZ + 0.004], text: t().moho, cls: 'boundary' });
     }
   }
+  for (const label of state.outcropLabels ?? []) anchors.push(label);
   if (state.scale) anchors.push({ id: 'scale', at: state.scale.at, text: `${state.scale.km} km`, cls: 'scale' });
   for (const d of [0, 35, 100, 200, 410, 660]) {
     if (d <= depth) anchors.push({ id: `d${d}`, at: [x0 - 0.02, yOf(-d), faceZ], text: `${d} km`, cls: 'depth' });
@@ -1597,7 +1663,8 @@ function renderLegend() {
                  ['fill', COLOURS.oceanic, t().lgOceanic], ['fill', COLOURS.lithosphere, t().lgLithosphere],
                  ['fill', COLOURS.mantleTop, t().lgMantle], ['fill', COLOURS.slabMantle, t().lgSlab],
                  ['dots', '', t().lgFlow], ['dash', '', t().lgCob],
-                 state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch]];
+                 state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch],
+                 ...(state.outcrops ? [['line', OUTCROP_COLOURS.lower, t().lgOutcropLower], ['line', OUTCROP_COLOURS.upper, t().lgOutcropUpper]] : [])];
   const list = $('legend');
   list.replaceChildren();
   for (const [shape, c, text] of items) {
@@ -1622,6 +1689,7 @@ function renderSources() {
     'Scotese, C. R., and Wright, N. M., 2018. PALEOMAP Paleodigital Elevation Models (PaleoDEMS) for the Phanerozoic. doi:10.5281/zenodo.5460860. CC BY 4.0.',
     'Scotese, C. R., 2016. PALEOMAP PaleoAtlas for GPlates. doi:10.5281/zenodo.10251792. CC BY 4.0.',
     'Batchelor, G. K., 1967. An Introduction to Fluid Dynamics. McKenzie, D. P., 1969. Speculations on the consequences and causes of plate motions. Geophys. J. R. Astr. Soc., 18, 1–32.',
+    'Myrow, P. M., Pope, M. C., Goodge, J. W., Fischer, W., and Palmer, A. R., 2002. Depositional history of pre-Devonian strata and timing of Ross orogenic tectonism in the central Transantarctic Mountains, Antarctica. GSA Bulletin, 114, 1070–1088 (fig. 1: outcrops traced by this project; fig. 16: revised stratigraphy).',
     'Myrow, P. M., et al., 2002. GSA Bulletin, 114, 1070–1088. Gootee, B. F., and Stump, E., 2006. Claybourn, T. M., et al., 2019. Journal of Paleontology.',
     'Ages: ICS International Chronostratigraphic Chart v2023/09. Derived data: CPlates (PaleoBytes), CC BY 4.0.',
   ];
@@ -1679,7 +1747,7 @@ function applyLanguage() {
   renderVe();
   renderLegend();
   renderPeriods();
-  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); update(); }
+  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); renderOutcropNote(); renderLegend(); update(); }
 }
 
 // ---------- controls ----------
@@ -1702,11 +1770,20 @@ $('play').addEventListener('click', () => {
 $('slider').addEventListener('input', (e) => { setPlaying(false); goTo(state.oldest - Number(e.target.value)); });
 $('show-flow').addEventListener('change', (e) => { state.flow = e.target.checked; update(); });
 $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.target.checked; update(); });
+$('show-outcrops').checked = state.outcrops;
+$('show-outcrops').addEventListener('change', (e) => { state.outcrops = e.target.checked; keepParams(); renderLegend(); renderOutcropNote(); update(); });
+function renderOutcropNote() {
+  const note = $('outcrop-note');
+  const o = state.data?.meta.outcrops;
+  note.hidden = !state.outcrops || !o;
+  if (o) note.textContent = `${t().outcropNote} ${o.stratigraphy_note[state.lang]}`;
+}
 $('fit-trench').checked = state.fit;
 $('fit-trench').addEventListener('change', (e) => { state.fit = e.target.checked; keepParams(); renderLegend(); update(); });
 function keepParams() {
   const params = new URLSearchParams(location.search);
   if (state.fit) params.set('trench', 'paleodem'); else params.delete('trench');
+  if (state.outcrops) params.set('outcrops', '1'); else params.delete('outcrops');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
   history.replaceState(null, '', `?${params}`);

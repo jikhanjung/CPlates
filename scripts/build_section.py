@@ -394,6 +394,22 @@ def main():
                  "anchor": section["anchor"]},
         "built_with": f"pygplates {pygplates.__version__}",
     }
+    # Byrd Group outcrops (Myrow et al. 2002, fig. 1), in the block's along/across km.
+    outcrops_path = ROOT / "sources/sections/byrd_outcrops.json"
+    if outcrops_path.exists():
+        outcrops = json.loads(outcrops_path.read_text())
+
+        def block_km(lon, lat):
+            v = unit(lon, lat)
+            a = math.degrees(math.atan2(float(np.cross(anchor, v) @ pole), float(v @ anchor)))
+            b = math.degrees(math.asin(max(-1.0, min(1.0, float(v @ pole)))))
+            return [round(a * km, 1), round(b * km, 1)]
+
+        meta["outcrops"] = {
+            **{k: outcrops[k] for k in ("source", "method", "stratigraphy_note", "units")},
+            "outlines": [{"unit": o["unit"], "ab": [block_km(*p) for p in o["ring"]]} for o in outcrops["outlines"]],
+            "sections": [{"id": x["id"], "ab": block_km(*x["at"])} for x in outcrops["sections"]],
+        }
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     total = sum(p.stat().st_size for p in OUT.iterdir())
     print(f"section: {len(ages)} ages, grid {nx}×{ny}, {total / 1e6:.1f} MB")

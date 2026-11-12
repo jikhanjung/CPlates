@@ -357,6 +357,20 @@ async function openSection(viewport, query) {
     const shown = await page.evaluate(() => Object.fromEntries(Object.entries(window.cplates.handles).map(([k, m]) => [k, m.visible])));
     check(shown.front && !shown.back, `from the front, the back handle should be hidden: ${JSON.stringify(shown)}`);
   }
+  // Byrd Group outcrops traced from Myrow et al. 2002, draped on the surface.
+  {
+    await page.evaluate(() => window.cplates.goTo(520));
+    await page.click('#show-outcrops');
+    await page.waitForTimeout(400);
+    check(new URL(page.url()).searchParams.get('outcrops') === '1', 'the address should remember the outcrops');
+    check(!(await page.locator('#outcrop-note').isHidden()), 'the outcrop note should say what the outlines are');
+    check((await page.locator('#legend').innerText()).includes('Myrow'), 'the legend should name the outcrops');
+    const labels = await page.evaluate(() => [...document.querySelectorAll('#labels span.outcrop')].map((s) => s.textContent));
+    check(labels.some((x) => x.includes('하부 버드층군')), `the lower Byrd Group should be named: ${labels}`);
+    await page.screenshot({ path: 'test-results/section-outcrops.png' });
+    await page.click('#show-outcrops');
+    await page.waitForTimeout(200);
+  }
   // Merdith's trench and PaleoDEM disagree: marked; and, on request, the trench fitted to PaleoDEM.
   {
     await page.evaluate(() => window.cplates.goTo(520));
