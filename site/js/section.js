@@ -19,6 +19,7 @@ import { subductionFlow } from './cornerflow.js';
 import { RotationModel, turn } from './rotation.js';
 import { toVector } from './geo.js';
 import { continentalShare, crustKm, OCEANIC_CRUST_KM } from './isostasy.js';
+import { slabUV, slabSD, outsidePieces, insidePieces, carve } from './slabcut.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
 const BASE = '../data/section/';
@@ -177,7 +178,12 @@ controls.enableDamping = true;
 controls.minDistance = 0.8;
 controls.maxDistance = 14;
 
-const colour = (hex) => new THREE.Color(hex);
+// Parsed once per hex string; each call hands out a fresh copy.
+const parsedColours = new Map();
+const colour = (hex) => {
+  if (!parsedColours.has(hex)) parsedColours.set(hex, new THREE.Color(hex));
+  return parsedColours.get(hex).clone();
+};
 const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
 const water = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
   color: colour(COLOURS.water), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
@@ -278,11 +284,13 @@ function setGeometry(mesh, positions, colours, index) {
 }
 
 // A band between two curves along the section face (z = 0), coloured per column.
-function band(out, xs, upper, lower, colourAt, z = 0.0005) {
+// With `cut`, each quad goes through it instead (to leave out the slab).
+function band(out, xs, upper, lower, colourAt, z = 0.0005, cut = null) {
   for (let i = 0; i < xs.length - 1; i++) {
     const c0 = colourAt(i);
     const c1 = colourAt(i + 1);
     const quad = [[xs[i], upper[i], c0], [xs[i + 1], upper[i + 1], c1], [xs[i + 1], lower[i + 1], c1], [xs[i], lower[i], c0]];
+    if (cut) { cut(quad.map(([x, y, c]) => ({ p: [x, y, z], c: [c.r, c.g, c.b] })), out); continue; }
     for (const k of [0, 1, 2, 0, 2, 3]) {
       out.p.push(quad[k][0], quad[k][1], z);
       out.c.push(quad[k][2].r, quad[k][2].g, quad[k][2].b);
@@ -507,6 +515,35 @@ function update() {
   const trench = displayTrench(state.age);
   state.trench = trench;
   const k = Math.max(0, Math.min(meta.ages.length - 1, Math.round(meta.ages[0] - state.age)));
+
+  // The main slab, row by row: where the eased trench crosses the row, the way to its
+  // overriding side, and the sea floor's depth there (the slab starts on the sea floor).
+  // Every layer is cut away where the slab passes, and the slab drawn in the gap.
+  const slabRows = new Array(ny).fill(null);
+  if (trench) {
+    const [ka, kb] = [xAt(ci0) * 1000, xAt(ci1) * 1000];
+    for (let j = cj0; j <= cj1; j++) {
+      const r = trench.rows[j];
+      if (!r || r.a < ka || r.a > kb) continue;
+      const iT = Math.max(0, Math.min(nx - 1, Math.round((r.a - meta.along_km[0]) / meta.step_km)));
+      slabRows[j] = { ...r, b: meta.across_km[0] + j * meta.step_km, top: Math.max(0, -h[j * nx + iT] / 1000) };
+    }
+  }
+  // A point in the scene → its slab coordinates, or null where its row has no slab.
+  const slabF = (x, y, z, row) => {
+    const r = slabRows[row ?? Math.round((-z * 1000 - meta.across_km[0]) / meta.step_km)];
+    if (!r) return null;
+    const s = (x * 1000 - r.a) * r.na + (-z * 1000 - r.b) * r.nb;
+    return slabUV(s, (-y * 1000) / state.ve - r.top, SLAB_DIP);
+  };
+  const OUTSIDE = outsidePieces(SLAB_KM);
+  const vtx = (p, c = null, row = undefined) => ({ p, c, f: slabF(p[0], p[1], p[2], row) });
+  const cutInto = (poly, positions, colours, pieces = OUTSIDE) => carve(poly, pieces, (a, b, c) => {
+    for (const v of [a, b, c]) {
+      positions.push(v.p[0], v.p[1], v.p[2]);
+      if (colours) colours.push(v.c[0], v.c[1], v.c[2]);
+    }
+  });
   const other = (n) => data.region[k * data.cells + n] === 2;
   const inCrop = (i, j) => i >= ci0 && i <= ci1 && j >= cj0 && j <= cj1;
 
@@ -518,63 +555,61 @@ function update() {
 
   // One crust solid for the box: relief on top, the Airy/oceanic base beneath, walls where
   // the box cuts it. Other continents are tinted grey so Antarctica stands out.
-  const pos = [];
-  const col = [];
-  const low = [];
-  const crustColour = [];
-  for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
-      const height = h[j * nx + i];
-      pos.push(xAt(i), yOf(height / 1000), zAt(j));
-      low.push(xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
-      const cc = colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), continentalShare(height));
-      crustColour.push(cc.r, cc.g, cc.b);
+  // Per grid point, filled only inside the box (the grid reaches beyond it).
+  const pos = new Float32Array(nx * ny * 3);
+  const col = new Float32Array(nx * ny * 3);
+  const low = new Float32Array(nx * ny * 3);
+  const crustColour = new Float32Array(nx * ny * 3);
+  const [oceanicColour, continentalColour, otherColour] = [colour(COLOURS.oceanic), colour(COLOURS.continental), colour('#8b8a86')];
+  const set3 = (array, n, a, b, c) => { array[n * 3] = a; array[n * 3 + 1] = b; array[n * 3 + 2] = c; };
+  for (let j = cj0; j <= cj1; j++) {
+    for (let i = ci0; i <= ci1; i++) {
+      const n = j * nx + i;
+      const height = h[n];
+      set3(pos, n, xAt(i), yOf(height / 1000), zAt(j));
+      set3(low, n, xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
+      const cc = oceanicColour.clone().lerp(continentalColour, continentalShare(height));
+      set3(crustColour, n, cc.r, cc.g, cc.b);
       const c = hypsometric(height);
-      const w = data.lens[j * nx + i] / 255;
-      if (other(j * nx + i) && height > -1000) c.lerp(colour('#8b8a86'), 0.6);
+      const w = data.lens[n] / 255;
+      if (other(n) && height > -1000) c.lerp(otherColour, 0.6);
       if (state.shackleton && w > 0) c.lerp(limestone, grown > 0 ? 0.85 : 0.45);
-      col.push(c.r, c.g, c.b);
+      set3(col, n, c.r, c.g, c.b);
     }
   }
   const index = [];
   const lowIndex = [];
-  const gridIndex = [];
-  const edges = new Map();
-  const edge = (a, b) => { const key = a < b ? `${a}:${b}` : `${b}:${a}`; edges.set(key, (edges.get(key) ?? 0) + 1); };
   for (let j = cj0; j < cj1; j++) {
     for (let i = ci0; i < ci1; i++) {
       const a = j * nx + i;
-      for (const tri of [[a, a + 1, a + nx], [a + 1, a + nx + 1, a + nx]]) {
-        index.push(...tri);
-        gridIndex.push(...tri);
-        lowIndex.push(tri[0], tri[2], tri[1]);
-        edge(tri[0], tri[1]); edge(tri[1], tri[2]); edge(tri[2], tri[0]);
-      }
+      index.push(a, a + 1, a + nx, a + 1, a + nx + 1, a + nx);
+      lowIndex.push(a, a + nx, a + 1, a + 1, a + nx, a + nx + 1);
     }
   }
+  const gridIndex = index;
+  // The box's walls: its back row and its two ends (the front row is the section face,
+  // drawn with its own layers).
+  const rim = [];
+  for (let i = ci0; i < ci1; i++) rim.push([cj1 * nx + i, cj1 * nx + i + 1]);
+  for (let j = cj0; j < cj1; j++) rim.push([j * nx + ci0, (j + 1) * nx + ci0], [j * nx + ci1, (j + 1) * nx + ci1]);
   setGeometry(top, pos, col, index);
   setGeometry(base, low, null, lowIndex);
   const wall = [];
   const wallColours = [];
-  for (const [key, count] of edges) {
-    if (count !== 1) continue;
-    const [a, b] = key.split(':').map(Number);
-    // The front row is the section face, drawn with its own layers.
-    if (Math.floor(a / nx) === cj0 && Math.floor(b / nx) === cj0) continue;
-    wall.push(...pos.slice(a * 3, a * 3 + 3), ...pos.slice(b * 3, b * 3 + 3), ...low.slice(b * 3, b * 3 + 3),
-              ...pos.slice(a * 3, a * 3 + 3), ...low.slice(b * 3, b * 3 + 3), ...low.slice(a * 3, a * 3 + 3));
+  for (const [a, b] of rim) {
     const ca = crustColour.slice(a * 3, a * 3 + 3);
     const cb = crustColour.slice(b * 3, b * 3 + 3);
-    wallColours.push(...ca, ...cb, ...cb, ...ca, ...cb, ...ca);
+    cutInto([vtx(pos.slice(a * 3, a * 3 + 3), ca), vtx(pos.slice(b * 3, b * 3 + 3), cb),
+             vtx(low.slice(b * 3, b * 3 + 3), cb), vtx(low.slice(a * 3, a * 3 + 3), ca)], wall, wallColours);
   }
   setGeometry(walls, wall, wallColours);
 
   // Mantle lithosphere and mantle as translucent solids inside the box.
   const shareGrid = new Float32Array(nx * ny);
   for (let n = 0; n < nx * ny; n++) shareGrid[n] = continentalShare(h[n]);
-  const lithBase = [];
-  for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
+  const lithBase = new Float32Array(nx * ny * 3);
+  for (let j = cj0; j <= cj1; j++) {
+    for (let i = ci0; i <= ci1; i++) {
       let sum = 0;
       let count = 0;
       for (let jj = Math.max(0, j - 3); jj <= Math.min(ny - 1, j + 3); jj++) {
@@ -582,20 +617,26 @@ function update() {
       }
       const f = sum / count;
       const crustBase = low[(j * nx + i) * 3 + 1];
-      lithBase.push(xAt(i), Math.max(bottom, Math.min(crustBase, yOf(-(f * 160 + (1 - f) * 90)))), zAt(j));
+      set3(lithBase, j * nx + i, xAt(i), Math.max(bottom, Math.min(crustBase, yOf(-(f * 160 + (1 - f) * 90)))), zAt(j));
     }
   }
-  const floor = [];
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) floor.push(xAt(i), bottom, zAt(j));
+  const floor = new Float32Array(nx * ny * 3);
+  for (let j = cj0; j <= cj1; j++) for (let i = ci0; i <= ci1; i++) set3(floor, j * nx + i, xAt(i), bottom, zAt(j));
   const solid = (upper, lower) => {
     const p = [];
     for (let t = 0; t < gridIndex.length; t += 3) {
-      for (const v of [gridIndex[t], gridIndex[t + 1], gridIndex[t + 2]]) p.push(lower[v * 3], lower[v * 3 + 1], lower[v * 3 + 2]);
+      const tri = [gridIndex[t], gridIndex[t + 1], gridIndex[t + 2]];
+      // Most rows have no slab: no need to cut.
+      if (tri.every((v) => !slabRows[Math.floor(v / nx)])) {
+        for (const v of tri) p.push(lower[v * 3], lower[v * 3 + 1], lower[v * 3 + 2]);
+        continue;
+      }
+      cutInto(tri.map((v) => vtx(lower.slice(v * 3, v * 3 + 3))), p, null);
     }
     const side = (a, b) => {
       const ua = upper.slice(a * 3, a * 3 + 3); const ub = upper.slice(b * 3, b * 3 + 3);
       const la = lower.slice(a * 3, a * 3 + 3); const lb = lower.slice(b * 3, b * 3 + 3);
-      p.push(...ua, ...ub, ...lb, ...ua, ...lb, ...la);
+      cutInto([vtx(ua), vtx(ub), vtx(lb), vtx(la)], p, null);
     };
     for (let i = ci0; i < ci1; i++) side(cj1 * nx + i, cj1 * nx + i + 1);
     for (let j = cj0; j < cj1; j++) { side(j * nx + ci0, (j + 1) * nx + ci0); side(j * nx + ci1, (j + 1) * nx + ci1); }
@@ -671,13 +712,14 @@ function update() {
     bottomY.push(bottom);
   }
   const out = { p: [], c: [] };
-  band(out, xs, mantleTopY, bottomY, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0001);
-  band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere), faceZ + 0.0005);
-  band(out, xs, surfaceY, crustBottomY, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[n]), faceZ + 0.0005);
-  band(out, xs, seaY, surfaceY.map((y) => Math.min(0, y)), () => colour(COLOURS.water).multiplyScalar(0.8), faceZ + 0.0005);
+  const faceCut = (poly, o) => cutInto(poly.map((v) => vtx(v.p, v.c, cj0)), o.p, o.c);
+  band(out, xs, mantleTopY, bottomY, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0005, faceCut);
+  band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere), faceZ + 0.0005, faceCut);
+  band(out, xs, surfaceY, crustBottomY, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[n]), faceZ + 0.0005, faceCut);
+  band(out, xs, seaY, surfaceY.map((y) => Math.min(0, y)), () => colour(COLOURS.water).multiplyScalar(0.8), faceZ + 0.0005, faceCut);
   if (state.shackleton && grown > 0) {
     const lower = surfaceY.map((y, n) => y - yOf(state.limestoneKm * lensRow[n] * grown));
-    band(out, xs, surfaceY, lower, () => limestone, faceZ + 0.0007);
+    band(out, xs, surfaceY, lower, () => limestone, faceZ + 0.0007, faceCut);
   }
   setGeometry(face, out.p, out.c);
   state.profile = { xs, surfaceY, crustBottomY, lithY, bottom, share, z: faceZ };
@@ -743,13 +785,22 @@ function update() {
       sheet.push(...p0, ...q0, ...q1, ...p0, ...q1, ...p1);
     }
   };
-  if (trench) {
-    for (let j = cj0; j < cj1; j++) {
-      if (!rowsIn(j) || !rowsIn(j + 1)) continue;
-      const p = trench.rows[j];
-      const q = trench.rows[j + 1];
-      panel(p.a, rowB(j), q.a, rowB(j + 1), p.na, p.nb, q.na, q.nb);
-    }
+  // The main slab: its top and base surfaces and the end where it starts, in the same
+  // slab coordinates the layers were cut with, so the sheets line the gap exactly.
+  const slabAt = (r, u, v) => { const [s, d] = slabSD(u, v, SLAB_DIP); return at(r.a + r.na * s, r.b + r.nb * s, r.top + d); };
+  const quad = (a, b, c, d) => sheet.push(...a, ...b, ...c, ...a, ...c, ...d);
+  const sin = Math.sin(SLAB_DIP);
+  const cos = Math.cos(SLAB_DIP);
+  for (let j = cj0; j < cj1; j++) {
+    const p = slabRows[j];
+    const q = slabRows[j + 1];
+    if (!p || !q) continue;
+    const uTop = (r) => Math.max(0, (depth - r.top) / sin);
+    const uBase = (r) => Math.max(0, (depth - r.top - SLAB_KM * cos) / sin);
+    const vEnd = (r) => Math.max(0, Math.min(SLAB_KM, (depth - r.top) / cos));
+    quad(slabAt(p, 0, 0), slabAt(q, 0, 0), slabAt(q, uTop(q), 0), slabAt(p, uTop(p), 0));
+    quad(slabAt(p, 0, vEnd(p)), slabAt(q, 0, vEnd(q)), slabAt(q, uBase(q), vEnd(q)), slabAt(p, uBase(p), vEnd(p)));
+    quad(slabAt(p, 0, 0), slabAt(q, 0, 0), slabAt(q, 0, vEnd(q)), slabAt(p, 0, vEnd(p)));
   }
   if (boundaryFrame_) {
     for (const piece of boundaryFrame_.pieces) {
@@ -770,24 +821,27 @@ function update() {
   // Slab and flow on the face, where the eased trench crosses the face row.
   const sp = [];
   const sc = [];
-  const crossing = rowsIn(cj0) ? trench.rows[cj0] : null;
+  const crossing = slabRows[cj0];
   state.faceTrench = crossing ? { s_km: crossing.a } : null;
   if (crossing) {
     const xT = crossing.a;
     const side = Math.sign(crossing.na) || (trench.over_side ?? -1);
-    const reach = depth / Math.sin(SLAB_DIP) + SLAB_KM;
-    const along = [side * Math.cos(SLAB_DIP), -Math.sin(SLAB_DIP)];
-    const normal = [-side * Math.sin(SLAB_DIP), -Math.cos(SLAB_DIP)];
-    const strip = (from, to, c) => {
-      const p = (u, d) => [(xT + along[0] * u + normal[0] * d) / 1000, Math.max(bottom, yOf(along[1] * u + normal[1] * d))];
-      const cs = [p(0, from), p(reach, from), p(reach, to), p(0, to)];
-      for (const k2 of [0, 1, 2, 0, 2, 3]) { sp.push(cs[k2][0], cs[k2][1], faceZ + 0.0003); sc.push(c.r, c.g, c.b); }
-    };
-    strip(0, OCEANIC_CRUST_KM, colour(COLOURS.slabCrust));
-    strip(OCEANIC_CRUST_KM, SLAB_KM, colour(COLOURS.slabMantle));
-    const field = subductionFlow(side, SLAB_DIP);
+    // The slab on the face: each column from the surface down, kept inside the slab — the
+    // gap the layers left. Seen on the face it dips at its apparent angle.
+    const fill = [colour(COLOURS.slabCrust), colour(COLOURS.slabMantle)];
+    insidePieces(OCEANIC_CRUST_KM, SLAB_KM).forEach((planes, part) => {
+      const c = [fill[part].r, fill[part].g, fill[part].b];
+      for (let n = 0; n + 1 < xs.length; n++) {
+        const column = [[xs[n], surfaceY[n]], [xs[n + 1], surfaceY[n + 1]], [xs[n + 1], bottom], [xs[n], bottom]];
+        cutInto(column.map(([x, y]) => vtx([x, y, faceZ + 0.0005], c, cj0)), sp, sc, [planes]);
+      }
+    });
+    // The corner flow on the face uses the same apparent dip, from the sea floor at the trench.
+    const na = Math.max(0.05, Math.abs(crossing.na));
+    const dip = Math.atan(Math.tan(SLAB_DIP) * na);
+    const field = subductionFlow(side, dip);
     const convergence = (trench.rate_cm_yr ?? 0) * (trench.over_side ?? side);
-    flow = { field, xT, side, dip: SLAB_DIP, speed: Math.max(0.5, Math.abs(convergence)), depth, lithY, xs, z: faceZ };
+    flow = { field, xT, side, dip, na: crossing.na, top: crossing.top, speed: Math.max(0.5, Math.abs(convergence)), depth, lithY, xs, z: faceZ };
   } else {
     flow = null;
   }
@@ -817,14 +871,13 @@ const particleColours = new Float32Array(PARTICLES * 4);
 for (let n = 0; n < PARTICLES; n++) particleColours.set([tint.r, tint.g, tint.b, 0], n * 4);
 flowPoints.geometry.setAttribute('color', new THREE.BufferAttribute(particleColours, 4));
 
-// Slab coordinates of a point (x along, d depth, km): u down-dip from the trench along the
-// slab top, n below the slab top (positive into the slab).
+// Slab coordinates of a point on the face (x along, d depth, km), as the layers were cut:
+// u down-dip from the trench's sea floor, n below the slab top (positive into the slab).
 function slabCoords(xkm, dkm) {
-  const w = [xkm - flow.xT, -dkm];
-  const along = [flow.side * Math.cos(SLAB_DIP), -Math.sin(SLAB_DIP)];
-  const normal = [-flow.side * Math.sin(SLAB_DIP), -Math.cos(SLAB_DIP)];
-  return [w[0] * along[0] + w[1] * along[1], w[0] * normal[0] + w[1] * normal[1]];
+  return slabUV((xkm - flow.xT) * flow.na, dkm - flow.top, SLAB_DIP);
 }
+// The corner flow at a point on the face, its corner on the sea floor at the trench.
+const flowAt = (xkm, dkm) => flow.field(xkm - flow.xT, -(dkm - flow.top));
 
 function inMantle(xkm, dkm) {
   if (!flow) return false;
@@ -863,9 +916,9 @@ function traceStreamlines() {
   for (const [phi, r] of seeds) {
     for (const direction of [1, -1]) {
       let x = flow.xT + flow.side * r * Math.cos(phi);
-      let d = r * Math.sin(phi);
+      let d = flow.top + r * Math.sin(phi);
       for (let step = 0; step < 400; step++) {
-        const v = flow.field(x - flow.xT, -d);
+        const v = flowAt(x, d);
         if (!v) break;
         const speed = Math.hypot(v[0], v[1]) || 1;
         const nx_ = x + direction * (v[0] / speed) * 8;
@@ -884,7 +937,7 @@ let flowKey = '';
 function stepFlow(dt) {
   streamlines.visible = Boolean(flow) && state.flow;
   if (!flow || !state.flow) return;
-  const key = `${flow.xT}:${flow.side}:${state.ve}:${flow.z}:${flow.xs[0]}:${flow.xs.length}`;
+  const key = `${flow.xT}:${flow.side}:${flow.dip}:${flow.top}:${state.ve}:${flow.z}:${flow.xs[0]}:${flow.xs.length}`;
   if (key !== flowKey) {
     flowKey = key;
     for (let n = 0; n < PARTICLES; n++) respawn(n);
@@ -899,7 +952,7 @@ function stepFlow(dt) {
     let d = particles.pos[n * 3 + 1];
     particles.life[n] -= dt;
     particles.born[n] += dt;
-    const v = flow.field(x - flow.xT, -d);
+    const v = flowAt(x, d);
     if (!v || particles.life[n] <= 0 || !inMantle(x, d)) { respawn(n); x = particles.pos[n * 3]; d = particles.pos[n * 3 + 1]; }
     else {
       x += v[0] * scale * dt;
@@ -1178,15 +1231,15 @@ function placeLabels() {
   if (x0 < -1.8 && x1 > -1.8) anchors.push({ id: 'interior', at: [-1.8, 0.1, faceZ], text: t().interior, cls: '' });
   if (state.faceTrench) anchors.push({ id: 'trench', at: [state.faceTrench.s_km / 1000, 0.08, faceZ], text: t().trench, cls: '' });
   if (flow && depth >= 200) {
-    const along = Math.min(depth * 0.55, 300) / Math.sin(SLAB_DIP);
-    anchors.push({ id: 'slab', at: [(flow.xT + flow.side * Math.cos(SLAB_DIP) * along) / 1000, yOf(-Math.sin(SLAB_DIP) * along), faceZ + 0.004],
+    const along = Math.min(depth * 0.55, 300) / Math.sin(flow.dip);
+    anchors.push({ id: 'slab', at: [(flow.xT + flow.side * Math.cos(flow.dip) * along) / 1000, yOf(-(flow.top + Math.sin(flow.dip) * along)), faceZ + 0.004],
                    text: t().slabLabel, cls: 'boundary' });
     if (state.flow) {
       const r = Math.min(depth * 0.6, 320);
-      for (const [id, phi, scale, text] of [['wedge', SLAB_DIP / 2 + 0.25, 1, t().wedgeLabel],
-                                            ['under', (SLAB_DIP + Math.PI) / 2 + 0.35, 1.35, t().underLabel]]) {
+      for (const [id, phi, scale, text] of [['wedge', flow.dip / 2 + 0.25, 1, t().wedgeLabel],
+                                            ['under', (flow.dip + Math.PI) / 2 + 0.35, 1.35, t().underLabel]]) {
         const x = flow.xT + flow.side * r * scale * Math.cos(phi);
-        const d = r * scale * Math.sin(phi);
+        const d = flow.top + r * scale * Math.sin(phi);
         if (d < depth && x / 1000 > x0 && x / 1000 < x1) anchors.push({ id, at: [x / 1000, yOf(-d), faceZ + 0.004], text, cls: 'boundary' });
       }
     }
