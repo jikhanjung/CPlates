@@ -54,7 +54,8 @@ const STRINGS = {
     showFlow: '맨틀 흐름 (모식)', showBoundaries: '판 경계',
     observedBadge: '관측', modelBadge: '재구성', sketchBadge: '모식',
     columnHeading: '섀클턴 석회암 산지의 기록',
-    columnObserved: '관측 (암석)', columnModel: 'PaleoDEM 환경',
+    columnObserved: '관측 · Myrow et al. 2002 개정 층서', columnModel: 'PaleoDEM 환경',
+    colInboard: '← 안쪽 (대륙 쪽)', colOutboard: '바깥쪽 →', colTop: 'C–O?', interpSuffix: ' (해석)', belowView: '{age} Ma 이전',
     legend: '범례',
     lgWater: '바다', lgContinental: '대륙 지각 (에어리 평형으로 계산)', lgOceanic: '해양 지각 (7 km)',
     lgLithosphere: '맨틀 암석권 (모식 두께)', lgMantle: '맨틀', lgSlab: '섭입하는 판 (모식, 45°)',
@@ -117,7 +118,8 @@ const STRINGS = {
     showFlow: 'Mantle flow (sketch)', showBoundaries: 'Plate boundaries',
     observedBadge: 'Observed', modelBadge: 'Reconstructed', sketchBadge: 'Sketch',
     columnHeading: 'Record at the Shackleton Limestone area',
-    columnObserved: 'Observed (rocks)', columnModel: 'PaleoDEM setting',
+    columnObserved: 'Observed · Myrow et al. 2002, revised', columnModel: 'PaleoDEM setting',
+    colInboard: '← inboard (continent)', colOutboard: 'outboard →', colTop: 'C–O?', interpSuffix: ' (interpretation)', belowView: 'before {age} Ma',
     legend: 'Legend',
     lgWater: 'Sea', lgContinental: 'Continental crust (Airy isostasy)', lgOceanic: 'Oceanic crust (7 km)',
     lgLithosphere: 'Mantle lithosphere (schematic thickness)', lgMantle: 'Mantle', lgSlab: 'Subducting plate (sketch, 45°)',
@@ -1512,7 +1514,8 @@ function renderAge() {
 }
 
 function activeUnits() {
-  return state.data.meta.section.stratigraphy.units.filter((u) => state.age <= u.age[0] + 0.5 && state.age >= u.age[1] - 0.5);
+  // Units below the view (older than its start, age unknown) are not "being laid down now".
+  return state.data.meta.section.stratigraphy.units.filter((u) => !u.below && state.age <= u.age[0] + 0.5 && state.age >= u.age[1] - 0.5);
 }
 
 function renderNow(height) {
@@ -1586,52 +1589,121 @@ function renderNow(height) {
   note.hidden = !state.fit && !(state.trench && state.sites?.share > 0);
 }
 
+// The record at the Shackleton Limestone area, drawn after the revised stratigraphy of
+// Myrow et al. 2002 (fig. 16): across is inboard (continent side) to outboard, down is age.
+// The Douglas Formation is an inboard wedge interfingering with the Starshot, and the thin
+// Holyoake Formation (with the bioherms and phosphatic crust under it) is absent inboard.
+// Left: the PaleoDEM setting at the locality, Myr by Myr (model).
 function drawColumn() {
   const svg = $('column');
   const W = 300;
-  const H = 230;
-  const top_ = 14;
-  const bottom_ = H - 8;
-  const y = (age) => top_ + ((state.oldest - age) / (state.oldest - state.youngest)) * (bottom_ - top_);
-  // Old at the bottom, as in a column: flip.
-  const Y = (age) => top_ + bottom_ - y(age);
+  const top_ = 18;
+  const bottom_ = 222;
+  const Y = (age) => top_ + ((state.oldest - Math.min(state.oldest, Math.max(state.youngest, age))) / (state.oldest - state.youngest)) * (bottom_ - top_);
+  // Oldest at the bottom.
+  const A = (age) => top_ + bottom_ - Y(age);
   const ns = 'http://www.w3.org/2000/svg';
   svg.replaceChildren();
-  const add = (tag, attrs, text) => {
+  const add = (tag, attrs, text, parent = svg) => {
     const e = document.createElementNS(ns, tag);
     for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
     if (text) e.textContent = text;
-    svg.append(e);
+    parent.append(e);
     return e;
   };
+  const units = Object.fromEntries(state.data.meta.section.stratigraphy.units.map((u) => [u.id, u]));
+  const short = (u) => u.name[state.lang].split(' (')[0];
+  // Fill patterns: limestone bricks, coarse dots (conglomerate), fine dots (siltstone).
+  const defs = add('defs', {});
+  const pattern = (id, w, h, bg, draw) => {
+    const pt = add('pattern', { id, width: w, height: h, patternUnits: 'userSpaceOnUse' }, null, defs);
+    add('rect', { width: w, height: h, fill: bg }, null, pt);
+    draw(pt);
+  };
+  pattern('col-brick', 12, 6, units.shackleton?.colour ?? '#9fd3e0', (pt) => {
+    add('path', { d: 'M0 0.5H12M0 3.5H12M3 0.5V3.5M9 3.5V6.5', stroke: '#5e8c97', 'stroke-width': 0.6, fill: 'none' }, null, pt);
+  });
+  pattern('col-cong', 7, 7, units.douglas?.colour ?? '#b0855a', (pt) => {
+    add('circle', { cx: 2, cy: 2, r: 1.3, fill: '#5d3f22' }, null, pt);
+    add('circle', { cx: 5.5, cy: 5, r: 0.9, fill: '#5d3f22' }, null, pt);
+  });
+  pattern('col-silt', 5, 5, units.starshot?.colour ?? '#8a8f6a', (pt) => {
+    add('circle', { cx: 1.5, cy: 1.5, r: 0.5, fill: '#3e4230' }, null, pt);
+  });
+  pattern('col-goldie', 6, 6, units.goldie?.colour ?? '#8c8c8c', (pt) => {
+    add('path', { d: 'M0 3Q1.5 1 3 3T6 3', stroke: '#5c5c5c', 'stroke-width': 0.6, fill: 'none' }, null, pt);
+  });
+
   add('text', { x: 4, y: 10 }, t().columnModel);
-  add('text', { x: 92, y: 10 }, t().columnObserved);
+  add('text', { x: 296, y: 10, 'text-anchor': 'end' }, t().columnObserved);
   // PaleoDEM setting at the locality, per Myr.
   const { meta, surface, cells } = state.data;
   const nLoc = lineRow() * meta.nx + localityColumn();
   meta.ages.forEach((age, k) => {
     const z = surface[k * cells + nLoc];
     const env = ENV.find(([, low]) => z >= low);
-    add('rect', { x: 4, y: Y(age - 0.5), width: 70, height: Math.max(1, Y(age + 0.5) - Y(age - 0.5)) + 0.8, fill: env[2] });
+    add('rect', { x: 4, y: A(age + 0.5), width: 28, height: Math.max(1, A(age - 0.5) - A(age + 0.5)) + 0.8, fill: env[2] });
   });
-  // Observed units: a bar over each unit's age range, labels pushed apart so they do not overlap.
-  let lastLabel = -Infinity;
-  const units = [...meta.section.stratigraphy.units].sort((a, b) => a.age[0] - b.age[0]);
-  for (const u of units) {
-    const yTop = Y(u.age[1]);
-    const yBottom = Y(u.age[0]);
-    const height = Math.max(3, yBottom - yTop);
-    add('rect', { x: 92, y: yTop, width: 60, height, fill: u.colour, opacity: u.kind === 'interpretation' ? 0.55 : 1,
-                  stroke: u.kind === 'interpretation' ? '#9cc7ff' : '#0b1220', 'stroke-width': 1,
-                  'stroke-dasharray': u.kind === 'interpretation' ? '3 2' : 'none' });
-    const wanted = yTop + height / 2 + 3.5;
-    const at = Math.max(wanted, lastLabel + 11);
-    lastLabel = at;
-    if (at - wanted > 1) add('line', { x1: 152, x2: 157, y1: yTop + height / 2, y2: at - 3.5, stroke: '#9aa8bd', 'stroke-width': 0.6 });
-    add('text', { x: 158, y: at, class: 'label' }, `${u.name[state.lang].split(' (')[0]} ${u.age[0]}${u.age[0] !== u.age[1] ? `–${u.age[1]}` : ''}`);
+  for (const age of [540, 525, 512, 500, 485, 460]) add('text', { x: 35, y: A(age) + 3 }, String(age));
+
+  // The revised stratigraphy, across the panel from inboard (left) to outboard (right).
+  const X0 = 62;
+  const X1 = 296;
+  const X = (f) => X0 + f * (X1 - X0);
+  const poly = (pts, attrs) => add('polygon', { points: pts.map(([f, age]) => `${X(f)},${A(age)}`).join(' '), ...attrs });
+  const label = (text, f, age, anchor = 'middle') => add('text', { x: X(f), y: A(age) + 3, 'text-anchor': anchor, class: 'label' }, text);
+  const line = { stroke: '#0b1220', 'stroke-width': 0.8 };
+  const g = units.goldie;
+  const sh = units.shackleton;
+  const ho = units.holyoake;
+  const st = units.starshot;
+  const dg = units.douglas;
+  const up = units.uplift;
+  if (g) {
+    poly([[0, g.age[0]], [1, g.age[0]], [1, g.age[1]], [0, g.age[1]]], { fill: 'url(#col-goldie)', ...line });
+    label(short(g), 0.5, (g.age[0] + g.age[1]) / 2);
   }
-  for (const age of [540, 520, 500, 480, 460]) add('text', { x: 76, y: Y(age) + 3 }, String(age));
-  add('line', { x1: 0, x2: W, y1: Y(state.age), y2: Y(state.age), stroke: '#fff', 'stroke-width': 1.5 });
+  if (sh) {
+    poly([[0, sh.age[0]], [1, sh.age[0]], [1, sh.age[1]], [0, sh.age[1]]], { fill: 'url(#col-brick)', ...line });
+    // The unconformity at its base.
+    add('path', { d: Array.from({ length: 24 }, (_, k) => `${k ? 'L' : 'M'}${X(k / 23)},${A(sh.age[0]) + (k % 2 ? 1.5 : -1.5)}`).join(''),
+                  stroke: '#0b1220', 'stroke-width': 0.9, fill: 'none' });
+    label(short(sh), 0.5, (sh.age[0] + sh.age[1]) / 2);
+  }
+  if (st) {
+    poly([[0, st.age[0]], [1, st.age[0]], [1, st.age[1]], [0, st.age[1]]], { fill: 'url(#col-silt)', ...line });
+    // Its top is not well bounded: dashed, with the boundary the figure queries.
+    add('line', { x1: X0, x2: X1, y1: A(st.age[1]), y2: A(st.age[1]), stroke: '#e8edf5', 'stroke-width': 1, 'stroke-dasharray': '3 2' });
+    add('text', { x: X1, y: A(st.age[1]) - 2, 'text-anchor': 'end' }, t().colTop);
+    label(short(st), 0.68, (st.age[0] + st.age[1]) / 2 + 2);
+  }
+  if (ho) {
+    // Thin, outboard of the Douglas wedge, with bioherms under it and the phosphatic crust.
+    const f0 = 0.4;
+    poly([[f0, ho.age[0]], [1, ho.age[0]], [1, ho.age[0] - 1.3], [f0, ho.age[0] - 1.3]], { fill: '#2b2f36', stroke: 'none' });
+    for (let f = f0 + 0.02; f < 0.92; f += 0.045) {
+      add('path', { d: `M${X(f) - 3},${A(ho.age[0])} a3,3 0 0 1 6,0 z`, fill: sh?.colour ?? '#9fd3e0', stroke: '#0b1220', 'stroke-width': 0.5 });
+    }
+    add('text', { x: X(1) - 2, y: A(ho.age[0] - 1.3) - 2, 'text-anchor': 'end', class: 'label' }, short(ho));
+  }
+  if (dg) {
+    // The inboard wedge, interfingering outboard with the Starshot.
+    const [base, topAge] = dg.age;
+    const span = base - topAge;
+    const at = (k) => base - span * k;
+    poly([[0, base], [0.48, base], [0.4, at(0.12)], [0.44, at(0.2)], [0.33, at(0.35)], [0.37, at(0.43)],
+          [0.25, at(0.58)], [0.29, at(0.66)], [0.15, at(0.8)], [0.18, at(0.87)], [0, topAge]],
+         { fill: 'url(#col-cong)', ...line });
+    label(short(dg), 0.14, base - span * 0.32);
+  }
+  if (up) {
+    poly([[0, up.age[0]], [1, up.age[0]], [1, up.age[1]], [0, up.age[1]]],
+         { fill: up.colour, 'fill-opacity': 0.4, stroke: '#9cc7ff', 'stroke-width': 0.8, 'stroke-dasharray': '3 2' });
+    label(`${short(up)}${t().interpSuffix}`, 0.5, (up.age[0] + up.age[1]) / 2);
+  }
+  add('text', { x: X0, y: 236 }, t().colInboard);
+  add('text', { x: X1, y: 236, 'text-anchor': 'end' }, t().colOutboard);
+  add('line', { x1: 0, x2: W, y1: A(state.age), y2: A(state.age), stroke: '#fff', 'stroke-width': 1.5 });
 }
 
 function renderUnits() {
@@ -1644,7 +1716,8 @@ function renderUnits() {
     b.className = `badge ${u.kind === 'interpretation' ? 'model' : 'observed'}`;
     b.textContent = u.kind === 'interpretation' ? (state.lang === 'ko' ? '해석' : 'Interpretation') : t().observedBadge;
     const name = document.createElement('strong');
-    name.textContent = ` ${u.name[state.lang]} · ${u.age[0]}${u.age[0] !== u.age[1] ? `–${u.age[1]}` : ''} Ma`;
+    const when = u.below ? format(t().belowView, { age: u.age[1] }) : `${u.age[0]}${u.age[0] !== u.age[1] ? `–${u.age[1]}` : ''} Ma`;
+    name.textContent = ` ${u.name[state.lang]} · ${when}`;
     const what = document.createElement('div');
     what.textContent = u.what[state.lang];
     li.append(b, name, what);

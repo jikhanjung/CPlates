@@ -21,7 +21,7 @@
 .column-box { border-top: 1px solid var(--panel-line); padding-top: 8px; margin-top: 8px; }
 #column { width: 100%; height: auto; display: block; background: #0b1220; border-radius: 4px; }
 #column text { font-size: 10px; fill: var(--muted); font-family: inherit; }
-#column .label { fill: var(--text); font-size: 10.5px; }
+#column .label { fill: var(--text); font-size: 10.5px; paint-order: stroke; stroke: #0b1220; stroke-width: 2.5px; stroke-linejoin: round; }
 .units { list-style: none; padding: 0; margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; }
 .units li { margin: 0 0 6px; padding-left: 8px; border-left: 3px solid var(--observed); }
 .units li.interpretation { border-left-color: var(--model); }

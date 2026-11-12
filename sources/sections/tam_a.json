@@ -42,6 +42,28 @@
     },
     "units": [
       {
+        "id": "goldie",
+        "kind": "observed",
+        "below": true,
+        "age": [
+          540,
+          525
+        ],
+        "colour": "#8c8c8c",
+        "name": {
+          "ko": "골디층 (한정, 베어드모어층군)",
+          "en": "Goldie Formation (restricted, Beardmore Group)"
+        },
+        "what": {
+          "ko": "섀클턴 석회암 아래. Myrow et al. 2002가 섀클턴 석회암보다 오래된 퇴적층으로 한정했다(예전 '바깥쪽' 골디층은 스타샷층으로). 위 경계는 부정합, 아래 연대는 이 화면 밖.",
+          "en": "Below the Shackleton Limestone. Myrow et al. 2002 restricted it to strata older than the Shackleton (the former 'outboard' Goldie went into the Starshot). Unconformable top; its lower age lies outside this view."
+        },
+        "refs": [
+          "Myrow et al. 2002, fig. 16 (revised stratigraphy)",
+          "Goodge et al. 2002 ('inboard' and 'outboard' Goldie)"
+        ]
+      },
+      {
         "id": "shackleton",
         "kind": "observed",
         "age": [
@@ -95,12 +117,13 @@
           "en": "Holyoake Formation (shale, nodular limestone)"
         },
         "what": {
-          "ko": "물에 잠긴 면 위의 전이층. 위로 스타샷층으로 바뀐다. 캄브리아기 3–4절 (Dailyatia odyssei 대).",
-          "en": "Transitional unit above the drowning surface, grading up into the Starshot Formation; Cambrian Stages 3–4 (Dailyatia odyssei Zone)."
+          "ko": "물에 잠긴 면 위의 얇은 전이층(셰일·단괴 석회암). Myrow et al. 2002가 새로 정의했다. 위로 스타샷층으로 바뀌고, 안쪽(대륙 쪽)에는 없다 — 거기서는 더글러스층이 섀클턴 석회암 위에 바로 놓인다. 캄브리아기 3–4절 (Dailyatia odyssei 대).",
+          "en": "A thin transitional unit (shale, nodular limestone) over the drowning surface, newly defined by Myrow et al. 2002. It grades up into the Starshot and is absent inboard, where the Douglas lies directly on the Shackleton. Cambrian Stages 3–4 (Dailyatia odyssei Zone)."
         },
         "refs": [
-          "Myrow et al. 2002",
-          "Claybourn et al. 2019, Journal of Paleontology, doi:10.1017/jpa.2018.84"
+          "Myrow et al. 2002, fig. 16 (revised stratigraphy)",
+          "Claybourn et al. 2019, Journal of Paleontology, doi:10.1017/jpa.2018.84",
+          "Paulsen et al. 2007 (about 515–510 Ma)"
         ]
       },
       {
@@ -108,7 +131,7 @@
         "kind": "observed",
         "age": [
           511,
-          503
+          485
         ],
         "colour": "#8a8f6a",
         "name": {
@@ -116,11 +139,11 @@
           "en": "Starshot Formation (calcareous siltstone, turbidites)"
         },
         "what": {
-          "ko": "삼엽충·히올리스가 든 석회질 실트암. 서쪽 충상 시트에 눌려 가라앉은 전면 분지를 채운 퇴적층으로 해석된다. 끝 연대는 잘 묶이지 않았다.",
-          "en": "Trilobite- and hyolith-bearing calcareous siltstone, read as the fill of a basin depressed by thrust sheets to the west. Its upper age is poorly constrained."
+          "ko": "삼엽충·히올리스가 든 석회질 실트암·저탁암. 서쪽 충상 시트에 눌려 가라앉은 전면 분지를 채운 퇴적층으로 해석된다. Myrow et al. 2002가 예전의 딕층과 '바깥쪽' 골디층을 포함하도록 재정의했다. 위 끝은 잘 묶이지 않았고, 개정 층서 그림은 캄브리아기–오르도비스기 경계(?)까지 그린다.",
+          "en": "Trilobite- and hyolith-bearing calcareous siltstone and turbidites, read as the fill of a basin depressed by thrust sheets to the west. Redefined by Myrow et al. 2002 to include the former Dick Formation and 'outboard' Goldie. Its top is poorly constrained; the revised stratigraphy draws it up to the Cambrian–Ordovician boundary (?)."
         },
         "refs": [
-          "Myrow et al. 2002",
+          "Myrow et al. 2002, fig. 16 (revised stratigraphy)",
           "Gootee & Stump 2006 (about 512 Ma)"
         ]
       },
@@ -128,20 +151,20 @@
         "id": "douglas",
         "kind": "observed",
         "age": [
-          503,
+          511,
           492
         ],
         "colour": "#b0855a",
         "name": {
-          "ko": "더글러스 역암",
-          "en": "Douglas Conglomerate"
+          "ko": "더글러스층 (역암)",
+          "en": "Douglas Formation (conglomerate)"
         },
         "what": {
-          "ko": "충상지에 쌓인 선상지 역암 (얕은·육상 환경). 섀클턴 석회암의 습곡과 카르스트보다 뒤. 492 ± 2 Ma 심성암보다 젊지 않다.",
-          "en": "Alluvial-fan conglomerate (shallow to subaerial), postdating folding and karst in the Shackleton Limestone; no younger than 492 ± 2 Ma plutonism."
+          "ko": "충상지에 쌓인 선상지 역암 (얕은·육상 환경). 개정 층서에서는 스타샷층 다음이 아니라, 홀리오크층 높이부터 스타샷층과 옆으로 맞물리는 안쪽(대륙 쪽) 쐐기다. 섀클턴 석회암의 습곡과 카르스트보다 뒤. 492 ± 2 Ma 심성암보다 젊지 않다.",
+          "en": "Alluvial-fan conglomerate (shallow to subaerial). In the revised stratigraphy it is not above the Starshot but an inboard wedge interfingering with it from the Holyoake level up. Postdates folding and karst in the Shackleton Limestone; no younger than 492 ± 2 Ma plutonism."
         },
         "refs": [
-          "Myrow et al. 2002",
+          "Myrow et al. 2002, fig. 16 (revised stratigraphy)",
           "Gootee & Stump 2006",
           "Rees, Rowell & Pratt (1980s)"
         ]
@@ -164,7 +187,8 @@
         },
         "refs": []
       }
-    ]
+    ],
+    "after": "Myrow et al. 2002, fig. 16 (revised stratigraphy); ages from the references of each unit."
   },
   "antarctic_plates": [
     802,
