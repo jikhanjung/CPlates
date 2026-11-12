@@ -77,6 +77,30 @@ function check(condition, message) { if (!condition) failures.push(message); }
   await page.close();
 }
 
+// The globe sits in the middle of the part of the screen the panels leave free, and fits
+// inside it, on a wide screen and on a phone, at load and after the panel's text changes.
+async function globeFits(page, label) {
+  const { g, r } = await page.evaluate(() => ({ g: window.cplates.globeOnScreen(), r: window.cplates.visibleRect() }));
+  const cx = (r.left + r.right) / 2;
+  const cy = (r.top + r.bottom) / 2;
+  const w = r.right - r.left;
+  const h = r.bottom - r.top;
+  check(Math.abs(g.centre[0] - cx) < 0.03 * w && Math.abs(g.centre[1] - cy) < 0.03 * h,
+        `${label}: globe centre (${g.centre.map((v) => v.toFixed(0))}) vs free-area centre (${cx.toFixed(0)}, ${cy.toFixed(0)})`);
+  check(g.radius <= Math.min(w, h) / 2 + 1 && g.radius > 0.35 * Math.min(w, h),
+        `${label}: globe radius ${g.radius.toFixed(0)} px should fit the free area ${w.toFixed(0)}×${h.toFixed(0)}`);
+}
+for (const [viewport, tag] of [[{ width: 1400, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'phone'],
+                               [{ width: 1024, height: 700 }, 'laptop']]) {
+  const page = await open(viewport, '?age=300');
+  await globeFits(page, `main ${tag}`);
+  await page.evaluate(() => window.cplates.pick([20, -20]));
+  await page.waitForTimeout(400);
+  await globeFits(page, `main ${tag} after a pick`);
+  await page.screenshot({ path: `test-results/main-fit-${tag}.png` });
+  await page.close();
+}
+
 // The Phanerozoic, and the switch between reference frames.
 {
   const page = await open({ width: 1400, height: 900 }, '?age=500');

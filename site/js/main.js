@@ -700,20 +700,66 @@ function tick(now) {
   }
 }
 
-function resize() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  renderer.setSize(width, height, false);
-  camera.aspect = width / height;
-  // 35 degrees across the narrower side, so a portrait phone sees the whole globe.
+// The part of the window the panels leave free: right of the side panel on a wide
+// screen, below it on a phone, and above the timeline. (Same rule as the Cambrian page.)
+function visibleRect() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const panel = $('panel').getBoundingClientRect();
+  const timeline = document.querySelector('.timeline').getBoundingClientRect();
+  const rect = { left: 0, top: 0, right: W, bottom: Math.min(H, timeline.top) };
+  if (panel.width < W * 0.6) rect.left = panel.right;
+  else rect.top = panel.bottom;
+  return rect;
+}
+
+// Shift the picture so the globe's centre is the centre of the free part, and size the
+// view so the globe fits in it. Checked every frame, since the panel's height changes
+// with its text; the work is done only when the free part changes.
+let lastFrame = '';
+function frameView() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const r = visibleRect();
+  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join();
+  if (key === lastFrame) return;
+  lastFrame = key;
+  // 0.92: a little margin so the rim is not cut by the panels.
+  const free = 0.92 * Math.max(120, Math.min(r.right - r.left, r.bottom - r.top));
   const across = Math.tan((35 / 2) * Math.PI / 180);
-  camera.fov = (2 * Math.atan(camera.aspect < 1 ? across / camera.aspect : across) * 180) / Math.PI;
+  camera.fov = (2 * Math.atan((across * H) / free) * 180) / Math.PI;
+  camera.aspect = W / H;
+  camera.setViewOffset(W, H, -((r.left + r.right) / 2 - W / 2), -((r.top + r.bottom) / 2 - H / 2), W, H);
   camera.updateProjectionMatrix();
+}
+
+// Where a scene point is drawn, in CSS pixels (for tests).
+function screenOf(point) {
+  const v = new THREE.Vector3(...point).project(camera);
+  return [((v.x + 1) / 2) * window.innerWidth, ((1 - v.y) / 2) * window.innerHeight];
+}
+
+// The globe's drawn centre and radius in CSS pixels (for tests).
+function globeOnScreen() {
+  const toEye = camera.position.clone().normalize();
+  const d = camera.position.length();
+  const side = new THREE.Vector3().crossVectors(toEye, camera.up).normalize();
+  const rim = toEye.clone().multiplyScalar(1 / d).addScaledVector(side, Math.sqrt(1 - 1 / (d * d)));
+  const centre = screenOf([0, 0, 0]);
+  const edge = screenOf(rim.toArray());
+  return { centre, radius: Math.hypot(edge[0] - centre[0], edge[1] - centre[1]) };
+}
+
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  lastFrame = '';
+  frameView();
 }
 window.addEventListener('resize', resize);
 
 renderer.setAnimationLoop((now) => {
   tick(now);
+  frameView();
   controls.update();
   renderer.render(scene, camera);
 });
@@ -741,4 +787,4 @@ async function start() {
 start();
 
 // For tests and for looking around from the console.
-window.cplates = { state, goTo, pick, setModel, camera, controls };
+window.cplates = { state, goTo, pick, setModel, camera, controls, visibleRect, globeOnScreen };
