@@ -1121,8 +1121,10 @@ function renderInset() {
     globeView.manual = true;
     const position = globeCamera.position;
     position.applyAxisAngle(new THREE.Vector3(0, 1, 0), -dx * 0.008);
+    // Grab-and-drag: the surface under the pointer follows it. Dragging right turns the
+    // camera left about the vertical; dragging down raises the camera.
     const right = new THREE.Vector3().crossVectors(globeCamera.up, position).normalize();
-    const tilted = position.clone().applyAxisAngle(right, dy * 0.008);
+    const tilted = position.clone().applyAxisAngle(right, -dy * 0.008);
     if (Math.abs(tilted.y) < 0.97 * tilted.length()) position.copy(tilted);
     globeCamera.lookAt(0, 0, 0);
     drag.x = event.clientX;

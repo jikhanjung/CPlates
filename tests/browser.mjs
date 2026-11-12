@@ -278,6 +278,15 @@ async function openSection(viewport, query) {
     await page.mouse.up();
     const after = await page.evaluate(() => window.cplates.globeCamera.position.toArray());
     check(before.some((v, i) => Math.abs(v - after[i]) > 0.05), 'dragging in the small globe should turn it');
+    // Dragging down should pull the near surface down, so the camera rises; right, so the
+    // camera swings left (the surface follows the pointer).
+    const y0 = after[1];
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 40, { steps: 6 });
+    await page.mouse.up();
+    const down = await page.evaluate(() => window.cplates.globeCamera.position.toArray());
+    check(down[1] > y0 + 0.05, `dragging down should raise the globe camera: ${y0} → ${down[1]}`);
     await page.mouse.move(box.x + 4, box.y + 4);
     await page.mouse.down();
     await page.mouse.move(box.x - 60, box.y - 60, { steps: 6 });

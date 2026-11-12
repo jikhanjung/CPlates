@@ -109,3 +109,10 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - 배포 전: `make test` 21개, 브라우저 점검 전체 통과. 디스크 여유 25 GB.
 - `deploy/deploy.sh 6d4a683`: 114 MB, `current -> releases/6d4a683`.
 - 배포 뒤: 쪽·코드 `no-cache`, `version.json` 6d4a683, earththrutime3d 200, cdgts 200. `tests/browser.mjs`를 https에 대고 전체 통과.
+
+## 재배포: 7e49aca (상자 면 끌기로 단면 옮기기)
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘"
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과. `deploy/deploy.sh 7e49aca`: 114 MB, `current -> releases/7e49aca`.
+- 배포 뒤: 쪽·코드 `no-cache`, `version.json` 7e49aca, earththrutime3d 200, cdgts 200. `tests/browser.mjs`를 https에 대고 전체 통과.
