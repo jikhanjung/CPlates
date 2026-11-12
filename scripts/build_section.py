@@ -120,7 +120,7 @@ def sample_grid(grid, lon, lat):
     return top * (1 - fy) + bottom * fy
 
 
-def trench_rows(pieces, ny, step_km, across0_km, crossings):
+def trench_rows(pieces, ny, step_km, across0_km, crossings, line_row=0):
     """Per block row, the main trench's along-position (km) and the unit vector (along,
     across) towards its overriding side, or None where it does not cross the row.
 
@@ -153,18 +153,20 @@ def trench_rows(pieces, ny, step_km, across0_km, crossings):
         return [None] * ny
     start = min(main, key=lambda c: abs(c["s_km"]))["s_km"]
     rows = [None] * ny
-    previous = start
     used = set()
-    for j in range(ny):
-        options = candidates[j]
-        if not options:
-            continue
-        a, na, nb, index = min(options, key=lambda o: abs(o[0] - previous))
-        if abs(a - previous) > 600:
-            continue
-        rows[j] = [round(a, 1), round(na, 4), round(nb, 4)]
-        used.add(index)
-        previous = a
+    # Out from the line's row, towards A–A′'s far side and then the other way.
+    for order in (range(line_row, ny), range(line_row - 1, -1, -1)):
+        previous = start
+        for j in order:
+            options = candidates[j]
+            if not options:
+                continue
+            a, na, nb, index = min(options, key=lambda o: abs(o[0] - previous))
+            if abs(a - previous) > 600:
+                continue
+            rows[j] = [round(a, 1), round(na, 4), round(nb, 4)]
+            used.add(index)
+            previous = a
     for index in used:
         pieces[index]["main"] = True
     return rows
@@ -180,9 +182,17 @@ def main():
     pole = np.cross(unit(lon1, lat1), unit(lon2, lat2))
     pole /= np.linalg.norm(pole)
     step = section["step_deg"]
-    along = np.arange(section["along_deg"][0], section["along_deg"][1] + 1e-9, step)
-    across = np.arange(section["across_deg"][0], section["across_deg"][1] + 1e-9, step)
+    # The data grid: the A–A′ box (along_deg × across_deg, what the page opens with) plus
+    # margin_deg on every side, so the box can be dragged out as well as in.
+    margin = section.get("margin_deg", 0.0)
+    along_deg = [section["along_deg"][0] - margin, section["along_deg"][1] + margin]
+    across_deg = [section["across_deg"][0] - margin, section["across_deg"][1] + margin]
+    along = np.arange(along_deg[0], along_deg[1] + 1e-9, step)
+    across = np.arange(across_deg[0], across_deg[1] + 1e-9, step)
     nx, ny = len(along), len(across)
+    # The A–A′ box in grid indices; its front row j0 is the line itself.
+    m = int(round(margin / step))
+    box = {"i0": m, "i1": nx - 1 - m, "j0": m, "j1": ny - 1 - m}
     grid = np.zeros((ny, nx, 3))
     for i, s in enumerate(along):
         on_line = axis_rotation(pole, math.radians(s)) @ anchor
@@ -300,8 +310,8 @@ def main():
             # along: angle about the pole from the anchor; across: angle from the plane
             a = np.degrees(np.arctan2(np.cross(anchor, local) @ pole, local @ anchor))
             b = np.degrees(np.arcsin(np.clip(local @ pole, -1, 1)))
-            keep = (a > section["along_deg"][0] - 3) & (a < section["along_deg"][1] + 3) & \
-                   (b > section["across_deg"][0] - 3) & (b < section["across_deg"][1] + 3)
+            keep = (a > along_deg[0] - 3) & (a < along_deg[1] + 3) & \
+                   (b > across_deg[0] - 3) & (b < across_deg[1] + 3)
             if keep.sum() >= 2:
                 pieces.append({"k": piece["k"], "p": piece["p"],
                                "xy": [round(v, 1) for pair in zip(a * EARTH_KM * math.pi / 180,
@@ -315,7 +325,7 @@ def main():
                     x = local[i] + (local[i + 1] - local[i]) * f
                     x /= np.linalg.norm(x)
                     s = math.degrees(math.atan2(np.cross(anchor, x) @ pole, x @ anchor))
-                    if not section["along_deg"][0] <= s <= section["along_deg"][1]:
+                    if not along_deg[0] <= s <= along_deg[1]:
                         continue
                     # Which way along the line is the overriding plate? Left of the piece's
                     # direction for polarity L, right for R; "left" is up × forward.
@@ -353,7 +363,7 @@ def main():
         # horizontal direction towards its overriding side. The page interpolates these points
         # in time, so the whole line moves smoothly, not just where it crosses A–A′.
         rows = trench_rows(pieces, ny, step * EARTH_KM * math.pi / 180,
-                           section["across_deg"][0] * EARTH_KM * math.pi / 180, crossings)
+                           across_deg[0] * EARTH_KM * math.pi / 180, crossings, box["j0"])
         lines[str(t)] = {"pieces": pieces, "trenches": crossings, "rows": rows}
         print(f"{t} Ma: {len(pieces)} boundary pieces, trenches "
               f"{[(c['s_km'], c['over_side'], c['rate_cm_yr']) for c in crossings]}", flush=True)
@@ -366,16 +376,21 @@ def main():
     km = EARTH_KM * math.pi / 180
     meta = {
         "ages": ages, "nx": nx, "ny": ny,
-        "along_km": [round(section["along_deg"][0] * km, 1), round(section["along_deg"][1] * km, 1)],
-        "across_km": [round(section["across_deg"][0] * km, 1), round(section["across_deg"][1] * km, 1)],
+        "along_km": [round(along_deg[0] * km, 1), round(along_deg[1] * km, 1)],
+        "across_km": [round(across_deg[0] * km, 1), round(across_deg[1] * km, 1)],
         "step_km": round(step * km, 2),
+        # The whole grid in degrees, and the A–A′ box inside it (the page's default).
+        "grid_deg": {"along": along_deg, "across": across_deg, "step": step},
+        "box": box,
         "grid_ages": grid_ages,
         "section": section,
-        # The box's top outline, present-day coordinates of plate 802, for the small globe.
+        # The A–A′ box's top outline, present-day coordinates of plate 802.
         "outline": [[round(float(v), 3) for v in lon_lat(p)] for p in
-                    list(grid[0, :]) + list(grid[:, -1]) + list(grid[-1, ::-1]) + list(grid[::-1, 0])],
-        "line": {"A": [round(v, 3) for v in lon_lat(grid[0, 0])],
-                 "A_prime": [round(v, 3) for v in lon_lat(grid[0, -1])],
+                    list(grid[box["j0"], box["i0"]:box["i1"] + 1]) + list(grid[box["j0"]:box["j1"] + 1, box["i1"]])
+                    + list(grid[box["j1"], box["i1"]:box["i0"] - 1 if box["i0"] else None:-1])
+                    + list(grid[box["j1"]:box["j0"] - 1 if box["j0"] else None:-1, box["i0"]])],
+        "line": {"A": [round(v, 3) for v in lon_lat(grid[box["j0"], box["i0"]])],
+                 "A_prime": [round(v, 3) for v in lon_lat(grid[box["j0"], box["i1"]])],
                  "anchor": section["anchor"]},
         "built_with": f"pygplates {pygplates.__version__}",
     }

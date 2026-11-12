@@ -67,8 +67,8 @@ const STRINGS = {
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
     trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 (선을 따라) 약 {km} km 한 번에 옮겨집니다. 화면은 해구선의 각 점을 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
-    resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 앞면이 단면입니다.',
-    faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽',
+    resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
+    faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
     limestoneLabel: '섀클턴 석회암 · 지금 두께 {km} km (모식)', limestoneNotYet: '섀클턴 석회암 분포 (아직 쌓이기 전)',
     slabLabel: '섭입하는 판 (슬랩, 모식)', wedgeLabel: '맨틀 쐐기 흐름 (모식)', underLabel: '슬랩 아래 흐름 (모식)',
     globeCaption: '지구본 · Merdith 2021 · {age} Ma', boxNote: '빨간 상자가 이 블록. 끌어서 돌리기, 휠로 확대, 더블클릭으로 처음 시점, 왼쪽 위 모서리로 크기.',
@@ -115,8 +115,8 @@ const STRINGS = {
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
     trenchEased: 'In the model the trench moves about {km} km (along its length) at once between {from} and {to} Ma; the screen eases each point of the line over 5 Myr either side (interpolation).',
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
-    resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces. The front face is the section.',
-    faceAt: 'Front section', faceAtValue: '{km} km in from A–A′',
+    resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
+    faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
     limestoneLabel: 'Shackleton Limestone · {km} km so far (sketch)', limestoneNotYet: 'Shackleton Limestone area (not yet laid down)',
     slabLabel: 'Subducting plate (slab, sketch)', wedgeLabel: 'Mantle-wedge flow (sketch)', underLabel: 'Flow under the slab (sketch)',
     globeCaption: 'Globe · Merdith 2021 · {age} Ma', boxNote: 'Red box: this block. Drag to turn, wheel to zoom, double-click to reset, top-left corner to resize.',
@@ -370,20 +370,32 @@ function displayTrench(age) {
   const frame = trenchInBlock(age);
   if (!frame) return null;
   const { rows, jump } = trenchRows(age);
-  const s = rows[0] ? rows[0].a : frame.s_km;
+  const line = rows[lineRow()];
+  const s = line ? line.a : frame.s_km;
   return { ...frame, s_km: s, transition: jump, rows };
 }
 
 // The box the viewer has cut: columns i0..i1 along A–A′, rows j0..j1 across. The front
-// row j0 is the section face. Kept in the address as ?box=i0,i1,j0,j1.
+// row j0 is the section face. The data grid reaches some way beyond the A–A′ box
+// (meta.box, what the page opens with), so the box can be widened as well as narrowed.
+// Kept in the address as ?box=i0,i1,j0,j1, counted from A (column) and the line (row), so
+// negative numbers reach outside the A–A′ box.
 const MIN_COLUMNS = 8;
 const MIN_ROWS = 4;
+const defaultBox = () => {
+  const { meta } = state.data;
+  return meta.box ?? { i0: 0, i1: meta.nx - 1, j0: 0, j1: meta.ny - 1 };
+};
+// The row on the line A–A′, and the locality's column.
+const lineRow = () => defaultBox().j0;
+const localityColumn = () => Math.round((0 - state.data.meta.along_km[0]) / state.data.meta.step_km);
 function cropOf() {
   const { nx, ny } = state.data.meta;
   if (!state.crop) {
+    const home = defaultBox();
     const asked = (ASKED.get('box') || '').split(',').map(Number);
     state.crop = asked.length === 4 && asked.every(Number.isFinite)
-      ? { i0: asked[0], i1: asked[1], j0: asked[2], j1: asked[3] } : { i0: 0, i1: nx - 1, j0: 0, j1: ny - 1 };
+      ? { i0: asked[0] + home.i0, i1: asked[1] + home.i0, j0: asked[2] + home.j0, j1: asked[3] + home.j0 } : { ...home };
   }
   const c = state.crop;
   c.i0 = Math.max(0, Math.min(nx - 1 - MIN_COLUMNS, Math.round(c.i0)));
@@ -393,11 +405,11 @@ function cropOf() {
   return c;
 }
 function keepBox() {
-  const { nx, ny } = state.data.meta;
+  const home = defaultBox();
   const c = state.crop;
   const params = new URLSearchParams(location.search);
-  if (c.i0 === 0 && c.i1 === nx - 1 && c.j0 === 0 && c.j1 === ny - 1) params.delete('box');
-  else params.set('box', [c.i0, c.i1, c.j0, c.j1].join(','));
+  if (c.i0 === home.i0 && c.i1 === home.i1 && c.j0 === home.j0 && c.j1 === home.j1) params.delete('box');
+  else params.set('box', [c.i0 - home.i0, c.i1 - home.i0, c.j0 - home.j0, c.j1 - home.j0].join(','));
   history.replaceState(null, '', `?${params}`);
 }
 
@@ -783,14 +795,15 @@ function update() {
   flowPoints.visible = state.flow && Boolean(flow);
 
   // The locality pin, when the face is the line A–A′ and the locality is inside the box.
-  const iLoc = Math.round((0 - meta.along_km[0]) / meta.step_km);
-  pin.visible = cj0 === 0 && iLoc >= ci0 && iLoc <= ci1;
-  pin.position.set(0, Math.max(0, yOf(h[iLoc] / 1000)) + 0.05, 0.001);
+  const iLoc = localityColumn();
+  const nLoc = lineRow() * nx + iLoc;
+  pin.visible = cj0 === lineRow() && iLoc >= ci0 && iLoc <= ci1;
+  pin.position.set(0, Math.max(0, yOf(h[nLoc] / 1000)) + 0.05, 0.001);
 
   updateGlobe();
   $('inset-caption').textContent = `${format(t().globeCaption, { age: Math.round(state.age) })} · ${t().boxNote}`;
   renderAge();
-  renderNow(h[iLoc]);
+  renderNow(h[nLoc]);
   drawColumn();
 }
 
@@ -978,16 +991,17 @@ function gridLonLat(i, j) {
   const len = Math.hypot(...pole);
   pole = pole.map((v) => v / len);
   const r = Math.PI / 180;
-  const onLine = rotate3(geoUnit(...sec.anchor), pole, (sec.along_deg[0] + i * sec.step_deg) * r);
+  const g = state.data.meta.grid_deg ?? { along: sec.along_deg, across: sec.across_deg, step: sec.step_deg };
+  const onLine = rotate3(geoUnit(...sec.anchor), pole, (g.along[0] + i * g.step) * r);
   let tangent = cross3(pole, onLine);
   const tl = Math.hypot(...tangent);
   tangent = tangent.map((v) => v / tl);
-  const p = rotate3(onLine, tangent, -(sec.across_deg[0] + j * sec.step_deg) * r);
+  const p = rotate3(onLine, tangent, -(g.across[0] + j * g.step) * r);
   return [Math.atan2(p[1], p[0]) / r, Math.asin(Math.max(-1, Math.min(1, p[2]))) / r];
 }
 function boxOutline() {
   const { meta } = state.data;
-  const c = state.crop ?? { i0: 0, i1: meta.nx - 1, j0: 0, j1: meta.ny - 1 };
+  const c = state.crop ?? defaultBox();
   const out = [];
   for (let i = c.i0; i <= c.i1; i++) out.push(gridLonLat(i, c.j0));
   for (let j = c.j0; j <= c.j1; j++) out.push(gridLonLat(c.i1, j));
@@ -1030,7 +1044,7 @@ async function updateGlobe() {
       top_.push(...toVector(a[0], a[1], 1.004), ...toVector(b[0], b[1], 1.004));
       inner.push(...toVector(a[0], a[1], deep), ...toVector(b[0], b[1], deep));
     }
-    const c0 = state.crop ?? { i0: 0, i1: meta.nx - 1, j0: 0, j1: meta.ny - 1 };
+    const c0 = state.crop ?? defaultBox();
     const w = c0.i1 - c0.i0 + 1;
     const hgt = c0.j1 - c0.j0 + 1;
     for (const c of [0, w - 1, w + hgt - 1, 2 * w + hgt - 1]) {
@@ -1148,14 +1162,18 @@ function placeLabels() {
   if (!state.data) return;
   const { meta } = state.data;
   const anchors = [];
-  const crop = state.crop ?? { i0: 0, i1: meta.nx - 1, j0: 0, j1: meta.ny - 1 };
+  const crop = state.crop ?? defaultBox();
   const faceZ = zAt(crop.j0);
   const x0 = xAt(crop.i0);
   const x1 = xAt(crop.i1);
   const depth = depthShownKm(state.ve);
   // A and A′ name the ends of the line itself, so only while the face is on it.
-  if (crop.j0 === 0 && crop.i0 === 0) anchors.push({ id: 'A', at: [x0, 0.08, 0], text: 'A', cls: 'end' });
-  if (crop.j0 === 0 && crop.i1 === meta.nx - 1) anchors.push({ id: 'A2', at: [x1, 0.08, 0], text: 'A′', cls: 'end' });
+  const home = defaultBox();
+  if (crop.j0 === home.j0) {
+    for (const [id, i, text] of [['A', home.i0, 'A'], ['A2', home.i1, 'A′']]) {
+      if (i >= crop.i0 && i <= crop.i1) anchors.push({ id, at: [xAt(i), 0.08, faceZ], text, cls: 'end' });
+    }
+  }
   if (!state.shackleton && pin.visible) anchors.push({ id: 'loc', at: [0, 0.16, 0], text: t().locality, cls: 'obs' });
   if (x0 < -1.8 && x1 > -1.8) anchors.push({ id: 'interior', at: [-1.8, 0.1, faceZ], text: t().interior, cls: '' });
   if (state.faceTrench) anchors.push({ id: 'trench', at: [state.faceTrench.s_km / 1000, 0.08, faceZ], text: t().trench, cls: '' });
@@ -1279,7 +1297,8 @@ function renderNow(height) {
   row(t().nowHeight, format(t().m, { v: Math.round(height) }), 'model');
   row(t().nowCrust, format(t().km, { v: crustKm(height).toFixed(0) }), 'model');
   const c = state.crop;
-  if (c && c.j0 > 0) row(t().faceAt, format(t().faceAtValue, { km: Math.round(c.j0 * state.data.meta.step_km) }));
+  const off = c ? c.j0 - lineRow() : 0;
+  if (off) row(t().faceAt, format(off > 0 ? t().faceAtValue : t().faceAtOut, { km: Math.round(Math.abs(off) * state.data.meta.step_km) }));
   if (state.trench) {
     row(t().nowTrench, format(t().km, { v: Math.round(Math.abs(state.trench.s_km)) }), 'model');
     if (state.trench.transition) {
@@ -1317,9 +1336,9 @@ function drawColumn() {
   add('text', { x: 92, y: 10 }, t().columnObserved);
   // PaleoDEM setting at the locality, per Myr.
   const { meta, surface, cells } = state.data;
-  const i0 = Math.round((0 - meta.along_km[0]) / meta.step_km);
+  const nLoc = lineRow() * meta.nx + localityColumn();
   meta.ages.forEach((age, k) => {
-    const z = surface[k * cells + i0];
+    const z = surface[k * cells + nLoc];
     const env = ENV.find(([, low]) => z >= low);
     add('rect', { x: 4, y: Y(age - 0.5), width: 70, height: Math.max(1, Y(age + 0.5) - Y(age - 0.5)) + 0.8, fill: env[2] });
   });

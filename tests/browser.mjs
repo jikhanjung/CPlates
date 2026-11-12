@@ -309,14 +309,39 @@ async function openSection(viewport, query) {
     await page.mouse.up();
     await page.waitForTimeout(400);
     const after = await page.evaluate(() => ({ crop: { ...window.cplates.state.crop }, cam: window.cplates.camera.position.toArray() }));
-    check(after.crop.j0 > 0, `dragging the front handle should move the face in, j0 = ${after.crop.j0}`);
+    const home = await page.evaluate(() => ({ ...window.cplates.state.data.meta.box }));
+    check(home && home.j0 > 0 && home.i0 > 0, `the data grid should reach beyond the A–A′ box: ${JSON.stringify(home)}`);
+    check(after.crop.j0 > home.j0, `dragging the front handle should move the face in, j0 = ${after.crop.j0}`);
     check(cam.every((v, i) => Math.abs(v - after.cam[i]) < 1e-6), 'dragging a handle should not turn the view');
     check((new URL(page.url()).searchParams.get('box') || '').split(',').length === 4, 'the address should remember the box');
     check((await page.locator('#now').innerText()).includes('A–A′에서'), 'the panel should say where the face is');
     await page.screenshot({ path: 'test-results/section-box-moved.png' });
     await page.click('#reset-box');
     await page.waitForTimeout(300);
-    check(await page.evaluate(() => window.cplates.state.crop.j0 === 0), 'reset should bring the face back to A–A′');
+    check(await page.evaluate(() => window.cplates.state.crop.j0 === window.cplates.state.data.meta.box.j0), 'reset should bring the face back to A–A′');
+    // Out as well as in: drag the right face beyond A′ and the front face off the line outwards.
+    const drag = async (side, dx, dy) => {
+      const p = await page.evaluate((s) => {
+        const c = window.cplates; const v = c.handles[s].position.clone().project(c.camera);
+        return [((v.x + 1) / 2) * innerWidth, ((1 - v.y) / 2) * innerHeight];
+      }, side);
+      await page.mouse.move(p[0], p[1]);
+      await page.mouse.down();
+      await page.mouse.move(p[0] + dx, p[1] + dy, { steps: 8 });
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+    };
+    await drag('right', 120, 0);
+    await drag('front', 0, 80);
+    const out = await page.evaluate(() => ({ ...window.cplates.state.crop }));
+    check(out.i1 > home.i1, `dragging the right handle out should widen the box past A′: i1 ${home.i1} → ${out.i1}`);
+    check(out.j0 < home.j0, `dragging the front handle out should move the face off the line outwards: j0 ${home.j0} → ${out.j0}`);
+    const asked = (new URL(page.url()).searchParams.get('box') || '').split(',').map(Number);
+    check(asked[2] < 0 && asked[1] > home.i1 - home.i0, `the address should count from the A–A′ box: ${asked}`);
+    check((await page.locator('#now').innerText()).includes('바깥쪽'), 'the panel should say the face is outside the line');
+    await page.screenshot({ path: 'test-results/section-box-widened.png' });
+    await page.click('#reset-box');
+    await page.waitForTimeout(300);
   }
   await page.click('#show-limestone');
   await page.waitForTimeout(400);

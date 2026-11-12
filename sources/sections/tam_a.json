@@ -28,6 +28,8 @@
     0.0,
     17.0
   ],
+  "margin_deg": 6.0,
+  "margin_note": "The data grid reaches margin_deg beyond the A–A′ box on all four sides, so the viewer can drag the box out as well as in. along_deg and across_deg stay the box the page opens with.",
   "step_deg": 0.25,
   "ages": [
     540,
