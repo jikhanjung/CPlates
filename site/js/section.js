@@ -755,6 +755,19 @@ function update() {
     }
   }
   setGeometry(limestoneEdge, outline);
+  // Where to name it: the middle of the part of its area inside the box, on the surface.
+  state.limestoneAt = null;
+  if (state.shackleton) {
+    let [sx, sy, sz, sw] = [0, 0, 0, 0];
+    for (let j = cj0; j <= cj1; j++) {
+      for (let i = ci0; i <= ci1; i++) {
+        const w = data.lens[j * nx + i];
+        if (!w) continue;
+        sx += xAt(i) * w; sz += zAt(j) * w; sy = Math.max(sy, yOf(h[j * nx + i] / 1000)); sw += w;
+      }
+    }
+    if (sw) state.limestoneAt = [sx / sw, Math.max(0, sy) + 0.07, sz / sw];
+  }
 
   // Sea level and the box, at the box's extent.
   const x0 = xAt(ci0);
@@ -1365,9 +1378,10 @@ function placeLabels() {
       }
     }
   }
-  if (state.shackleton && pin.visible) {
+  // Named over its area whenever part of it is in the box, wherever the face is.
+  if (state.shackleton && state.limestoneAt) {
     const g = state.limestone?.grown ?? 0;
-    anchors.push({ id: 'limestone', at: [0, 0.07, 0], cls: 'obs',
+    anchors.push({ id: 'limestone', at: state.limestoneAt, cls: 'obs',
                    text: g > 0 ? format(t().limestoneLabel, { km: (state.limestoneKm * g).toFixed(1) }) : t().limestoneNotYet });
   }
   if (state.cob) anchors.push({ id: 'cob', at: [state.cob, Math.max(yOf(-depth), yOf(-60)) - 0.02, faceZ + 0.002], text: t().cob, cls: 'depth' });

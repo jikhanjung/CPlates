@@ -379,6 +379,10 @@ async function openSection(viewport, query) {
   await page.click('#show-limestone');
   await page.waitForTimeout(400);
   check(new URL(page.url()).searchParams.get('shackleton') === '1', 'the address should remember the limestone toggle');
+  check(await page.evaluate(() => { const n = document.querySelector('#limestone-note'); const box = document.querySelector('#show-limestone').closest('.tools');
+    return !n.hidden && n.previousElementSibling === box; }), 'the limestone note should show right under its checkbox');
+  check(await page.evaluate(() => [...document.querySelectorAll('#labels span')].some((s) => s.textContent.includes('지금 두께'))),
+        'the limestone should be named over its area with its thickness so far');
   const grown520 = await page.evaluate(() => window.cplates.state.limestone.grown);
   check(grown520 > 0.3 && grown520 < 0.5, `520 Ma: about 5/13 of the limestone laid down, got ${grown520}`);
   await page.selectOption('#limestone-km', '5.4');
