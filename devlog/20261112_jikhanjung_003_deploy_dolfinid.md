@@ -58,3 +58,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - `deploy/deploy.sh f6b01c9`: 110 MB, `current -> releases/f6b01c9`(이전 cc9901d는 되돌리기용으로 남김).
 - 배포 뒤: https 메인·/cambrian/·두 모델의 자료·JS 200, `version.json` f6b01c9, http → https 301(질의 유지),
   인증서 만료 2027-02-09, earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
+
+## 재배포: 236fb99 (단면 A–A′ 쪽 추가)
+
+2026-11-12, 사용자 직접 지시(이 세션): "다 되면 일단 배포해줘."
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과(새 단면 쪽 포함). 디스크 여유 25 GB.
+- `deploy/deploy.sh 236fb99`: 112 MB, `current -> releases/236fb99`. 이전 f6b01c9와 cc9901d는 남겼다.
+- 배포 뒤: https `/`, `/cambrian/`, `/section/`, 단면 자료와 새 JS 200. `version.json` 236fb99.
+  earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
+- push는 하지 않았다(origin/main은 077c25b). 배포한 커밋은 아직 GitHub에 없다.
