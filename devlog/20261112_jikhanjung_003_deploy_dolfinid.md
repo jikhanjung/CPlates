@@ -152,3 +152,12 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   배포의 정리에서 빠진다.
 - 배포 뒤: `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz` 200, earththrutime·cdgts.paleobytes.info
   200. 디스크 여유 24 GB.
+
+## 재배포: b2e6765 (석회암 설명 위치, 석회암 이름표를 분포 지역 위에)
+
+2026-11-12, 사용자 직접 지시(이 세션): "일단 push 배포 하고".
+
+- push 전 점검: 1커밋 3파일, 비밀값 없음. node 시험 30개 통과. `e3ca059..b2e6765` push.
+- `deploy/deploy.sh b2e6765`: origin/main 확인 → `current -> releases/b2e6765`(이전 259cb61) → 스모크 통과 →
+  정리(지금 것 + 2): 25990e4, 7e49aca 삭제. 남은 것 b2e6765 259cb61 c417757. 디스크 여유 24 GB.
+- 배포 뒤: `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime3d `/healthz` 200, cdgts 200.
