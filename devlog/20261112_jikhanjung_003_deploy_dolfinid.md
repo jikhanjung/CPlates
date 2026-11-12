@@ -161,3 +161,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - `deploy/deploy.sh b2e6765`: origin/main 확인 → `current -> releases/b2e6765`(이전 259cb61) → 스모크 통과 →
   정리(지금 것 + 2): 25990e4, 7e49aca 삭제. 남은 것 b2e6765 259cb61 c417757. 디스크 여유 24 GB.
 - 배포 뒤: `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime3d `/healthz` 200, cdgts 200.
+
+## 재배포: f668ec3 (버드층군 노두, Myrow 2002 개정 층서로 다시 그린 기록 그림)
+
+2026-11-12, 사용자 직접 지시(이 세션): "진행하자." (push·배포 물음에 대한 답)
+
+- push 전 점검: 2커밋 9파일, 200 KB 넘는 파일·생성 자료·비밀값·그림 파일 없음(Myrow 2002 그림은 저장소 밖).
+  node 시험 30개 통과. 단면 자료를 노두·새 지층 자료로 다시 빌드했다. `1a816b2..f668ec3` push.
+- `deploy/deploy.sh f668ec3`: origin/main 확인 → `current -> releases/f668ec3`(이전 b2e6765) → 스모크 통과 →
+  정리로 c417757 삭제. 남은 것 f668ec3 b2e6765 259cb61. 디스크 여유 24 GB.
+- 배포 뒤: 운영 meta에 노두 윤곽 6개와 새 지층(goldie 포함) 확인. `tests/browser.mjs`를 https에 대고 전체 통과.
+  earththrutime3d `/healthz` 200, cdgts 200.
