@@ -78,3 +78,16 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - 배포 뒤: https `/`, `/cambrian/`, `/section/`, 새 자료(region.bin, shackleton.bin) 200. `version.json` bb1afb1.
   earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
 - push는 하지 않았다.
+
+## 재배포: 2736d00 (자료 버전 붙이기, 지각 연속, 구멍 없앰) + nginx 캐시 설정
+
+2026-11-12, 사용자 직접 지시(이 세션): "배포해줘"
+
+- 배포 전: `make test` 21개, 브라우저 점검 전체 통과. 디스크 여유 25 GB.
+- `deploy/deploy.sh 2736d00`: 114 MB, `current -> releases/2736d00`. 이전 릴리스는 남겼다.
+- nginx: `sites-available/cplates`를 `deploy/nginx-cplates-tls.conf`로 바꿨다(백업
+  `cplates.bak-20261112-cache`). `nginx -t` 통과 뒤 reload했고, cplates 설정만 바꿨다.
+  - 쪽·JS·CSS는 `Cache-Control: no-cache`, `/data/`는 `public, max-age=3600`, `version.json`은 `no-store`.
+  - reload 직후 잠깐은 옛 워커가 응답해 헤더가 없었고, 다시 확인해 적용을 확인했다.
+- 배포 뒤: https `version.json` 2736d00. earththrutime3d 200, cdgts 200. http → https 301.
+  `tests/browser.mjs`를 https 주소에 대고 전체 통과.
