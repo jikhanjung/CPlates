@@ -72,9 +72,9 @@ const STRINGS = {
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
-    showOutcrops: '버드층군 노두 (Myrow 2002)',
-    outcropNote: '지금 드러난 노두를 Myrow et al. 2002의 지질도(Fig. 1)에서 눈으로 따라 그린 대략의 윤곽입니다(몇 km 오차). 얼음과 침식이 남긴 범위라 그 시대에 쌓인 범위가 아닙니다. 하늘색은 하부 버드층군(섀클턴 석회암), 주황은 상부 버드층군(홀리오크·스타샷·더글러스층, 이 축척에서는 나뉘지 않음)이고, 쌓이던 시기에 밝게 보입니다.',
-    lgOutcropLower: '하부 버드층군 노두 (섀클턴 석회암, Myrow 2002)', lgOutcropUpper: '상부 버드층군 노두 (홀리오크·스타샷·더글러스, Myrow 2002)',
+    showOutcrops: '버드층군 노두 (GeoMAP)',
+    outcropNote: '지금 드러난 노두입니다. SCAR GeoMAP v2022-08(Cox et al. 2023, 1:25만)의 버드층군 지질 단위를 층별로 그렸고, 250 m 안쪽으로 간추렸습니다. 얼음과 침식이 남긴 범위라 그 시대에 쌓인 범위가 아닙니다. 하늘색은 섀클턴 석회암, 주황은 스타샷층, 분홍은 더글러스 역암, 노랑은 층을 나누지 않은 버드층군이고, 쌓이던 시기에 밝게 보입니다. 나이는 기록 그림(Myrow et al. 2002)을 따릅니다.',
+    lgOutcrop: '{unit} 노두 (GeoMAP)', outcropLabel: '버드층군 노두',
     outcropSections: '측정 단면 S1·S2·HR (Myrow 2002)',
     fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
     fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
@@ -136,9 +136,9 @@ const STRINGS = {
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
-    showOutcrops: 'Byrd Group outcrops (Myrow 2002)',
-    outcropNote: 'Today’s outcrop, traced by eye from the geologic map of Myrow et al. 2002 (fig. 1) and simplified (a few km). It is what ice and erosion leave exposed, not where the units were laid down. Light blue: lower Byrd Group (Shackleton Limestone); orange: upper Byrd Group (Holyoake, Starshot and Douglas formations, not separated at that scale). Each is bright while it was being laid down.',
-    lgOutcropLower: 'Lower Byrd Group outcrop (Shackleton Limestone, Myrow 2002)', lgOutcropUpper: 'Upper Byrd Group outcrop (Holyoake, Starshot, Douglas; Myrow 2002)',
+    showOutcrops: 'Byrd Group outcrops (GeoMAP)',
+    outcropNote: 'Today’s outcrop: the Byrd Group units of SCAR GeoMAP v2022-08 (Cox et al. 2023, 1:250 000), by formation, simplified within 250 m. It is what ice and erosion leave exposed, not where the units were laid down. Light blue: Shackleton Limestone; orange: Starshot Formation; pink: Douglas Conglomerate; yellow: Byrd Group not divided. Each is bright while it was being laid down; the ages follow the record (Myrow et al. 2002).',
+    lgOutcrop: '{unit} outcrop (GeoMAP)', outcropLabel: 'Byrd Group outcrops',
     outcropSections: 'Measured sections S1, S2, HR (Myrow 2002)',
     fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
     fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
@@ -257,9 +257,9 @@ const scaleBar = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.Li
 const SCALE_STEPS = [1, 2, 5, 10, 20, 50, 100, 200];
 // The step nearest a quarter of a scene unit tall: 10 km at the default 25×.
 const scaleKm = (ve) => SCALE_STEPS.reduce((a, b) => (Math.abs(Math.log((b * ve) / 250)) < Math.abs(Math.log((a * ve) / 250)) ? b : a));
-// Byrd Group outcrops (Myrow et al. 2002), draped on the surface.
+// Byrd Group outcrops (SCAR GeoMAP), draped on the surface.
 const outcropLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
-const OUTCROP_COLOURS = { lower: '#5fd3ff', upper: '#ffb347' };
+const OUTCROP_COLOURS = { shackleton: '#5fd3ff', starshot: '#ffb347', douglas: '#ff7eb6', byrd: '#e8d36a' };
 const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -801,13 +801,12 @@ function update() {
       const z = (v(j, i) * (1 - fi) + v(j, i + 1) * fi) * (1 - fj) + (v(j + 1, i) * (1 - fi) + v(j + 1, i + 1) * fi) * fj;
       return Math.max(0, yOf(z / 1000)) + 0.006;
     };
-    const best = {};
+    let [sumA, sumB, count] = [0, 0, 0];
     for (const o of meta.outcrops.outlines) {
       const unit = meta.outcrops.units[o.unit];
       const active = state.age <= unit.age[0] && state.age >= unit.age[1];
       const c = colour(OUTCROP_COLOURS[o.unit]);
       if (!active) c.lerp(colour('#707070'), 0.55);
-      let [sa, sb, n] = [0, 0, 0];
       for (let k = 0; k < o.ab.length; k++) {
         const [a0, b0] = o.ab[k];
         const [a1, b1] = o.ab[(k + 1) % o.ab.length];
@@ -818,14 +817,14 @@ function update() {
           if (!inBox(pa, pb) || !inBox(qa, qb)) continue;
           drape.push(pa / 1000, surfaceAt(pa, pb), -pb / 1000, qa / 1000, surfaceAt(qa, qb), -qb / 1000);
           drapeColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
-          sa += pa; sb += pb; n++;
+          sumA += pa; sumB += pb; count++;
         }
       }
-      if (n && (!best[o.unit] || n > best[o.unit].n)) best[o.unit] = { n, a: sa / n, b: sb / n };
     }
-    for (const [unit, at] of Object.entries(best)) {
-      state.outcropLabels.push({ id: `outcrop-${unit}`, at: [at.a / 1000, surfaceAt(at.a, at.b) + 0.05, -at.b / 1000],
-                                 text: meta.outcrops.units[unit].name[state.lang], cls: `outcrop ${unit}` });
+    // One name for them all: the patches are small, and the colours tell the units apart.
+    if (count) {
+      const [a, b] = [sumA / count, sumB / count];
+      state.outcropLabels.push({ id: 'outcrop', at: [a / 1000, surfaceAt(a, b) + 0.05, -b / 1000], text: t().outcropLabel, cls: 'outcrop' });
     }
     const secs = meta.outcrops.sections.filter((x) => inBox(...x.ab));
     if (secs.length) {
@@ -1737,7 +1736,9 @@ function renderLegend() {
                  ['fill', COLOURS.mantleTop, t().lgMantle], ['fill', COLOURS.slabMantle, t().lgSlab],
                  ['dots', '', t().lgFlow], ['dash', '', t().lgCob],
                  state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch],
-                 ...(state.outcrops ? [['line', OUTCROP_COLOURS.lower, t().lgOutcropLower], ['line', OUTCROP_COLOURS.upper, t().lgOutcropUpper]] : [])];
+                 ...(state.outcrops && state.data?.meta.outcrops
+                   ? Object.entries(state.data.meta.outcrops.units).map(([id, u]) => ['line', OUTCROP_COLOURS[id], t().lgOutcrop.replace('{unit}', u.name[state.lang])])
+                   : [])];
   const list = $('legend');
   list.replaceChildren();
   for (const [shape, c, text] of items) {
@@ -1762,7 +1763,8 @@ function renderSources() {
     'Scotese, C. R., and Wright, N. M., 2018. PALEOMAP Paleodigital Elevation Models (PaleoDEMS) for the Phanerozoic. doi:10.5281/zenodo.5460860. CC BY 4.0.',
     'Scotese, C. R., 2016. PALEOMAP PaleoAtlas for GPlates. doi:10.5281/zenodo.10251792. CC BY 4.0.',
     'Batchelor, G. K., 1967. An Introduction to Fluid Dynamics. McKenzie, D. P., 1969. Speculations on the consequences and causes of plate motions. Geophys. J. R. Astr. Soc., 18, 1–32.',
-    'Myrow, P. M., Pope, M. C., Goodge, J. W., Fischer, W., and Palmer, A. R., 2002. Depositional history of pre-Devonian strata and timing of Ross orogenic tectonism in the central Transantarctic Mountains, Antarctica. GSA Bulletin, 114, 1070–1088 (fig. 1: outcrops traced by this project; fig. 16: revised stratigraphy).',
+    'Myrow, P. M., Pope, M. C., Goodge, J. W., Fischer, W., and Palmer, A. R., 2002. Depositional history of pre-Devonian strata and timing of Ross orogenic tectonism in the central Transantarctic Mountains, Antarctica. GSA Bulletin, 114, 1070–1088 (fig. 1: measured sections; fig. 16: revised stratigraphy).',
+    'Cox, S. C., et al., 2023. The GeoMAP (v.2022-08) continent-wide detailed geological dataset of Antarctica. PANGAEA, doi:10.1594/PANGAEA.951482; Scientific Data, 10, 250. CC BY 4.0.',
     'Myrow, P. M., et al., 2002. GSA Bulletin, 114, 1070–1088. Gootee, B. F., and Stump, E., 2006. Claybourn, T. M., et al., 2019. Journal of Paleontology.',
     'Ages: ICS International Chronostratigraphic Chart v2023/09. Derived data: CPlates (PaleoBytes), CC BY 4.0.',
   ];

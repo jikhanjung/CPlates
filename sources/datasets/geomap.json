@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "id": "geomap",
+  "title": "The GeoMAP (v.2022-08) continent-wide detailed geological dataset of Antarctica",
+  "short_title": "SCAR GeoMAP v2022-08",
+  "retrieved_at": "2026-11-12",
+  "citation": "Cox, S. C., Smith Lyttle, B., Elkind, S., Smith Siddoway, C. S., Morin, P., Capponi, G., et al., 2023. The GeoMAP (v.2022-08) continent-wide detailed geological dataset of Antarctica. PANGAEA, doi:10.1594/PANGAEA.951482. Described in: A continent-wide detailed geological map dataset of Antarctica, Scientific Data 10, 250, doi:10.1038/s41597-023-02152-9",
+  "doi": "10.1594/PANGAEA.951482",
+  "license": {
+    "name": "Creative Commons Attribution 4.0 International",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "statement": "The PANGAEA dataset page states CC-BY-4.0.",
+    "source": "https://doi.pangaea.de/10.1594/PANGAEA.951482"
+  },
+  "archive": {
+    "url": "https://download.pangaea.de/dataset/951482/files/ATA_SCAR_GeoMAP_v2022_08_QGIS.zip",
+    "path": "data/sources/datasets/geomap/archive.zip",
+    "bytes": 196265158,
+    "sha256": "0dd1ec3f276d7aec1bddface7280ae3c10a40d8dea1efd9271803284a1120f84",
+    "md5_published": "b955696dd8ad5fce4ee514d362787db9",
+    "member_prefix": "ATA_SCAR_GeoMAP_v2022_08_QGIS/"
+  },
+  "members": [
+    {
+      "role": "geology",
+      "name": "Data/ATA_SCAR_GeoMAP_Geology_v2022_08.gpkg",
+      "bytes": 489955328,
+      "sha256": "fa2ba13c3deaca3fa98ab08617ea529b5e8b85d23d5e931da3d773e1b99b4200"
+    },
+    {
+      "role": "legend",
+      "name": "GeoMAP chrono-lithostratigraphic legend - v.2022-08.pdf",
+      "bytes": 416331,
+      "sha256": "168efeb3f0223b8101f57e680c62c9f8bba11ae032ce619a433b12b6923a488b"
+    },
+    {
+      "role": "metadata",
+      "name": "Support/metadata/ATA GeoMAP geological units v.2022-08.pdf",
+      "bytes": 247289,
+      "sha256": "ae51cc3fdfa84d0ebd1f322c620bb6ff690ec3d23eb657c023afc1aab3251dac"
+    }
+  ],
+  "notes": "The QGIS archive (GeoPackage, EPSG:3031). scripts/outcrops_geomap.py reads the geological units table for the Byrd Group outcrops of the A–A′ section.",
+  "limitations": "Mapped at 1:250 000 (locally finer); 'known geology' of exposed rock, not interpreted sub-ice geology. Age ranges (ABSMIN_MA, ABSMAX_MA) are coarse: the whole Byrd Group is given 485–541 Ma."
+}

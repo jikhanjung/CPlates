@@ -394,7 +394,8 @@ def main():
                  "anchor": section["anchor"]},
         "built_with": f"pygplates {pygplates.__version__}",
     }
-    # Byrd Group outcrops (Myrow et al. 2002, fig. 1), in the block's along/across km.
+    # Byrd Group outcrops (SCAR GeoMAP, scripts/outcrops_geomap.py), in the block's
+    # along/across km; only rings that reach into the grid.
     outcrops_path = ROOT / "sources/sections/byrd_outcrops.json"
     if outcrops_path.exists():
         outcrops = json.loads(outcrops_path.read_text())
@@ -405,9 +406,16 @@ def main():
             b = math.degrees(math.asin(max(-1.0, min(1.0, float(v @ pole)))))
             return [round(a * km, 1), round(b * km, 1)]
 
+        along_km = [along_deg[0] * km, along_deg[1] * km]
+        across_km = [across_deg[0] * km, across_deg[1] * km]
+
+        def in_grid(ring):
+            return any(along_km[0] <= a <= along_km[1] and across_km[0] <= b <= across_km[1] for a, b in ring)
+
+        rings = [{"unit": o["unit"], "ab": [block_km(*p) for p in o["ring"]]} for o in outcrops["outlines"]]
         meta["outcrops"] = {
             **{k: outcrops[k] for k in ("source", "method", "stratigraphy_note", "units")},
-            "outlines": [{"unit": o["unit"], "ab": [block_km(*p) for p in o["ring"]]} for o in outcrops["outlines"]],
+            "outlines": [r for r in rings if in_grid(r["ab"])],
             "sections": [{"id": x["id"], "ab": block_km(*x["at"])} for x in outcrops["sections"]],
         }
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))

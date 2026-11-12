@@ -323,3 +323,21 @@ fig. 16이다. Claybourn 2019 fig. 1(3)은 그것을 옮겼다. 다만 Claybourn
 - 그림: 왼쪽 PaleoDEM 환경 막대(모델)는 그대로. 오른쪽은 가로가 안쪽(대륙)–바깥쪽, 세로가 나이: 골디층, 부정합,
   섀클턴 석회암(벽돌), 그 위 바깥쪽에만 생물초·홀리오크층, 스타샷층(잔점, 위 끝 점선과 "C–O?"), 안쪽의
   더글러스층 쐐기(굵은 점, 톱니 경계), 해석 띠. "지금 쌓이는 것"은 `below` 단위를 뺀다.
+
+## 바꿈: 노두 윤곽을 SCAR GeoMAP으로 (사용자)
+
+사용자: (GSM 저장소에 남극 지질도가 있다고 알려 준 뒤) "PANGAEA 에서 받아도 돼", 그리고 "해줘".
+
+- 자료: SCAR GeoMAP v2022-08 (Cox et al. 2023, PANGAEA doi:10.1594/PANGAEA.951482, CC BY 4.0). GSM이 남극 지질도로
+  쓰는 것과 같다. QGIS 판(zip 187 MB, PANGAEA의 MD5와 같음)을 `sources/datasets/geomap.json`으로 고정하고
+  `make outcrops`가 받는다(`fetch_dataset.py geomap`). 쓰는 것은 지질 단위 gpkg(490 MB, EPSG:3031).
+- `scripts/outcrops_geomap.py`: GRPEQUIV 'Byrd Group'인 단위를 FMNEQUIV로 넷으로 나눈다 — 섀클턴 석회암, 스타샷층,
+  더글러스 역암, 나누지 않은 버드층군. GSM처럼 GIS 라이브러리 없이 sqlite3와 WKB 풀이, Snyder의 극평사 역변환(EPSG
+  지침 7-2 예제로 확인)으로 읽는다. 250 m로 간추리고 0.25 km² 미만 고리는 뺐다: 고리 1 828개 중 799개.
+  GeoMAP은 홀리오크층을 따로 그리지 않는다. 나이(ABSMIN/ABSMAX)는 버드층군 전체가 485–541 Ma로 거칠어서, 나이는
+  기둥 그림(Myrow 2002)의 것을 쓴다.
+- 손으로 딴 Myrow 2002 fig. 1 윤곽(`scripts/outcrops_myrow2002.py`)은 지웠다. 측정 단면 S1·S2·HR의 위치(fig. 1에서
+  눈으로)만 새 스크립트에 상수로 옮겼다.
+- 빌드는 격자에 닿는 고리만 meta에 넣는다(799개 모두 닿는다; meta.json 32 kB → 300 kB).
+- 쪽: 네 단위를 색으로 가르고(하늘 섀클턴, 주황 스타샷, 분홍 더글러스, 노랑 미구분), 범례는 단위마다 한 줄.
+  노두 조각이 작아 단위별 이름표가 한 자리에 겹쳤다 — 이름표는 "버드층군 노두" 하나로 줄였다. 출처에 Cox et al. 2023.

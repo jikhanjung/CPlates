@@ -2,7 +2,7 @@
 PY ?= .venv/bin/python
 PORT ?= 8350
 
-.PHONY: setup fetch frames cambrian section fixture test browser serve
+.PHONY: setup fetch frames cambrian section outcrops fixture test browser serve
 
 setup:            ## Python 3.12 venv for the offline tools (pygplates has no 3.14 wheel)
 	uv venv .venv --python 3.12
@@ -22,6 +22,10 @@ cambrian:         ## the Cambrian Antarctica page's data into site/data/cambrian
 
 section:          ## the A–A′ section block into site/data/section/ (after `make frames`)
 	$(PY) scripts/build_section.py
+
+outcrops:         ## Byrd Group outcrops from SCAR GeoMAP (fetches 187 MB) into sources/sections/; then `make section`
+	$(PY) scripts/fetch_dataset.py geomap
+	$(PY) scripts/outcrops_geomap.py
 
 fixture:          ## pygplates reference values for tests/pygplates.test.mjs
 	$(PY) scripts/make_test_fixture.py merdith2021 muller2022
