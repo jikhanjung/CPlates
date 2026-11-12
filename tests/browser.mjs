@@ -7,7 +7,9 @@ import { mkdir } from 'node:fs/promises';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:8350/';
 await mkdir('test-results', { recursive: true });
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+// CPLATES_RESOLVE="cplates.nopeoplestime.info 34.64.158.160" tests a server before its DNS exists.
+const resolve = process.env.CPLATES_RESOLVE ? [`--host-resolver-rules=MAP ${process.env.CPLATES_RESOLVE}`] : [];
+const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...resolve] });
 const failures = [];
 
 async function open(viewport, query) {
