@@ -19,7 +19,7 @@ import { continentalShare, crustKm, OCEANIC_CRUST_KM } from './isostasy.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
 const BASE = '../data/section/';
-const VES = [1, 2, 5, 10, 25, 50];
+const VES = [1, 2, 5, 10, 25, 50, 100];
 const SLAB_DIP = 45 * Math.PI / 180;
 const SLAB_KM = 90;
 const COLOURS = {
@@ -122,7 +122,9 @@ const $ = (id) => document.getElementById(id);
 const ASKED = new URLSearchParams(location.search);
 const state = {
   lang: initialLanguage(),
-  ve: VES.includes(Number(ASKED.get('ve'))) ? Number(ASKED.get('ve')) : 5,
+  // 25×: relief and crust both readable. PaleoDEM gives most Cambrian land a flat 240 m, so
+  // less than this hides what relief there is.
+  ve: VES.includes(Number(ASKED.get('ve'))) ? Number(ASKED.get('ve')) : 25,
   age: 540, oldest: 540, youngest: 460,
   playing: false, flow: true, boundaries: true, data: null,
 };
@@ -139,10 +141,15 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1220);
 const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
 scene.add(camera);
-const light = new THREE.DirectionalLight(0xffffff, 2.0);
-light.position.set(-0.4, 1, 0.6);
-camera.add(light);
-scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+// A low sun from the A end, fixed in the scene, so relief casts shading; a softer light
+// from the camera keeps the section face readable.
+const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+sun.position.set(-3, 1.2, -1.5);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+fill.position.set(0, 0.5, 1);
+camera.add(fill);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.minDistance = 0.8;
@@ -194,8 +201,10 @@ const zAt = (j) => -(state.data.meta.across_km[0] + j * state.data.meta.step_km)
 const yOf = (km) => (km * state.ve) / 1000;
 
 function hypsometric(h) {
+  // More steps on land below 1 km, where nearly all Cambrian land in PaleoDEM sits.
   const stops = [[-6000, '#0c1a36'], [-2000, '#183a68'], [-250, '#286296'], [-249, '#5cbace'], [-1, '#96dce2'],
-                 [0, '#b0c484'], [500, '#c4b478'], [1500, '#aa845c'], [4000, '#ece6de']];
+                 [0, '#8fb06a'], [150, '#a9bd7c'], [300, '#c8c48a'], [600, '#d2b276'], [1000, '#bf8f5c'],
+                 [1800, '#9c6e4c'], [2600, '#8a7466'], [4000, '#ece6de']];
   for (let i = 0; i < stops.length - 1; i++) {
     const [h0, c0] = stops[i];
     const [h1, c1] = stops[i + 1];
@@ -800,7 +809,7 @@ function aim(move = true) {
   const r = visibleRect();
   const freeWidth = Math.max(0.3, (r.right - r.left) / window.innerWidth);
   const fit = (length / (2 * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect * freeWidth)) * 1.3;
-  const view = new THREE.Vector3(-0.22, 0.42, 1).normalize();
+  const view = new THREE.Vector3(-0.22, 0.68, 1).normalize();
   if (move) camera.position.copy(target).addScaledVector(view, Math.max(2.5, fit));
   else camera.position.add(shift);
   controls.update();
