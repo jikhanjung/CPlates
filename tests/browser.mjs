@@ -211,6 +211,35 @@ async function openCambrian(viewport, query) {
   await page.close();
 }
 
+// The same globe through the whole Phanerozoic.
+{
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  page.on('pageerror', (error) => failures.push(`phanerozoic pageerror: ${error.message}`));
+  page.on('console', (message) => { if (message.type() === 'error') failures.push(`phanerozoic console: ${message.text()}`); });
+  await page.goto(`${base}phanerozoic/?age=180`);
+  await page.waitForFunction(() => window.cplates?.state.data, null, { timeout: 60000 });
+  await page.waitForTimeout(2500);
+  const span = await page.evaluate(() => [window.cplates.state.oldest, window.cplates.state.youngest]);
+  check(span[0] === 540 && span[1] === 0, `the Phanerozoic page should span 540–0 Ma: ${span}`);
+  check((await page.locator('#period').innerText()).includes('쥐라기'), 'at 180 Ma the period should be the Jurassic');
+  check(await page.locator('#to-section').isHidden(), 'outside 540–460 Ma there should be no link to the section');
+  check((await page.locator('#periods b').allInnerTexts()).includes('백악기'), 'the timeline should name the periods');
+  const bands = await page.locator('#periods b').allInnerTexts();
+  check(bands.indexOf('캄브리아기') < bands.indexOf('백악기'), `the timeline runs old to young, left to right: ${bands}`);
+  await page.screenshot({ path: 'test-results/phanerozoic-plates-180.png' });
+  await page.click('[data-mode="paleodem"]');
+  await page.waitForFunction(() => window.cplates.state.data.grids.get(180), null, { timeout: 20000 });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'test-results/phanerozoic-paleodem-180.png' });
+  await page.click('[data-mode="plates"]');
+  await page.evaluate(() => window.cplates.goTo(10));
+  await page.click('#play');
+  await page.waitForTimeout(1200);
+  const age = await page.evaluate(() => window.cplates.state.age);
+  check(age < 10, `Phanerozoic playback should move the age, at ${age}`);
+  await page.close();
+}
+
 // "Follow Antarctica" keeps Antarctica and the Transantarctic Mountains band in the
 // middle of the part of the screen the panels leave free, in both views, at any age,
 // on a wide screen and on a phone.

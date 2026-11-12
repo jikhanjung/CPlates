@@ -575,6 +575,7 @@ function renderAge() {
   const link = $('to-cambrian');
   link.href = age >= 485 && age <= 540 ? `cambrian/?age=${age}` : 'cambrian/';
   link.classList.toggle('here', age >= 485 && age <= 540);
+  $('to-phanerozoic').href = age <= 540 ? `phanerozoic/?age=${age}` : 'phanerozoic/';
   const params = new URLSearchParams(location.search);
   params.set('age', String(age));
   params.set('frame', state.model);

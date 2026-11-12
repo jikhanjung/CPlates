@@ -1,4 +1,6 @@
-// Antarctica through the Cambrian.
+// Antarctica through the Cambrian (site/cambrian/), or through the whole Phanerozoic
+// (site/phanerozoic/): the same globe, a different time span and data directory, chosen by
+// <body data-page>.
 //
 // Two reconstructions, kept apart on purpose (scripts/build_cambrian.py):
 // - "plates": Merdith et al. 2021, palaeomagnetic frame. Continents are present-day
@@ -18,9 +20,12 @@ import { LineSegmentsGeometry } from '../vendor/three/lines/LineSegmentsGeometry
 import { LineMaterial } from '../vendor/three/lines/LineMaterial.js';
 import { RotationModel, turn } from './rotation.js';
 import { toLonLat, toVector, sceneQuaternion } from './geo.js';
-import { format, initialLanguage, keepLanguage } from './i18n.js';
+import { format, initialLanguage, keepLanguage, PERIODS, periodAt, STRINGS as COMMON } from './i18n.js';
 
-const BASE = '../data/cambrian/';
+const PAGE = document.body.dataset.page === 'phanerozoic' ? 'phanerozoic' : 'cambrian';
+const BASE = `../data/${PAGE}/`;
+// The A–A′ section page's span.
+const SECTION_SPAN = [540, 460];
 const MERDITH = '../data/merdith2021/';
 const ENV = {
   land: '#b0c484', shallow: '#8fe3ef', slope: '#3f7fb0', deep: '#1b3a6a',
@@ -158,6 +163,38 @@ const STRINGS = {
   },
 };
 
+// What the Phanerozoic page says differently.
+const PHANEROZOIC = {
+  ko: {
+    title: 'CPlates — 현생누대의 남극대륙',
+    heading: '현생누대의 남극대륙',
+    subtitle: '540–0 Ma, 곤드와나에서 지금의 남극까지, 그리고 지금의 남극종단산맥이 있던 곳',
+    toOther: '캄브리아기만 자세히 보기 (540–485 Ma) →',
+    stripHeading: '남극종단산맥 자리의 높이·바다 깊이 (PaleoDEM)',
+    tamNote: '남극종단산맥 윤곽은 지금의 산맥(Natural Earth)을 판과 함께 옮긴 것입니다. 그때의 산맥 모양이 아니고, 판 안의 늘어남·줄어듦(로스해 열개, 로스 조산운동 등)도 들어 있지 않습니다. 지금의 산맥은 주로 신생대에 솟았습니다.',
+    timeScale: '연대: ICS 국제 층서 차트 v2023/09.',
+    error: '자료를 불러오지 못했습니다. scripts/build_cambrian.py --page phanerozoic 를 먼저 실행하세요.',
+    obsHeading: '지질 기록 (캄브리아기)',
+  },
+  en: {
+    title: 'CPlates — Antarctica through the Phanerozoic',
+    heading: 'Antarctica through the Phanerozoic',
+    subtitle: '540–0 Ma: from Gondwana to today’s Antarctica, and where today’s Transantarctic Mountains were',
+    toOther: 'The Cambrian in detail (540–485 Ma) →',
+    stripHeading: 'Height and sea depth where the Transantarctic Mountains are now (PaleoDEM)',
+    tamNote: 'The Transantarctic Mountains outline is today’s range (Natural Earth) carried with its plate. It is not the shape of a range at that time, and stretching or shortening within the plate (the Ross Sea rift, the Ross orogeny) is not in it. Today’s range rose mainly in the Cenozoic.',
+    timeScale: 'Ages: ICS International Chronostratigraphic Chart v2023/09.',
+    error: 'Could not load the data. Run scripts/build_cambrian.py --page phanerozoic first.',
+    obsHeading: 'Geological record (Cambrian)',
+  },
+};
+STRINGS.ko.toOther = '현생누대 전체로 보기 (540–0 Ma) →';
+STRINGS.en.toOther = 'The whole Phanerozoic (540–0 Ma) →';
+STRINGS.ko.tamNote = PHANEROZOIC.ko.tamNote;
+STRINGS.en.tamNote = PHANEROZOIC.en.tamNote;
+const TEXT = Object.fromEntries(Object.keys(STRINGS).map((lang) => [lang, {
+  ...STRINGS[lang], ...(PAGE === 'phanerozoic' ? PHANEROZOIC[lang] : {}), periods: COMMON[lang].periods }]));
+
 const $ = (id) => document.getElementById(id);
 const state = {
   lang: initialLanguage(),
@@ -169,7 +206,7 @@ const state = {
   follow: true,
   data: null,
 };
-const t = () => STRINGS[state.lang];
+const t = () => TEXT[state.lang];
 
 // ---------- scene ----------
 
@@ -298,12 +335,21 @@ async function load() {
   data.section = await vfetch('../data/section/meta.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
   data.boundaries = new Map();
   data.paleomap = new RotationModel(data['rotations-paleomap']);
+  // PaleoDEM pictures are fetched when first shown (the Phanerozoic page has 109).
   data.grids = new Map();
-  await Promise.all(data.meta.grid_ages.map(async (age) => {
-    const blob = await vfetch(`${BASE}paleodem/${age}.png`).then((r) => r.blob());
-    data.grids.set(age, await createImageBitmap(blob));
-  }));
   return data;
+}
+
+// The PaleoDEM picture for a grid age, or null while it loads (then the view is redrawn).
+function gridImage(age) {
+  const grids = state.data.grids;
+  if (grids.has(age)) return grids.get(age);
+  grids.set(age, null);
+  vfetch(`${BASE}paleodem/${age}.png`).then((r) => r.blob()).then(createImageBitmap).then((image) => {
+    grids.set(age, image);
+    update();
+  }).catch(() => grids.delete(age));
+  return null;
 }
 
 function buildContinents(list) {
@@ -414,6 +460,8 @@ function boundaryFrame(age) {
   const rounded = Math.round(age);
   const key = `${state.mode}:${rounded}`;
   if (shownBoundaries === key) return;
+  // The next few frames, so playback does not wait for them.
+  for (let k = 1; k <= 6; k++) if (rounded - k >= state.youngest) boundaryPieces(rounded - k);
   const pieces = boundaryPieces(rounded);
   if (!pieces) return;
   shownBoundaries = key;
@@ -483,9 +531,10 @@ function update() {
   const model = plates ? data.merdith : data.paleomap;
   const key = plates ? 'm' : 'p';
 
-  globeMaterial.uniforms.useDem.value = plates ? 0 : 1;
-  if (!plates && shownGrid !== grid) {
-    demTexture.image = data.grids.get(grid);
+  const image = plates ? null : gridImage(grid);
+  globeMaterial.uniforms.useDem.value = image ? 1 : 0;
+  if (image && shownGrid !== grid) {
+    demTexture.image = image;
     demTexture.needsUpdate = true;
     shownGrid = grid;
   }
@@ -674,7 +723,12 @@ function stageAt(age) {
 function renderAge() {
   const age = state.age;
   $('back').href = `../?age=${Math.round(age)}&frame=merdith2021`;
-  $('to-section').href = `../section/?age=${Math.round(age)}`;
+  const toSection = $('to-section');
+  toSection.href = `../section/?age=${Math.round(age)}`;
+  toSection.hidden = age > SECTION_SPAN[0] || age < SECTION_SPAN[1];
+  $('to-other').href = PAGE === 'phanerozoic'
+    ? (age <= 540 && age >= 485 ? `../cambrian/?age=${Math.round(age)}` : '../cambrian/')
+    : `../phanerozoic/?age=${Math.round(age)}`;
   $('age').textContent = format(t().age, { age: age.toFixed(1) });
   const [, , epoch, stage, colour] = stageAt(age);
   const inCambrian = age <= 538.8 && age > 486.85;
@@ -682,7 +736,12 @@ function renderAge() {
   period.replaceChildren();
   const swatch = document.createElement('i');
   swatch.style.background = colour;
-  const words = inCambrian ? `${t().cambrian} · ${t().epochs[epoch]} · ${t().stages[stage]}` : t().stages[stage];
+  let words = inCambrian ? `${t().cambrian} · ${t().epochs[epoch]} · ${t().stages[stage]}` : t().stages[stage];
+  if (PAGE === 'phanerozoic' && !inCambrian) {
+    const [name, , , periodColour] = periodAt(age);
+    words = t().periods[name];
+    swatch.style.background = periodColour;
+  }
   period.append(swatch, document.createTextNode(words));
   $('slider').value = String(state.oldest - age);
   $('slider').setAttribute('aria-valuetext', format(t().age, { age: age.toFixed(1) }));
@@ -804,17 +863,22 @@ function drawStrip() {
 function renderPeriods() {
   const bar = $('periods');
   bar.replaceChildren();
-  for (const [key, base, top, colour] of EPOCHS) {
+  // The Cambrian page shows epochs; the Phanerozoic page, periods.
+  const bands = PAGE === 'phanerozoic'
+    ? [...PERIODS].reverse().map(([name, young, old, colour]) => [name, old, young, colour, t().periods[name]])
+    : EPOCHS.map(([key, base, top, colour]) => [key, base, top, colour, t().epochs[key]]);
+  const wide = (state.oldest - state.youngest) / 9;
+  for (const [, base, top, colour, name] of bands) {
     const from = Math.min(base, state.oldest);
     const to = Math.max(top, state.youngest);
     if (from <= to) continue;
     const span = document.createElement('span');
     span.style.flex = String(from - to);
     span.style.background = colour;
-    span.title = t().epochs[key];
-    if (from - to > 6) {
+    span.title = name;
+    if (from - to > Math.min(6, wide) * (PAGE === 'phanerozoic' ? 5 : 1)) {
       const label = document.createElement('b');
-      label.textContent = t().epochs[key];
+      label.textContent = name;
       span.append(label);
     }
     bar.append(span);
@@ -867,6 +931,7 @@ function renderSources() {
     p.append(document.createTextNode(' · '), licence);
   }
   para(format(t().method, { version: state.data.meta.built_with.replace('pygplates ', '') }));
+  para(t().tamNote);
   para(t().classesNote);
   para(t().timeScale);
   para('CPlates (PaleoBytes), derived data: CC BY 4.0.');
@@ -984,8 +1049,9 @@ async function start() {
   state.youngest = state.data.meta.youngest;
   $('slider').max = String(state.oldest - state.youngest);
   buildContinents(state.data.continents);
-  // Fetch the boundary frames in the background, from the start of the timeline.
-  (async () => {
+  // Fetch the boundary frames in the background, from the start of the timeline (on the
+  // Cambrian page only: the Phanerozoic page's 541 frames come as they are needed).
+  if (state.oldest - state.youngest <= 100) (async () => {
     for (let age = state.oldest; age >= state.youngest; age -= 1) {
       boundaryPieces(age);
       await new Promise((resolve) => setTimeout(resolve, 30));

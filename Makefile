@@ -2,7 +2,7 @@
 PY ?= .venv/bin/python
 PORT ?= 8350
 
-.PHONY: setup fetch frames cambrian section outcrops fixture test browser serve
+.PHONY: setup fetch frames cambrian phanerozoic section outcrops fixture test browser serve
 
 setup:            ## Python 3.12 venv for the offline tools (pygplates has no 3.14 wheel)
 	uv venv .venv --python 3.12
@@ -18,7 +18,10 @@ frames:           ## resolve topologies 0-540 Ma, 1 Myr apart, for both plate mo
 	$(PY) scripts/build_frames.py muller2022 --from 0 --to 540 --step 1
 
 cambrian:         ## the Cambrian Antarctica page's data into site/data/cambrian/ (after `make frames`)
-	$(PY) scripts/build_cambrian.py
+	$(PY) scripts/build_cambrian.py --page cambrian
+
+phanerozoic:      ## the same globe for 540–0 Ma into site/data/phanerozoic/ (after `make frames`)
+	$(PY) scripts/build_cambrian.py --page phanerozoic
 
 section:          ## the A–A′ section block into site/data/section/ (after `make frames`)
 	$(PY) scripts/build_section.py

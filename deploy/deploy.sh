@@ -28,8 +28,8 @@ git merge-base --is-ancestor "$COMMIT" origin/main || {
 
 # The site must be exactly the commit's, and the data must be built.
 git diff --quiet "$COMMIT" -- site || { echo "site/ differs from $COMMIT; commit or check out first" >&2; exit 1; }
-for f in site/data/merdith2021/model.json site/data/muller2022/model.json site/data/cambrian/meta.json site/data/section/meta.json; do
-  [ -f "$f" ] || { echo "missing $f: run make frames cambrian section" >&2; exit 1; }
+for f in site/data/merdith2021/model.json site/data/muller2022/model.json site/data/cambrian/meta.json site/data/phanerozoic/meta.json site/data/section/meta.json; do
+  [ -f "$f" ] || { echo "missing $f: run make frames cambrian phanerozoic section" >&2; exit 1; }
 done
 
 STAGE=$(mktemp -d)
@@ -52,7 +52,7 @@ tar -czf - -C "$STAGE/site" . | ssh "$HOST" "set -e
   echo \"current -> \$(readlink /srv/cplates/current) (previous: \$previous)\""
 
 # 3. Smoke: the pages answer and the site says it is this commit.
-for path in / /section/ /cambrian/ /data/section/meta.json; do
+for path in / /section/ /cambrian/ /phanerozoic/ /data/section/meta.json; do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path")
   [ "$code" = 200 ] || { echo "smoke: $path → $code; not pruning. Roll back with the previous release (deploys.log)." >&2; exit 1; }
 done

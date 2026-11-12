@@ -8,6 +8,7 @@ export const STRINGS = {
     heading: '판의 움직임',
     subtitle: '판 경계와 판의 이동을 3D 지구본에서',
     toCambrian: '캄브리아기의 남극대륙 자세히 (540–485 Ma) →',
+    toPhanerozoic: '남극대륙을 따라 보기 (현생누대, 540–0 Ma) →',
     frameLabel: '기준틀',
     frameShort: { merdith2021: '고지자기 기준틀 (Merdith 2021)', muller2022: '맨틀 기준틀 (Müller 2022)' },
     frameNote: {
@@ -62,6 +63,7 @@ export const STRINGS = {
     heading: 'Plate motion',
     subtitle: 'Plate boundaries and plate motion on a 3D globe',
     toCambrian: 'Antarctica in the Cambrian, in detail (540–485 Ma) →',
+    toPhanerozoic: 'Follow Antarctica (Phanerozoic, 540–0 Ma) →',
     frameLabel: 'Reference frame',
     frameShort: { merdith2021: 'palaeomagnetic frame (Merdith 2021)', muller2022: 'mantle frame (Müller 2022)' },
     frameNote: {

@@ -32,6 +32,8 @@ h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: 
 .back { display: inline-block; font-size: 12px; color: #9cc7ff; margin: 0 0 6px; text-decoration: none; }
 .back:hover { text-decoration: underline; }
 .back.here { color: var(--accent); font-weight: 600; }
+.back[hidden] { display: none; }
+#to-other { display: block; }
 
 /* Segmented switch: the reference frame here, the view on the Cambrian page. */
 .seg, .modes { display: flex; gap: 4px; margin: 4px 0 4px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 3px; }

@@ -4,7 +4,7 @@
   "title": "PALEOMAP Paleodigital Elevation Models (PaleoDEMs) for the Phanerozoic, 1 degree grids",
   "short_title": "Scotese & Wright 2018 PaleoDEM",
   "covers_ma": [
-    460,
+    0,
     540
   ],
   "retrieved_at": "2026-09-12",
@@ -125,8 +125,560 @@
       "name": "Map80_PALEOMAP_1deg_Middle_Ordovician_460Ma.nc",
       "bytes": 50673,
       "sha256": "7c463009d7148aaf1a7c40451dd40fc516d7542d92f07fcedca0b10bc41ba108"
+    },
+    {
+      "role": "grid",
+      "name": "Map79_PALEOMAP_1deg_Late_Ordovician_455Ma.nc",
+      "bytes": 50968,
+      "sha256": "cc2570eec8b6ce99f189392bc1b0ed76c74f3326b0e0dbeebb9c36e239cbca00"
+    },
+    {
+      "role": "grid",
+      "name": "Map78_PALEOMAP_1deg_Late_Ordovician_450Ma.nc",
+      "bytes": 50204,
+      "sha256": "3976dc1b5ae3408f024116f0a46dec7eaeaeb4d45d03a12a540be621e89da6af"
+    },
+    {
+      "role": "grid",
+      "name": "Map77_PALEOMAP_1deg_Late_Ordovician_445Ma.nc",
+      "bytes": 48590,
+      "sha256": "a8477ab55fe304333985c81de21f2681b38fe09b774ae217fa209c48cf5fa422"
+    },
+    {
+      "role": "grid",
+      "name": "Map76_PALEOMAP_1deg_Early_Silurian_440Ma.nc",
+      "bytes": 45319,
+      "sha256": "23af8815ddbcb43075fb0b38f6ac86691d217ba49ad83e5e67ef9e99813a33c7"
+    },
+    {
+      "role": "grid",
+      "name": "Map75.5_PALEOMAP_1deg_Early_Silurian_435Ma.nc",
+      "bytes": 49351,
+      "sha256": "b263a785ad462fde8edc32efb0b2ffb413af0389710acc4f332f51e6ddb0bd4c"
+    },
+    {
+      "role": "grid",
+      "name": "Map75_PALEOMAP_1deg_Middle_Silurian_430Ma.nc",
+      "bytes": 48752,
+      "sha256": "8b2e9fada129fcb90ef3d967bb19e122aca891a0e283dd6b559dc0f4f23ce812"
+    },
+    {
+      "role": "grid",
+      "name": "Map74_PALEOMAP_1deg_Late_Silurian_425Ma.nc",
+      "bytes": 48885,
+      "sha256": "bed2ff03bc3e26fee334dfe436d97b71f0f9d8de723ff939a54fe4a662fac35e"
+    },
+    {
+      "role": "grid",
+      "name": "Map73_PALEOMAP_1deg_Late_Silurian_420Ma.nc",
+      "bytes": 45342,
+      "sha256": "91b1bc29cea89342074533a9fb8b8c522cce9f57949d6f14e33fc530c18ae721"
+    },
+    {
+      "role": "grid",
+      "name": "Map72_PALEOMAP_1deg_Early_Devonian_415Ma.nc",
+      "bytes": 47075,
+      "sha256": "0ee2a5169dd7ff6012b31190ea4188adff573123791be67da2f03673336daa08"
+    },
+    {
+      "role": "grid",
+      "name": "Map71_PALEOMAP_1deg_Early_Devonian_410Ma.nc",
+      "bytes": 47515,
+      "sha256": "a640bc8ef5dfa35dabd041420e884fd64bca0c051e0a47af1c9c7592a11f05a3"
+    },
+    {
+      "role": "grid",
+      "name": "Map70.5_PALEOMAP_1deg_Early_Devonian_405Ma.nc",
+      "bytes": 47256,
+      "sha256": "ce9a2ed5f1515ff47f3addf85a4649f78766d763130839ddcc98489cc9245c9b"
+    },
+    {
+      "role": "grid",
+      "name": "Map70_PALEOMAP_1deg_Early_Devonian_400Ma.nc",
+      "bytes": 46482,
+      "sha256": "ba358a7e0fc03b1c14a8cb71415d3f1c7a0b6e902a1b1432107e019738fc98f6"
+    },
+    {
+      "role": "grid",
+      "name": "Map69_PALEOMAP_1deg_Early_Devonian_395Ma.nc",
+      "bytes": 48293,
+      "sha256": "8a5ff514b689145dd10853783a60b4e45cf3eaf0beae8ee34849190091f94f7a"
+    },
+    {
+      "role": "grid",
+      "name": "Map68_PALEOMAP_1deg_Middle_Devonian_390.5Ma.nc",
+      "bytes": 48416,
+      "sha256": "7f1fd2a5e21130f536debb6e55af2b7a2b0fa7731a12f5c3033039082f30bd69"
+    },
+    {
+      "role": "grid",
+      "name": "Map67.5_PALEOMAP_1deg_Middle_Devonian_385.2Ma.nc",
+      "bytes": 48386,
+      "sha256": "a48a3bac81ba81e17a35fd3a8b61b19fd6341bff311fc2df28d6de264d497877"
+    },
+    {
+      "role": "grid",
+      "name": "Map67_PALEOMAP_1deg_Late_Devonian_380Ma.nc",
+      "bytes": 47238,
+      "sha256": "54c6f1eded7581d1686ca731f5b5d691eb106eb6a7af1879496fcff34caf804f"
+    },
+    {
+      "role": "grid",
+      "name": "Map66.5_PALEOMAP_1deg_Late_Devonian_375Ma.nc",
+      "bytes": 48647,
+      "sha256": "184e26fb4fcc3de516ae8c7445133398d46a29078510b4b89a416bd19a44f29e"
+    },
+    {
+      "role": "grid",
+      "name": "Map66_PALEOMAP_1deg_Late_Devonian_370Ma.nc",
+      "bytes": 48508,
+      "sha256": "5d633b38710be039fd840985be1c43c4eda6be12c76ca6476ae5fda84aceb0a1"
+    },
+    {
+      "role": "grid",
+      "name": "Map65.5_PALEOMAP_1deg_Late_Devonian_365Ma.nc",
+      "bytes": 48133,
+      "sha256": "1e43faf048dda30825059ddf7d6b3ed25c6ed93958cedb7b9e910f65896c3d5d"
+    },
+    {
+      "role": "grid",
+      "name": "Map65_PALEOMAP_1deg_Devono-Carboniferous Boundary_360Ma.nc",
+      "bytes": 45666,
+      "sha256": "72676768d24f761039147af63666c0ece7efe5d3f2ab2859744566b3561cd61c"
+    },
+    {
+      "role": "grid",
+      "name": "Map64.5_PALEOMAP_1deg_Early_Mississippian_355Ma.nc",
+      "bytes": 47818,
+      "sha256": "f64c7c8cbc4c6458190d926816e3a87b7dad3b03c6e4857d86f7a0fcf65c14a2"
+    },
+    {
+      "role": "grid",
+      "name": "Map64_PALEOMAP_1deg_Early_Mississippian_350Ma.nc",
+      "bytes": 48223,
+      "sha256": "2788b6d0ec9376530aefa47d4de8f0add6ae982f7eb95d5e7c3b93d3373d7e7d"
+    },
+    {
+      "role": "grid",
+      "name": "Map63.5_PALEOMAP_1deg_Middle_Mississippian_345Ma.nc",
+      "bytes": 47832,
+      "sha256": "9a1607ff1c690540aea87c5eb0aafb9d1c94ed33887351debb6b93e91935bf32"
+    },
+    {
+      "role": "grid",
+      "name": "Map63_PALEOMAP_1deg_Middle_Mississippian_340Ma.nc",
+      "bytes": 46237,
+      "sha256": "aad779b2061ef8d84e17476e73b28c10ca9bef7e8d6f4073c35e83b79606abe6"
+    },
+    {
+      "role": "grid",
+      "name": "Map62.5_PALEOMAP_1deg_Middle_Mississippian_335Ma.nc",
+      "bytes": 48136,
+      "sha256": "d4f41eaa39a597ecfa975abbf74c6f73edd1a59b65948fe61dc0c4f485f3b06c"
+    },
+    {
+      "role": "grid",
+      "name": "Map62_PALEOMAP_1deg_Late_Mississippian_330Ma.nc",
+      "bytes": 48146,
+      "sha256": "0043acf175f90fb1a31eb3ecf5b0d20a95026d0adbfb86797511cb211f3f584b"
+    },
+    {
+      "role": "grid",
+      "name": "Map61_PALEOMAP_1deg_Late_Mississippian_325Ma.nc",
+      "bytes": 48229,
+      "sha256": "a5656a2e3f7d3319936841a0d56f662fb7ef2c8b11c713a6b0155b4cfe7cf7f1"
+    },
+    {
+      "role": "grid",
+      "name": "Map60_PALEOMAP_1deg_Early_Pennsylvanian_320Ma.nc",
+      "bytes": 46938,
+      "sha256": "865536d4b2ae492f9482070ca215614ec46396f920062becf17e780a145d8966"
+    },
+    {
+      "role": "grid",
+      "name": "Map59.5_PALEOMAP_1deg_EarlyMiddleCarboniferous_315Ma.nc",
+      "bytes": 49111,
+      "sha256": "1ee62c334408f796357944531bc747e37901775f15e9045c3361a59ced96cc31"
+    },
+    {
+      "role": "grid",
+      "name": "Map59_PALEOMAP_1deg_Middle_Pennsylvanian_310Ma.nc",
+      "bytes": 49661,
+      "sha256": "9aa1bbd7a8b95d5f1954fcf5048451d7deab9a2b08da81c792580a33d6452026"
+    },
+    {
+      "role": "grid",
+      "name": "Map58_PALEOMAP_1deg_Late_Pennsylvanian_305Ma.nc",
+      "bytes": 49822,
+      "sha256": "3cff69c445ede13d0998915299ae311c64d47590c6129b7b9c46f1a43618b18d"
+    },
+    {
+      "role": "grid",
+      "name": "Map57_PALEOMAP_1deg_Late_Pennsylvanian_300Ma.nc",
+      "bytes": 48882,
+      "sha256": "907d683de665d5105c699b2a47f905b74e95e5c8bf7e5b22ae187fd84cae00d8"
+    },
+    {
+      "role": "grid",
+      "name": "Map56_PALEOMAP_1deg_Early_Permian_295Ma.nc",
+      "bytes": 51157,
+      "sha256": "fee89b2be56b40c34681de4e56883c79d482533cc0e678d4e6ef783c7521a928"
+    },
+    {
+      "role": "grid",
+      "name": "Map55_PALEOMAP_1deg_Early_Permian_290Ma.nc",
+      "bytes": 51921,
+      "sha256": "938c56e92e1c91d6ccbfaeb4cd62285f974acaede3e30de4212cceccf731baee"
+    },
+    {
+      "role": "grid",
+      "name": "Map54.5_PALEOMAP_1deg_Early_Permian_285Ma.nc",
+      "bytes": 52334,
+      "sha256": "3c6f40ef901402d7f79ccfd793ccfb303d7d3965a62e0518d40f5dcca1f80a0d"
+    },
+    {
+      "role": "grid",
+      "name": "Map54_PALEOMAP_1deg_Early_Permian_280Ma.nc",
+      "bytes": 51444,
+      "sha256": "23a298f0df6bcee87d41ad47a3ac9f3c902537afbcd35adddd79149e938e6ed0"
+    },
+    {
+      "role": "grid",
+      "name": "Map53_PALEOMAP_1deg_Early_Permian_275Ma.nc",
+      "bytes": 52214,
+      "sha256": "85301e9623c09f362b82a14e29e73b8dbe8a04d5188c4d30354927269dd99711"
+    },
+    {
+      "role": "grid",
+      "name": "Map52_PALEOMAP_1deg_Middle_Permian_270Ma.nc",
+      "bytes": 51671,
+      "sha256": "4a51ae480a1c7e19da63545de74a68d28d14be19daebe2fd3283dc83150f88d5"
+    },
+    {
+      "role": "grid",
+      "name": "Map51.5_PALEOMAP_1deg_Middle_Permian_265Ma.nc",
+      "bytes": 51101,
+      "sha256": "eb27ffe3c4580d90fda68097405adc69ed8324b58ea3ecb0df85b2e247ac5f9f"
+    },
+    {
+      "role": "grid",
+      "name": "Map51_PALEOMAP_1deg_Middle_Permian_260Ma.nc",
+      "bytes": 49158,
+      "sha256": "5d40f327768b10026552221d2f8e2a91f54d55ae502a554b122cdd0ad18cd867"
+    },
+    {
+      "role": "grid",
+      "name": "Map50_PALEOMAP_1deg_LatePermian_255Ma.nc",
+      "bytes": 51346,
+      "sha256": "bdb11ecde527e74bab66df287c610da2de80a28006e4331a9fd31b36461bf598"
+    },
+    {
+      "role": "grid",
+      "name": "Map49_PALEOMAP_1deg_Permo-Triassic Boundary_250Ma.nc",
+      "bytes": 51944,
+      "sha256": "59b3ca3dfc7e45879d020c1232bdeb9d8a188e4e6f75cb6fd82622a4683694e6"
+    },
+    {
+      "role": "grid",
+      "name": "Map48_PALEOMAP_1deg_Middle_Triassic_245Ma.nc",
+      "bytes": 51052,
+      "sha256": "bfb9a4694133039acc272d4bbbf43e8599f7cc95660daa663b6620f1face8261"
+    },
+    {
+      "role": "grid",
+      "name": "Map47_PALEOMAP_1deg_Middle_Triassic_240Ma.nc",
+      "bytes": 49188,
+      "sha256": "d10f9e76c772bdbda290771f11d9c43d9e48a1448924884d3c0932d47414ba24"
+    },
+    {
+      "role": "grid",
+      "name": "Map46.5_PALEOMAP_1deg_Late_Triassic_235Ma.nc",
+      "bytes": 52560,
+      "sha256": "dd29b403e80e833df4ddc289b0fbdd55458756efa7d09b168d2b51f98fd8e753"
+    },
+    {
+      "role": "grid",
+      "name": "Map46_PALEOMAP_1deg_Late_Triassic_230Ma.nc",
+      "bytes": 52193,
+      "sha256": "751b17d8a30dc93c5a7cd79e4eba909872282a0a838c9195b6e3e06ad5048114"
+    },
+    {
+      "role": "grid",
+      "name": "Map45.5_PALEOMAP_1deg_Late_Triassic_225Ma.nc",
+      "bytes": 54210,
+      "sha256": "1522a822225e3d78e8f64ff3809e86706c00fd5b4a10968e0638b9cc20c0cca1"
+    },
+    {
+      "role": "grid",
+      "name": "Map45_PALEOMAP_1deg_Late_Triassic_220Ma.nc",
+      "bytes": 51425,
+      "sha256": "3b3d342b9a1c9511b713cc3aeeb26664cad58f7747dc96e1078cabdb1a8bbb1c"
+    },
+    {
+      "role": "grid",
+      "name": "Map44.5_PALEOMAP_1deg_Late_Triassic_215Ma.nc",
+      "bytes": 52928,
+      "sha256": "7725692063110b23e857545c92853c2b6523e5145847427eef97877f091e9060"
+    },
+    {
+      "role": "grid",
+      "name": "Map44_PALEOMAP_1deg_Late_Triassic_210Ma.nc",
+      "bytes": 53013,
+      "sha256": "49af26207ca7c505ce09e88cfbb78d8cd453536b81b67cf890b6f3f25152087c"
+    },
+    {
+      "role": "grid",
+      "name": "Map43.5_PALEOMAP_1deg_Late_Triassic_205Ma.nc",
+      "bytes": 51181,
+      "sha256": "00052ac6aff4c568c2603c738ef9c39fbf306034427ee2862ab46989a0726c5f"
+    },
+    {
+      "role": "grid",
+      "name": "Map43_PALEOMAP_1deg_Late_Triassic_200Ma.nc",
+      "bytes": 49645,
+      "sha256": "c13723f0bc9812e5205266216125fd0f1979d890ea662b2f1eb19428c817427b"
+    },
+    {
+      "role": "grid",
+      "name": "Map42_PALEOMAP_1deg_Early_Jurassic_195Ma.nc",
+      "bytes": 51726,
+      "sha256": "4ce6ba75895b10427bf9838caf09c18cceac8eecd65e54adb669de3667413ed8"
+    },
+    {
+      "role": "grid",
+      "name": "Map41_PALEOMAP_1deg_Early_Jurassic_190Ma.nc",
+      "bytes": 52678,
+      "sha256": "f50624c5377910ed884fc329d196408dfb6aa01dbc71f86dd1d3156199f3f11c"
+    },
+    {
+      "role": "grid",
+      "name": "Map40_PALEOMAP_1deg_Early_Jurassic_185Ma.nc",
+      "bytes": 53076,
+      "sha256": "228ceae5e47a6cfed1104bf7266c1e0b7d60687004b974a332ba1828794b160a"
+    },
+    {
+      "role": "grid",
+      "name": "Map39_PALEOMAP_1deg_Early_Jurassic_180Ma.nc",
+      "bytes": 51177,
+      "sha256": "a7a6d43ed60ea15fa3184b3e4dcbb39fc71e7d334e1a6a66c1b587fa079ef1e4"
+    },
+    {
+      "role": "grid",
+      "name": "Map38_PALEOMAP_1deg_Middle_Jurassic_175Ma.nc",
+      "bytes": 53063,
+      "sha256": "c00fa9a5e6933cba77624a91d576aeda9de3e394dfccf86c17c3948d2bfa3730"
+    },
+    {
+      "role": "grid",
+      "name": "Map37_PALEOMAP_1deg_Middle_Jurassic_170Ma.nc",
+      "bytes": 54378,
+      "sha256": "0a07b9964cd44f708127bb44c1144d668f2bfb298970642673c2a373ed4c0c68"
+    },
+    {
+      "role": "grid",
+      "name": "Map36_PALEOMAP_1deg_Middle_Jurassic_165Ma.nc",
+      "bytes": 54778,
+      "sha256": "cb7572f9e34a6574c706f9b9a75f53ccc642833fae3df1332fe4fb570b34db0e"
+    },
+    {
+      "role": "grid",
+      "name": "Map35_PALEOMAP_1deg_Late_Jurassic_160Ma.nc",
+      "bytes": 53908,
+      "sha256": "889832e7c8eaa228e91401ab4f28f79ce4f8a12af26468d0cbfccbf25b82476f"
+    },
+    {
+      "role": "grid",
+      "name": "Map34_PALEOMAP_1deg_Late_Jurassic_155Ma.nc",
+      "bytes": 56765,
+      "sha256": "b0a97cdb6ec01a41e449fd65c7f19d84b8ee2c26bc8c056c944147eb3f433140"
+    },
+    {
+      "role": "grid",
+      "name": "Map33_PALEOMAP_1deg_Late_Jurassic_150Ma.nc",
+      "bytes": 57327,
+      "sha256": "d3d18faef779666dfb6c240a4ee560ee54130c511eb23c2ed36bcc4203bbf3c8"
+    },
+    {
+      "role": "grid",
+      "name": "Map32_PALEOMAP_1deg_Jurassic_Cretaceous_Boundary_145Ma.nc",
+      "bytes": 59327,
+      "sha256": "2735b2eb244574b6e58ee98dd428a38808d16bc410120231c60c63ccfb00806c"
+    },
+    {
+      "role": "grid",
+      "name": "Map31_PALEOMAP_1deg_Early_Cretaceous_140Ma.nc",
+      "bytes": 58812,
+      "sha256": "02b2212153d84b1d1ea068779907313423ecd2cc89e0aaefd8bd59d75137f966"
+    },
+    {
+      "role": "grid",
+      "name": "Map30_PALEOMAP_1deg_Early_Cretaceous_135Ma.nc",
+      "bytes": 62524,
+      "sha256": "27afe4e957a542c90356256aa9d78d967b13626db4bd96f6c27d9e56e9b54973"
+    },
+    {
+      "role": "grid",
+      "name": "Map29_PALEOMAP_1deg_Early_Cretaceous_130Ma.nc",
+      "bytes": 62945,
+      "sha256": "c3b79a5f371d296f2d0d8d93fd91b4e79a980aeac125424f4f69bd511b8782d0"
+    },
+    {
+      "role": "grid",
+      "name": "Map28_PALEOMAP_1deg_Early_Cretaceous_125Ma.nc",
+      "bytes": 64506,
+      "sha256": "bb9149a62a638a428b4a9cb873a7c944610cb9c222daf0a8bee24f30b037fd6a"
+    },
+    {
+      "role": "grid",
+      "name": "Map27_PALEOMAP_1deg_Early_Cretaceous_120Ma.nc",
+      "bytes": 63360,
+      "sha256": "a4dc1fbc1247b787af8cc14e8dc93d02ca75c9c0888b483e50c78c990ad78fdd"
+    },
+    {
+      "role": "grid",
+      "name": "Map26_PALEOMAP_1deg_Early_Cretaceous_115Ma.nc",
+      "bytes": 67188,
+      "sha256": "0fc2237e061dbaa1515b1e782f357e060528a0ff0ecbe9426ae6e3296aefb466"
+    },
+    {
+      "role": "grid",
+      "name": "Map25_PALEOMAP_1deg_Early_Cretaceous_110Ma.nc",
+      "bytes": 67077,
+      "sha256": "9e6dc7a6c325ec9ef04005a276525fb57b42711d7a64511c9f6f24fef569742a"
+    },
+    {
+      "role": "grid",
+      "name": "Map24_PALEOMAP_1deg_Early Cretaceous_105Ma.nc",
+      "bytes": 69410,
+      "sha256": "ce1245769cd6ac5710f1f4d0f3848ede7e078026cafb397ffe807bf44ed95320"
+    },
+    {
+      "role": "grid",
+      "name": "Map23_PALEOMAP_1deg_Early_Cretaceous_100Ma.nc",
+      "bytes": 64930,
+      "sha256": "1e75b507a90cff19cb452952ab75c907626f1b0223e84a6f7c8d5ad1c1bff0e3"
+    },
+    {
+      "role": "grid",
+      "name": "Map22_PALEOMAP_1deg_Mid-Cretaceous_95Ma.nc",
+      "bytes": 79450,
+      "sha256": "21c1b44ca0f4198aaab142f3245c34fd373be4737b88c8c15b0453f323e7e329"
+    },
+    {
+      "role": "grid",
+      "name": "Map21_PALEOMAP_1deg_Mid-Cretaceous_90Ma.nc",
+      "bytes": 79553,
+      "sha256": "5e75ac190780cf961cf88061e71612b4b06c235f3b5c720f3ab1ce81385d8352"
+    },
+    {
+      "role": "grid",
+      "name": "Map20_PALEOMAP_1deg_Late_Cretaceous_85Ma.nc",
+      "bytes": 84585,
+      "sha256": "4487b87168753d4b5283b75a3abac969075c27961a3f90fc8ee8e192c1c2fd75"
+    },
+    {
+      "role": "grid",
+      "name": "Map19_PALEOMAP_1deg_Late_Cretaceous_80Ma.nc",
+      "bytes": 76945,
+      "sha256": "2a5733b81011b154087ebe8bbc80f817dd2bc4dd9546c9c684ca4ade27b4afa1"
+    },
+    {
+      "role": "grid",
+      "name": "Map18_PALEOMAP_1deg_Late_Cretaceous_75Ma.nc",
+      "bytes": 84748,
+      "sha256": "c508bbe62c100f94a511d270970cb8918ff47c1e558d10c27e2a6972ce8cd5da"
+    },
+    {
+      "role": "grid",
+      "name": "Map17_PALEOMAP_1deg_Late_Cretaceous_70Ma.nc",
+      "bytes": 80317,
+      "sha256": "f92766ed7ba06e6b1745054d421e73cd698f6c2e56ac432d590fd89f0cee22f8"
+    },
+    {
+      "role": "grid",
+      "name": "Map16_PALEOMAP_1deg_KT_Boundary_65Ma.nc",
+      "bytes": 87877,
+      "sha256": "cd72f6a2090329a41765fec06be11b6c7600fc9caafc4acab0b10b3a07f7e1da"
+    },
+    {
+      "role": "grid",
+      "name": "Map15_PALEOMAP_1deg_Paleocene_60Ma.nc",
+      "bytes": 89654,
+      "sha256": "78e927434b315a189d14db99603955259c82a0f26b12b50eaf0c6f67d0fb61fb"
+    },
+    {
+      "role": "grid",
+      "name": "Map14_PALEOMAP_1deg_Paleocene_Eocene_Boundary_55Ma.nc",
+      "bytes": 92229,
+      "sha256": "e43b4ea4753de92b65ab973ff3c8aa21ad2a319ccff1b86c71cf760260370670"
+    },
+    {
+      "role": "grid",
+      "name": "Map13_PALEOMAP_1deg_Early_Eocene_50Ma.nc",
+      "bytes": 81230,
+      "sha256": "7f6e0b9512d7e368394f6ad922cd3dd6e787c299ed862881cc26b5a8cfbeac01"
+    },
+    {
+      "role": "grid",
+      "name": "Map12_PALEOMAP_1deg_early_Middle_Eocene_45Ma.nc",
+      "bytes": 92596,
+      "sha256": "e75989ecb9844c3d7151cd8416eebcad79b469484bad4c31d1eaca317dbc024b"
+    },
+    {
+      "role": "grid",
+      "name": "Map11_PALEOMAP_1deg_late_Middle_Eocene_40Ma.nc",
+      "bytes": 91370,
+      "sha256": "cf3dafaf0a01a26b69f69d9b1a5e197d720a7b82fd72f6451cafba842616eea2"
+    },
+    {
+      "role": "grid",
+      "name": "Map10_PALEOMAP_1deg_Late_Eocene_35Ma.nc",
+      "bytes": 90364,
+      "sha256": "d97a8b870546a0f4f11ea31b90891df1fe4ee1b8c3589f678a5294df062d5fda"
+    },
+    {
+      "role": "grid",
+      "name": "Map09_PALEOMAP_1deg_Early_Oligocene_30Ma.nc",
+      "bytes": 90151,
+      "sha256": "d9a4d3759733ae52dfc5e5f0e9be6ab3a5da27ec46999157da5fceec139df39d"
+    },
+    {
+      "role": "grid",
+      "name": "Map08_PALEOMAP_1deg_Late_Oligocene_25Ma.nc",
+      "bytes": 93685,
+      "sha256": "c140f55302e2af81dc8036be170b2ade645e93ef2479d66879b066ac07ff17d3"
+    },
+    {
+      "role": "grid",
+      "name": "Map07_PALEOMAP_1deg_Early_Miocene_20Ma.nc",
+      "bytes": 95676,
+      "sha256": "c0b0f932de42ad1d3ba3adeb50b467934f50e499aac1a7a27329b6a808c6836e"
+    },
+    {
+      "role": "grid",
+      "name": "Map06_PALEOMAP_1deg_Middle_Miocene_15Ma.nc",
+      "bytes": 95716,
+      "sha256": "85d2d895fe54bb3da0b9022ff3d5dab1c03d1cd6c6e03a9ac56110fe5620bac3"
+    },
+    {
+      "role": "grid",
+      "name": "Map05_PALEOMAP_1deg_middle_Late_Miocene_10Ma.nc",
+      "bytes": 96829,
+      "sha256": "f9e42c48be7261c8640782eb19c44df7e27ac00d5c4fa754136d4545147e360c"
+    },
+    {
+      "role": "grid",
+      "name": "Map03_PALEOMAP_1deg_Pliocene_5Ma.nc",
+      "bytes": 98937,
+      "sha256": "8d7e3636fd8a78e15d46b05b5a3bd5797a0fd0fd82e6956dc0d8f8822feb3c87"
+    },
+    {
+      "role": "grid",
+      "name": "Map01_PALEOMAP_1deg_Holocene_0Ma.nc",
+      "bytes": 101322,
+      "sha256": "b370925aac31e8330f5730aabba1a32580295b2bd57ae93697aa2a59f56a4822"
     }
   ],
-  "notes": "Only the grids from 540 to 460 Ma (5 Myr apart) are unpacked: the Cambrian page uses 540–485, the A–A′ section 540–460. Archive pinned from EarthThruTime3D sources/paleodem.json at be59c3a. The grids are in the PALEOMAP reconstruction (sources/plate-models/paleomap2016.json).",
+  "notes": "All grids from 540 to 0 Ma are unpacked: the Cambrian page uses 540–485, the A–A′ section 540–460, the Phanerozoic page 540–0. Archive pinned from EarthThruTime3D sources/paleodem.json at be59c3a. The grids are in the PALEOMAP reconstruction (sources/plate-models/paleomap2016.json).",
   "limitations": "Elevations and depths are the authors' reconstruction from palaeogeographic maps, not measurements; 1 degree cells (about 110 km)."
 }

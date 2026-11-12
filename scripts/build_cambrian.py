@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build the data for the Cambrian Antarctica page (site/cambrian/).
+"""Build the data for the Antarctica globe pages: Cambrian (site/cambrian/, 540–485 Ma) and
+Phanerozoic (site/phanerozoic/, 540–0 Ma), with `--page`.
 
 Two reconstructions are used, and the page keeps them apart:
 
@@ -12,7 +13,7 @@ Two reconstructions are used, and the page keeps them apart:
   reconstruction, so the Transantarctic Mountains are moved with PALEOMAP rotations to
   read them, never with Merdith's.
 
-Outputs in site/data/cambrian/:
+Outputs in site/data/<page>/:
   continents.json      triangulated continents, grouped by plate and lifetime
   rotations-paleomap.json   packed PALEOMAP rotations for the browser
   (Merdith rotations and boundaries: site/data/merdith2021/ from scripts/build_frames.py)
@@ -23,7 +24,9 @@ Outputs in site/data/cambrian/:
   meta.json            ages, citations, licences
 """
 import json
+import argparse
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -39,10 +42,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fetch_plate_model as plates  # noqa: E402
 from build_frames import rotations  # noqa: E402
 
-OUT = ROOT / "site/data/cambrian"
 DATASETS = ROOT / "data/sources/datasets"
-OLDEST, YOUNGEST = 540, 485
-GRID_AGES = list(range(540, 484, -5))
+# The pages built from this script: the Cambrian page and the whole Phanerozoic one share
+# everything but the time span (and so the PaleoDEM grids, every 5 Myr, in it).
+PAGES = {"cambrian": (540, 485), "phanerozoic": (540, 0)}
+PAGE = "cambrian"
+OUT = ROOT / "site/data/cambrian"
+OLDEST, YOUNGEST = PAGES[PAGE]
+
+
+def paleodem_ages(oldest, youngest):
+    """The PaleoDEM grid ages in the span, oldest first (a few are off the 5 Myr step, 385.2)."""
+    document = json.loads((ROOT / "sources/datasets/paleodem.json").read_text())
+    ages = [float(re.search(r"_([0-9.]+)Ma\.nc$", m["name"]).group(1)) for m in document["members"]]
+    return sorted((int(a) if a.is_integer() else a for a in ages if youngest <= a <= oldest), reverse=True)
+
+
+GRID_AGES = paleodem_ages(OLDEST, YOUNGEST)
 
 # Classes read from PaleoDEM heights. The grids put most shelf cells at -160 m and the
 # ocean floor near -4000 m; the cut-offs below are this project's, stated on the page.
@@ -327,6 +343,14 @@ def grid_image(grid, width=1440):
 
 
 def main():
+    global PAGE, OUT, OLDEST, YOUNGEST, GRID_AGES
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--page", choices=sorted(PAGES), default="cambrian")
+    PAGE = parser.parse_args().page
+    OUT = ROOT / "site/data" / PAGE
+    OLDEST, YOUNGEST = PAGES[PAGE]
+    GRID_AGES = paleodem_ages(OLDEST, YOUNGEST)
+    print(f"{PAGE}: {OLDEST}–{YOUNGEST} Ma, {len(GRID_AGES)} PaleoDEM grids")
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "paleodem").mkdir(exist_ok=True)
     merdith = pygplates.RotationModel(files("merdith2021", "rotation"))
@@ -400,7 +424,7 @@ def main():
         d = json.loads((ROOT / f"sources/datasets/{dataset}.json").read_text())
         sources[dataset] = {"title": d["short_title"], "citation": d["citation"], "doi": d.get("doi"),
                             "license": d["license"]["name"], "license_url": d["license"]["url"]}
-    write("meta.json", {"oldest": OLDEST, "youngest": YOUNGEST, "grid_ages": GRID_AGES,
+    write("meta.json", {"page": PAGE, "oldest": OLDEST, "youngest": YOUNGEST, "grid_ages": GRID_AGES,
                         "boundary_ages": [OLDEST, YOUNGEST], "sources": sources,
                         "built_with": f"pygplates {pygplates.__version__}"})
 
