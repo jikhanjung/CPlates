@@ -60,6 +60,8 @@ const STRINGS = {
     km: '{v} km', m: '{v} m', rate: '{v} cm/년 (Merdith 2021)',
     trench: '해구', locality: '섀클턴 석회암 산지', interior: '동남극 강괴', ocean: '고태평양',
     cob: 'Merdith 대륙 경계',
+    layerContinental: '대륙 지각', layerOceanic: '해양 지각', layerLithosphere: '맨틀 암석권 (판의 아랫부분)',
+    layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
     sourceHeading: '자료와 방법',
     methods: [
       '블록은 동남극(Merdith 2021 판 802)에 고정한 격자입니다. 각 나이에 격자의 각 점에 어느 판의 암석이 있는지를 Merdith 2021 프레임에서 찾습니다.',
@@ -99,6 +101,8 @@ const STRINGS = {
     km: '{v} km', m: '{v} m', rate: '{v} cm/yr (Merdith 2021)',
     trench: 'Trench', locality: 'Shackleton Limestone area', interior: 'East Antarctic craton', ocean: 'Palaeo-Pacific',
     cob: 'Merdith crust edge',
+    layerContinental: 'Continental crust', layerOceanic: 'Oceanic crust', layerLithosphere: 'Mantle lithosphere (lower part of the plate)',
+    layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
     sourceHeading: 'Data and methods',
     methods: [
       'The block is a grid fixed to East Antarctica (plate 802 of Merdith 2021). At each age, the Merdith 2021 frame tells whose rock is at each grid point.',
@@ -320,6 +324,7 @@ function update() {
   band(out, xs, surfaceY, crustBottomY, (i) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[i]));
   band(out, xs, seaY, surfaceY.map((y) => Math.min(0, y)), () => colour(COLOURS.water).multiplyScalar(0.8));
   setGeometry(face, out.p, out.c);
+  state.profile = { xs, surfaceY, crustBottomY, lithY, bottom, share };
 
   // Sides of the block: the two ends and the back, plain.
   const s = [];
@@ -496,6 +501,24 @@ function placeLabels() {
   anchors.push({ id: 'interior', at: [-1.8, 0.1, 0], text: t().interior, cls: '' });
   if (state.trench) anchors.push({ id: 'trench', at: [state.trench.s_km / 1000, 0.08, 0], text: t().trench, cls: '' });
   if (state.cob) anchors.push({ id: 'cob', at: [state.cob, Math.max(yOf(-depth), yOf(-60)) - 0.02, 0.002], text: t().cob, cls: 'depth' });
+  // Names of the layers on the face, a little in from A, where each is thick enough to hold one.
+  const pr = state.profile;
+  if (pr) {
+    const i = 14;
+    const x = pr.xs[i];
+    const cont = pr.share[i] > 0.5;
+    const layers = [
+      [Math.min(pr.surfaceY[i], 0), pr.crustBottomY[i], cont ? t().layerContinental : t().layerOceanic],
+      [pr.crustBottomY[i], pr.lithY[i], t().layerLithosphere],
+      [pr.lithY[i], pr.bottom, t().layerMantle],
+    ];
+    layers.forEach(([upper, lower, text], k) => {
+      if (upper - lower > 0.035) anchors.push({ id: `layer${k}`, at: [x, (upper + lower) / 2, 0.004], text, cls: 'layer' });
+    });
+    if (pr.crustBottomY[i] > pr.bottom + 0.01) {
+      anchors.push({ id: 'moho', at: [x + 0.55, pr.crustBottomY[i], 0.004], text: t().moho, cls: 'boundary' });
+    }
+  }
   for (const d of [0, 35, 100, 200, 410, 660]) {
     if (d <= depth) anchors.push({ id: `d${d}`, at: [x0 - 0.02, yOf(-d), 0], text: `${d} km`, cls: 'depth' });
   }
