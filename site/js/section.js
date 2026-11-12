@@ -296,11 +296,18 @@ function update() {
   // Antarctica only: grid points on an Antarctic plate whose rock is continental (Merdith's
   // mask, or PaleoDEM shallower than −1000 m). Other continents in the box are left out.
   const k = Math.max(0, Math.min(meta.ages.length - 1, Math.round(meta.ages[0] - state.age)));
-  // Everything except other continents: Antarctica's continental crust and the shelf and
-  // ocean floor around it, one solid, so the continent runs on into oceanic crust as on
-  // the A–A′ face. Australia and India (another continent's block) are left out.
-  const inside = new Uint8Array(nx * ny);
-  for (let n = 0; n < nx * ny; n++) inside[n] = data.region[k * data.cells + n] === 2 ? 0 : 1;
+  // One crust solid for the whole box: Antarctica's continental crust, the shelf and ocean
+  // floor around it, and other continents' blocks (Australia, India, the islands beyond the
+  // trench), so the continent runs on into oceanic crust as on the A–A′ face and nothing is
+  // a hole. Other continents are tinted grey so Antarctica stands out.
+  const inside = new Uint8Array(nx * ny).fill(1);
+  const other = (n) => data.region[k * data.cells + n] === 2;
+
+  // Shackleton Limestone: laid down evenly over 525–512 Ma (sketch), lens weight from the build.
+  const [lsStart, lsEnd] = [525, 512];
+  const grown = Math.min(1, Math.max(0, (lsStart - state.age) / (lsStart - lsEnd)));
+  const limestone = colour('#bdeef7');
+  state.limestone = { grown };
   const pos = [];
   const col = [];
   const low = [];
@@ -314,6 +321,7 @@ function update() {
       crustColour.push(cc.r, cc.g, cc.b);
       const c = hypsometric(height);
       const w = data.lens[j * nx + i] / 255;
+      if (other(j * nx + i) && height > -1000) c.lerp(colour('#8b8a86'), 0.6);
       if (state.shackleton && w > 0) c.lerp(limestone, grown > 0 ? 0.85 : 0.45);
       col.push(c.r, c.g, c.b);
     }
