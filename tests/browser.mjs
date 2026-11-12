@@ -350,6 +350,8 @@ async function openSection(viewport, query) {
     await page.click('#reset-box');
     await page.waitForTimeout(300);
   }
+  // A scale bar beside the box: 10 km at 25×.
+  check(await page.evaluate(() => window.cplates.state.ve !== 25 || window.cplates.state.scale?.km === 10), 'the scale bar should be 10 km at 25×');
   // Handles on faces turned away from the camera are hidden by the box.
   {
     const shown = await page.evaluate(() => Object.fromEntries(Object.entries(window.cplates.handles).map(([k, m]) => [k, m.visible])));

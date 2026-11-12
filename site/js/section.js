@@ -240,6 +240,12 @@ streamlines.renderOrder = 4;
 const boundaryLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
 const cobLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.012, gapSize: 0.01 }));
 // Merdith's own trench, dashed grey, while the trench is fitted to PaleoDEM.
+// A vertical scale bar standing beside the box's A′ front corner, in true km (so its
+// length on screen grows with the vertical exaggeration).
+const scaleBar = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
+const SCALE_STEPS = [1, 2, 5, 10, 20, 50, 100, 200];
+// The step nearest a quarter of a scene unit tall: 10 km at the default 25×.
+const scaleKm = (ve) => SCALE_STEPS.reduce((a, b) => (Math.abs(Math.log((b * ve) / 250)) < Math.abs(Math.log((a * ve) / 250)) ? b : a));
 const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -251,7 +257,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -765,6 +771,12 @@ function update() {
   }
   setGeometry(box, frame);
   placeHandles(x0, x1, zf, zb, bottom);
+  {
+    const km = scaleKm(state.ve);
+    const [x, y0, y1, tick] = [x1 + 0.07, 0, yOf(-km), 0.018];
+    setGeometry(scaleBar, [x, y0, zf, x, y1, zf, x - tick, y0, zf, x + tick, y0, zf, x - tick, y1, zf, x + tick, y1, zf]);
+    state.scale = { km, at: [x + 0.012, (y0 + y1) / 2, zf] };
+  }
 
   // The section face: the front row of the box (row cj0), from column ci0 to ci1.
   const faceZ = zf;
@@ -1376,6 +1388,7 @@ function placeLabels() {
       anchors.push({ id: 'moho', at: [x + 0.55, pr.crustBottomY[n], faceZ + 0.004], text: t().moho, cls: 'boundary' });
     }
   }
+  if (state.scale) anchors.push({ id: 'scale', at: state.scale.at, text: `${state.scale.km} km`, cls: 'scale' });
   for (const d of [0, 35, 100, 200, 410, 660]) {
     if (d <= depth) anchors.push({ id: `d${d}`, at: [x0 - 0.02, yOf(-d), faceZ], text: `${d} km`, cls: 'depth' });
   }
