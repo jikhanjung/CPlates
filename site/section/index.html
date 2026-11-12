@@ -14,6 +14,7 @@
 <body class="section-page">
   <canvas id="globe" aria-label="3D block diagram of section A–A′"></canvas>
   <div id="labels" class="labels" aria-hidden="true"></div>
+  <div class="inset" id="inset" aria-hidden="true"><span id="inset-caption"></span></div>
 
   <header class="panel top wide" id="panel">
     <div class="row">
@@ -37,7 +38,16 @@
     <div class="tools">
       <label><input type="checkbox" id="show-flow" checked> <span data-t="showFlow"></span></label>
       <label><input type="checkbox" id="show-boundaries" checked> <span data-t="showBoundaries"></span></label>
+      <label class="limestone"><input type="checkbox" id="show-limestone"> <span data-t="showLimestone"></span></label>
+      <label><span data-t="limestoneThickness"></span>
+        <select id="limestone-km"><option value="1">1 km</option><option value="2">2 km</option><option value="5.4">5.4 km</option></select>
+      </label>
     </div>
+    <div class="tools">
+      <button type="button" class="chip" id="close-up" data-t="closeUp"></button>
+      <button type="button" class="chip" id="whole" data-t="whole"></button>
+    </div>
+    <p class="frame-note" id="limestone-note" hidden></p>
 
     <section class="now" id="now" aria-live="polite"></section>
 

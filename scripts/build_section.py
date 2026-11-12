@@ -158,6 +158,20 @@ def main():
             cut_cache[key] = found.get_feature().get_reconstruction_plate_id() if found else 0
         return cut_cache[key]
 
+    continents = pygplates.FeaturesFunctionArgument(files("merdith2021", "continents")).get_features()
+
+    # The Shackleton Limestone's approximate area, as a 0–255 lens weight per grid point
+    # (full inside, thinning over the outer taper_km). Fixed to East Antarctica.
+    area = section["shackleton_area"]
+    ring = pygplates.PolygonOnSphere([(lat, lon) for lon, lat in area["polygon"]])
+    edge = pygplates.PolylineOnSphere(list(ring.get_exterior_ring_points()) + [ring.get_exterior_ring_points()[0]])
+    lens = np.zeros(len(flat_grid), np.uint8)
+    for n, v in enumerate(flat_grid):
+        p = pygplates.PointOnSphere(*v)
+        if ring.is_point_in_polygon(p):
+            km = pygplates.GeometryOnSphere.distance(p, edge) * EARTH_KM
+            lens[n] = int(round(255 * min(1.0, km / area["taper_km"])))
+
     first, last = section["ages"]
     ages = list(range(first, last - 1, -1))
     grid_ages = list(range(540, 459, -5))
@@ -165,6 +179,10 @@ def main():
 
     surface = np.zeros((len(ages), ny, nx), np.int16)
     crust = np.zeros((len(ages), ny, nx), np.uint8)
+    # Per grid point: 1 on an Antarctic block, 2 on another continent, 0 neither. The page
+    # draws Antarctica only (and the shelf joined to it), leaving Australia and India out.
+    antarctic_plates = set(section.get("antarctic_plates", []))
+    region = np.zeros((len(ages), ny, nx), np.uint8)
     lines = {}
     for k, t in enumerate(ages):
         # 1. into the Merdith reconstruction
@@ -181,6 +199,18 @@ def main():
         index = image[py, px, 0]
         continental = image[py, px, 1].astype(float) / 255.0
         crust[k] = (continental * 255).astype(np.uint8).reshape(ny, nx)
+        # Which continental block is here: Merdith's continent polygons reconstructed to t
+        # (the resolved plates are too large: in the Cambrian East Antarctica sits inside
+        # the Gondwana plate). Its own rotation is used to follow the rock.
+        blocks = pygplates.PlatePartitioner(continents, merdith.model, reconstruction_time=float(t))
+        block = np.zeros(len(flat_grid), np.int64)
+        for n in range(len(flat_grid)):
+            lo_, la_ = float(lon[n]), float(lat[n])
+            found = blocks.partition_point(pygplates.PointOnSphere(la_, lo_))
+            block[n] = found.get_feature().get_reconstruction_plate_id() if found else 0
+        # 1: an Antarctic block; 2: another continent (Australia, India, ...); 0: neither.
+        region[k] = np.array([1 if b in antarctic_plates else (2 if b else 0) for b in block],
+                             np.uint8).reshape(ny, nx)
 
         # 3. heights: the two PaleoDEM grids around t, and the weight between them
         older = min(g for g in grid_ages if g >= t)
@@ -189,7 +219,8 @@ def main():
         heights = np.zeros(len(flat_grid))
         R802p = {g: paleomap.m(frame_plate, g) for g in (older, younger)}
         for n in range(len(flat_grid)):
-            plate = index_to_plate.get(int(index[n]))
+            plate = int(block[n]) if block[n] and merdith.m(int(block[n]), t) is not None \
+                else index_to_plate.get(int(index[n]))
             value = {}
             if continental[n] >= 0.5 and plate is not None and merdith.m(plate, t) is not None:
                 present = merdith.m(plate, t).T @ where[n]
@@ -273,6 +304,8 @@ def main():
 
     (OUT / "surface.bin").write_bytes(surface.astype("<i2").tobytes())
     (OUT / "crust.bin").write_bytes(crust.tobytes())
+    (OUT / "region.bin").write_bytes(region.tobytes())
+    (OUT / "shackleton.bin").write_bytes(lens.tobytes())
     (OUT / "boundaries.json").write_text(json.dumps(lines, separators=(",", ":")))
     km = EARTH_KM * math.pi / 180
     meta = {
@@ -282,6 +315,9 @@ def main():
         "step_km": round(step * km, 2),
         "grid_ages": grid_ages,
         "section": section,
+        # The box's top outline, present-day coordinates of plate 802, for the small globe.
+        "outline": [[round(float(v), 3) for v in lon_lat(p)] for p in
+                    list(grid[0, :]) + list(grid[:, -1]) + list(grid[-1, ::-1]) + list(grid[::-1, 0])],
         "line": {"A": [round(v, 3) for v in lon_lat(grid[0, 0])],
                  "A_prime": [round(v, 3) for v in lon_lat(grid[0, -1])],
                  "anchor": section["anchor"]},

@@ -267,6 +267,20 @@ async function openSection(viewport, query) {
   check(s.trench && s.trench.over_side === -1, `520 Ma: a trench on the line with the slab under East Antarctica, got ${JSON.stringify(s.trench)}`);
   check(s.flow > 100, `520 Ma at 5×: mantle-flow particles should be moving, got ${s.flow}`);
   check((await page.locator('#now').innerText()).includes('섀클턴 석회암'), '520 Ma: the Shackleton Limestone is being laid down');
+  check(await page.evaluate(() => window.cplates.globeShown() === 520), 'the small globe should show the 520 Ma frame');
+  // The limestone: off by default, then on, with its thickness growing over 525–512 Ma.
+  await page.click('#show-limestone');
+  await page.waitForTimeout(400);
+  check(new URL(page.url()).searchParams.get('shackleton') === '1', 'the address should remember the limestone toggle');
+  const grown520 = await page.evaluate(() => window.cplates.state.limestone.grown);
+  check(grown520 > 0.3 && grown520 < 0.5, `520 Ma: about 5/13 of the limestone laid down, got ${grown520}`);
+  await page.selectOption('#limestone-km', '5.4');
+  await page.evaluate(() => window.cplates.closeUp());
+  await page.waitForTimeout(1600);
+  await page.screenshot({ path: 'test-results/section-limestone-closeup.png' });
+  await page.click('#whole');
+  await page.waitForTimeout(1500);
+  await page.click('#show-limestone');
   await page.screenshot({ path: 'test-results/section-520-5x.png' });
   await page.click('[data-ve="25"]');
   await page.waitForTimeout(500);

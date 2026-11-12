@@ -1,53 +1,225 @@
 {
   "id": "tam-a",
-  "title": {"ko": "단면 A–A′: 동남극 내륙에서 섀클턴 석회암을 지나 고태평양 해구까지", "en": "Section A–A′: from inner East Antarctica through the Shackleton Limestone to the palaeo-Pacific trench"},
-  "note": "A–A′ follows the line the user drew on the Cambrian page (Merdith 2021, about 520 Ma): a great circle through a point in inner East Antarctica (90°E, 78°S today) and the Shackleton Limestone locality (158.5°E, 82°S today), from the Prydz Bay coast (A) to about 1,300 km beyond the locality (A′). The block is fixed to East Antarctica (plate 802 of Merdith 2021): every point keeps its place relative to the East Antarctic craton, and the model is asked which plate's rock is there at each age.",
-  "great_circle_through": [[90.0, -78.0], [158.5, -82.0]],
-  "anchor": [158.5, -82.0],
+  "title": {
+    "ko": "단면 A–A′: 동남극 내륙에서 섀클턴 석회암을 지나 고태평양 해구까지",
+    "en": "Section A–A′: from inner East Antarctica through the Shackleton Limestone to the palaeo-Pacific trench"
+  },
+  "note": "A–A′ follows the line the user drew on the Cambrian page (Merdith 2021, about 520 Ma): a great circle through a point in inner East Antarctica (90°E, 78°S today) and the Shackleton Limestone locality (158.5°E, 82°S today), from the Prydz Bay coast (A) to about 1,300 km beyond the locality (A′). The block is fixed to East Antarctica (plate 802 of Merdith 2021): every point keeps its place relative to the East Antarctic craton, and the model is asked which plate's rock is there at each age. The block reaches 17° to the Australia side of A–A′ (the quadrilateral the user drew on the Cambrian globe, about 1,900 km); only rock on the Antarctic plates listed in antarctic_plates is drawn as land, so Australia and India are left out.",
+  "great_circle_through": [
+    [
+      90.0,
+      -78.0
+    ],
+    [
+      158.5,
+      -82.0
+    ]
+  ],
+  "anchor": [
+    158.5,
+    -82.0
+  ],
   "frame_plate": 802,
-  "along_deg": [-29.0, 12.0],
-  "across_deg": [0.0, 10.0],
+  "along_deg": [
+    -29.0,
+    12.0
+  ],
+  "across_deg": [
+    0.0,
+    17.0
+  ],
   "step_deg": 0.25,
-  "ages": [540, 460],
+  "ages": [
+    540,
+    460
+  ],
   "stratigraphy": {
-    "where": {"ko": "섀클턴 석회암 산지 (버드 빙하–홀리오크 산맥, 대략의 위치)", "en": "Shackleton Limestone area (Byrd Glacier–Holyoake Range, approximate)"},
+    "where": {
+      "ko": "섀클턴 석회암 산지 (버드 빙하–홀리오크 산맥, 대략의 위치)",
+      "en": "Shackleton Limestone area (Byrd Glacier–Holyoake Range, approximate)"
+    },
     "units": [
       {
-        "id": "shackleton", "kind": "observed", "age": [525, 512], "colour": "#9fd3e0",
-        "name": {"ko": "섀클턴 석회암", "en": "Shackleton Limestone"},
-        "what": {"ko": "탄산염 램프. 조간대에서 폭풍파 기저까지, 고배류–미생물 초. 맨 위는 높이 40 m에 이르는 고배류 생물초.", "en": "Carbonate ramp, intertidal to storm-wave base, archaeocyath–microbial reefs; capped by archaeocyathan bioherms up to 40 m high."},
-        "refs": ["Myrow et al. 2002, GSA Bulletin 114, 1070–1088", "Gootee & Stump 2006 (about 525 Ma at the base, early Atdabanian)"]
+        "id": "shackleton",
+        "kind": "observed",
+        "age": [
+          525,
+          512
+        ],
+        "colour": "#9fd3e0",
+        "name": {
+          "ko": "섀클턴 석회암",
+          "en": "Shackleton Limestone"
+        },
+        "what": {
+          "ko": "탄산염 램프. 조간대에서 폭풍파 기저까지, 고배류–미생물 초. 맨 위는 높이 40 m에 이르는 고배류 생물초.",
+          "en": "Carbonate ramp, intertidal to storm-wave base, archaeocyath–microbial reefs; capped by archaeocyathan bioherms up to 40 m high."
+        },
+        "refs": [
+          "Myrow et al. 2002, GSA Bulletin 114, 1070–1088",
+          "Gootee & Stump 2006 (about 525 Ma at the base, early Atdabanian)"
+        ]
       },
       {
-        "id": "hardground", "kind": "observed", "age": [512, 512], "colour": "#5b3a29",
-        "name": {"ko": "인산염 껍질 (하드그라운드)", "en": "Phosphatic crust (hardground)"},
-        "what": {"ko": "생물초 위를 덮은 인산염 껍질. 램프가 물에 잠기고(drowning) 로스 조산운동이 시작된 표지.", "en": "A phosphatic crust over the bioherms, marking the drowning of the ramp and the onset of the Ross orogeny."},
-        "refs": ["Myrow et al. 2002 (late Botomian)"]
+        "id": "hardground",
+        "kind": "observed",
+        "age": [
+          512,
+          512
+        ],
+        "colour": "#5b3a29",
+        "name": {
+          "ko": "인산염 껍질 (하드그라운드)",
+          "en": "Phosphatic crust (hardground)"
+        },
+        "what": {
+          "ko": "생물초 위를 덮은 인산염 껍질. 램프가 물에 잠기고(drowning) 로스 조산운동이 시작된 표지.",
+          "en": "A phosphatic crust over the bioherms, marking the drowning of the ramp and the onset of the Ross orogeny."
+        },
+        "refs": [
+          "Myrow et al. 2002 (late Botomian)"
+        ]
       },
       {
-        "id": "holyoake", "kind": "observed", "age": [512, 509], "colour": "#6f7f8f",
-        "name": {"ko": "홀리오크층 (셰일·단괴 석회암)", "en": "Holyoake Formation (shale, nodular limestone)"},
-        "what": {"ko": "물에 잠긴 면 위의 전이층. 위로 스타샷층으로 바뀐다. 캄브리아기 3–4절 (Dailyatia odyssei 대).", "en": "Transitional unit above the drowning surface, grading up into the Starshot Formation; Cambrian Stages 3–4 (Dailyatia odyssei Zone)."},
-        "refs": ["Myrow et al. 2002", "Claybourn et al. 2019, Journal of Paleontology, doi:10.1017/jpa.2018.84"]
+        "id": "holyoake",
+        "kind": "observed",
+        "age": [
+          512,
+          509
+        ],
+        "colour": "#6f7f8f",
+        "name": {
+          "ko": "홀리오크층 (셰일·단괴 석회암)",
+          "en": "Holyoake Formation (shale, nodular limestone)"
+        },
+        "what": {
+          "ko": "물에 잠긴 면 위의 전이층. 위로 스타샷층으로 바뀐다. 캄브리아기 3–4절 (Dailyatia odyssei 대).",
+          "en": "Transitional unit above the drowning surface, grading up into the Starshot Formation; Cambrian Stages 3–4 (Dailyatia odyssei Zone)."
+        },
+        "refs": [
+          "Myrow et al. 2002",
+          "Claybourn et al. 2019, Journal of Paleontology, doi:10.1017/jpa.2018.84"
+        ]
       },
       {
-        "id": "starshot", "kind": "observed", "age": [511, 503], "colour": "#8a8f6a",
-        "name": {"ko": "스타샷층 (석회질 실트암·저탁암)", "en": "Starshot Formation (calcareous siltstone, turbidites)"},
-        "what": {"ko": "삼엽충·히올리스가 든 석회질 실트암. 서쪽 충상 시트에 눌려 가라앉은 전면 분지를 채운 퇴적층으로 해석된다. 끝 연대는 잘 묶이지 않았다.", "en": "Trilobite- and hyolith-bearing calcareous siltstone, read as the fill of a basin depressed by thrust sheets to the west. Its upper age is poorly constrained."},
-        "refs": ["Myrow et al. 2002", "Gootee & Stump 2006 (about 512 Ma)"]
+        "id": "starshot",
+        "kind": "observed",
+        "age": [
+          511,
+          503
+        ],
+        "colour": "#8a8f6a",
+        "name": {
+          "ko": "스타샷층 (석회질 실트암·저탁암)",
+          "en": "Starshot Formation (calcareous siltstone, turbidites)"
+        },
+        "what": {
+          "ko": "삼엽충·히올리스가 든 석회질 실트암. 서쪽 충상 시트에 눌려 가라앉은 전면 분지를 채운 퇴적층으로 해석된다. 끝 연대는 잘 묶이지 않았다.",
+          "en": "Trilobite- and hyolith-bearing calcareous siltstone, read as the fill of a basin depressed by thrust sheets to the west. Its upper age is poorly constrained."
+        },
+        "refs": [
+          "Myrow et al. 2002",
+          "Gootee & Stump 2006 (about 512 Ma)"
+        ]
       },
       {
-        "id": "douglas", "kind": "observed", "age": [503, 492], "colour": "#b0855a",
-        "name": {"ko": "더글러스 역암", "en": "Douglas Conglomerate"},
-        "what": {"ko": "충상지에 쌓인 선상지 역암 (얕은·육상 환경). 섀클턴 석회암의 습곡과 카르스트보다 뒤. 492 ± 2 Ma 심성암보다 젊지 않다.", "en": "Alluvial-fan conglomerate (shallow to subaerial), postdating folding and karst in the Shackleton Limestone; no younger than 492 ± 2 Ma plutonism."},
-        "refs": ["Myrow et al. 2002", "Gootee & Stump 2006", "Rees, Rowell & Pratt (1980s)"]
+        "id": "douglas",
+        "kind": "observed",
+        "age": [
+          503,
+          492
+        ],
+        "colour": "#b0855a",
+        "name": {
+          "ko": "더글러스 역암",
+          "en": "Douglas Conglomerate"
+        },
+        "what": {
+          "ko": "충상지에 쌓인 선상지 역암 (얕은·육상 환경). 섀클턴 석회암의 습곡과 카르스트보다 뒤. 492 ± 2 Ma 심성암보다 젊지 않다.",
+          "en": "Alluvial-fan conglomerate (shallow to subaerial), postdating folding and karst in the Shackleton Limestone; no younger than 492 ± 2 Ma plutonism."
+        },
+        "refs": [
+          "Myrow et al. 2002",
+          "Gootee & Stump 2006",
+          "Rees, Rowell & Pratt (1980s)"
+        ]
       },
       {
-        "id": "uplift", "kind": "interpretation", "age": [490, 470], "colour": "#d7c49e",
-        "name": {"ko": "융기와 삭박", "en": "Uplift and erosion"},
-        "what": {"ko": "로스 조산운동의 끝에 수면 위로 올라와 깎인 것으로 본다(사용자 해석, 이 화면의 구성). 이후 고생대 중후반·중생대에 퇴적–융기–삭박이 되풀이된다(이 화면의 범위 밖).", "en": "Raised above sea level and eroded at the end of the Ross orogeny (the user's interpretation, as set up here). Deposition, uplift and erosion repeat through the later Palaeozoic and Mesozoic (outside this view)."},
+        "id": "uplift",
+        "kind": "interpretation",
+        "age": [
+          490,
+          470
+        ],
+        "colour": "#d7c49e",
+        "name": {
+          "ko": "융기와 삭박",
+          "en": "Uplift and erosion"
+        },
+        "what": {
+          "ko": "로스 조산운동의 끝에 수면 위로 올라와 깎인 것으로 본다(사용자 해석, 이 화면의 구성). 이후 고생대 중후반·중생대에 퇴적–융기–삭박이 되풀이된다(이 화면의 범위 밖).",
+          "en": "Raised above sea level and eroded at the end of the Ross orogeny (the user's interpretation, as set up here). Deposition, uplift and erosion repeat through the later Palaeozoic and Mesozoic (outside this view)."
+        },
         "refs": []
       }
+    ]
+  },
+  "antarctic_plates": [
+    802,
+    803,
+    804,
+    8021,
+    8022,
+    8023,
+    8024,
+    8025,
+    8026,
+    8030,
+    8031,
+    80121
+  ],
+  "shackleton_area": {
+    "polygon": [
+      [
+        155.5,
+        -80.2
+      ],
+      [
+        161.5,
+        -80.2
+      ],
+      [
+        166.0,
+        -82.5
+      ],
+      [
+        161.0,
+        -83.2
+      ],
+      [
+        157.0,
+        -83.0
+      ]
+    ],
+    "taper_km": 40,
+    "note": {
+      "ko": "대략의 분포: 버드 빙하(버드 퇴적 분지의 북쪽 경계)에서 님로드 빙하 일대까지, 산맥을 가로질러 약 100–150 km. 이 프로젝트가 문헌의 서술로 그린 범위이며 노두 지도가 아닙니다.",
+      "en": "Approximate extent: from Byrd Glacier (the northern edge of the Byrd basin) to the Nimrod Glacier area, about 100–150 km across the range. Drawn by this project from published descriptions, not from an outcrop map."
+    },
+    "thickness_km": [
+      1,
+      2,
+      5.4
+    ],
+    "thickness_default_km": 2,
+    "thickness_note": {
+      "ko": "두께는 불확실합니다. 홀리오크 산맥에서 최소 5,400 m라는 옛 추정이 있고, 이후 연구는 심한 변형 때문에 정확히 잴 수 없으며 5,000 m보다 훨씬 얇을 것이라고 봅니다. 약 2 km까지라는 서술도 있습니다. 525–512 Ma 동안 고르게 쌓인다고 두고, 가장자리 40 km는 얇아지게 그렸습니다(모식).",
+      "en": "Thickness is uncertain: an older estimate gives at least 5,400 m in the Holyoake Range; later work holds that intense deformation prevents an accurate figure and that it is likely well under 5,000 m; other accounts give up to about 2 km. Drawn as laid down evenly over 525–512 Ma, thinning over the outer 40 km (sketch)."
+    },
+    "refs": [
+      "Myrow et al. 2002, GSA Bulletin 114",
+      "Rees, Rowell & Pratt (1980s), Byrd Group",
+      "Shackleton Limestone (overview): up to ~2,000 m, true thickness uncertain"
     ]
   }
 }

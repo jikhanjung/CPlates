@@ -15,6 +15,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { subductionFlow } from './cornerflow.js';
+import { RotationModel, turn } from './rotation.js';
+import { toVector } from './geo.js';
 import { continentalShare, crustKm, OCEANIC_CRUST_KM } from './isostasy.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
 
@@ -62,6 +64,10 @@ const STRINGS = {
     cob: 'Merdith 대륙 경계',
     layerContinental: '대륙 지각', layerOceanic: '해양 지각', layerLithosphere: '맨틀 암석권 (판의 아랫부분)',
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
+    showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
+    limestoneLabel: '섀클턴 석회암 · 지금 두께 {km} km (모식)', limestoneNotYet: '섀클턴 석회암 분포 (아직 쌓이기 전)',
+    slabLabel: '섭입하는 판 (슬랩, 모식)', wedgeLabel: '맨틀 쐐기 흐름 (모식)', underLabel: '슬랩 아래 흐름 (모식)',
+    globeCaption: '지구본 · Merdith 2021 · {age} Ma', boxNote: '빨간 상자가 이 블록입니다.',
     sourceHeading: '자료와 방법',
     methods: [
       '블록은 동남극(Merdith 2021 판 802)에 고정한 격자입니다. 각 나이에 격자의 각 점에 어느 판의 암석이 있는지를 Merdith 2021 프레임에서 찾습니다.',
@@ -103,6 +109,10 @@ const STRINGS = {
     cob: 'Merdith crust edge',
     layerContinental: 'Continental crust', layerOceanic: 'Oceanic crust', layerLithosphere: 'Mantle lithosphere (lower part of the plate)',
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
+    showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
+    limestoneLabel: 'Shackleton Limestone · {km} km so far (sketch)', limestoneNotYet: 'Shackleton Limestone area (not yet laid down)',
+    slabLabel: 'Subducting plate (slab, sketch)', wedgeLabel: 'Mantle-wedge flow (sketch)', underLabel: 'Flow under the slab (sketch)',
+    globeCaption: 'Globe · Merdith 2021 · {age} Ma', boxNote: 'The red box is this block.',
     sourceHeading: 'Data and methods',
     methods: [
       'The block is a grid fixed to East Antarctica (plate 802 of Merdith 2021). At each age, the Merdith 2021 frame tells whose rock is at each grid point.',
@@ -131,6 +141,7 @@ const state = {
   ve: VES.includes(Number(ASKED.get('ve'))) ? Number(ASKED.get('ve')) : 25,
   age: 540, oldest: 540, youngest: 460,
   playing: false, flow: true, boundaries: true, data: null,
+  shackleton: ASKED.get('shackleton') === '1', limestoneKm: Number(ASKED.get('limestone')) || 2,
 };
 const t = () => STRINGS[state.lang];
 
@@ -165,27 +176,39 @@ const water = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMate
   color: colour(COLOURS.water), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
 const face = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
 const slab = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-const sides = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour(COLOURS.side), side: THREE.DoubleSide }));
+// Antarctica as a solid: relief on top, the base of the crust underneath, walls between.
+const base = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour('#8f6f52'), side: THREE.DoubleSide }));
+const walls = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour(COLOURS.continental), side: THREE.DoubleSide }));
+const box = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+const streamlines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
+  color: colour(COLOURS.flow), transparent: true, opacity: 0.22, depthTest: false }));
+streamlines.renderOrder = 4;
 const boundaryLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
 const cobLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.012, gapSize: 0.01 }));
+// The Shackleton Limestone's area outlined on the surface.
+const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
 const pin = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 12), new THREE.MeshBasicMaterial({ color: 0xff9f43 }));
 pin.rotation.x = Math.PI;
+// Tracers fade in and out (alpha in the colour attribute) instead of popping.
 const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({
-  color: colour(COLOURS.flow), size: 3, sizeAttenuation: false, transparent: true, opacity: 0.85, depthTest: false }));
+  vertexColors: true, size: 3.2, sizeAttenuation: false, transparent: true, depthTest: false }));
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(top, water, face, slab, sides, boundaryLines, cobLines, pin, flowPoints);
+scene.add(top, base, walls, box, water, face, slab, boundaryLines, cobLines, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
 async function load() {
   const get = (name) => fetch(`${BASE}${name}`).then((r) => { if (!r.ok) throw new Error(name); return r; });
-  const [meta, surface, crust, boundaries] = await Promise.all([
+  const [meta, surface, crust, region, boundaries, lens, rotations] = await Promise.all([
     get('meta.json').then((r) => r.json()), get('surface.bin').then((r) => r.arrayBuffer()),
-    get('crust.bin').then((r) => r.arrayBuffer()), get('boundaries.json').then((r) => r.json())]);
+    get('crust.bin').then((r) => r.arrayBuffer()), get('region.bin').then((r) => r.arrayBuffer()),
+    get('boundaries.json').then((r) => r.json()), get('shackleton.bin').then((r) => r.arrayBuffer()),
+    fetch('../data/merdith2021/rotations.json').then((r) => r.json())]);
   const cells = meta.nx * meta.ny;
-  return { meta, surface: new Int16Array(surface), crust: new Uint8Array(crust), boundaries, cells };
+  return { meta, surface: new Int16Array(surface), crust: new Uint8Array(crust), region: new Uint8Array(region),
+           boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
 }
 
 function heightsAt(age) {
@@ -264,29 +287,111 @@ function update() {
   const depth = depthShownKm(state.ve);
   const bottom = yOf(-depth);
 
-  // Top surface.
+  // Antarctica only: grid points on an Antarctic plate whose rock is continental (Merdith's
+  // mask, or PaleoDEM shallower than −1000 m). Other continents in the box are left out.
+  const k = Math.max(0, Math.min(meta.ages.length - 1, Math.round(meta.ages[0] - state.age)));
+  const inside = new Uint8Array(nx * ny);
+  const queue = [];
+  for (let n = 0; n < nx * ny; n++) {
+    const c = k * data.cells + n;
+    if (data.region[c] === 1 && (data.crust[c] >= 128 || h[n] > -1000)) { inside[n] = 1; queue.push(n); }
+  }
+  // Grow into the shelf joined to it (PaleoDEM above −1000 m, not another continent): the
+  // Transantarctic margin, where the Shackleton Limestone lies, is outside Merdith's
+  // continent polygons until 410 Ma.
+  while (queue.length) {
+    const n = queue.pop();
+    const i = n % nx;
+    const j = (n - i) / nx;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ii = i + di;
+      const jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue;
+      const m = jj * nx + ii;
+      if (inside[m] || data.region[k * data.cells + m] === 2 || h[m] <= -1000) continue;
+      inside[m] = 1;
+      queue.push(m);
+    }
+  }
+  // Shackleton Limestone: laid down evenly over 525–512 Ma (sketch), lens weight from the build.
+  const [lsStart, lsEnd] = [525, 512];
+  const grown = Math.min(1, Math.max(0, (lsStart - state.age) / (lsStart - lsEnd)));
+  const limestone = colour('#bdeef7');
+  state.limestone = { grown };
   const pos = [];
   const col = [];
+  const low = [];
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
       const height = h[j * nx + i];
       pos.push(xAt(i), yOf(height / 1000), zAt(j));
+      low.push(xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
       const c = hypsometric(height);
+      const w = data.lens[j * nx + i] / 255;
+      if (state.shackleton && w > 0) c.lerp(limestone, grown > 0 ? 0.85 : 0.45);
       col.push(c.r, c.g, c.b);
     }
   }
   const index = [];
+  const lowIndex = [];
+  const edges = new Map();
+  const edge = (a, b) => { const key = a < b ? `${a}:${b}` : `${b}:${a}`; edges.set(key, (edges.get(key) ?? 0) + 1); };
   for (let j = 0; j < ny - 1; j++) {
     for (let i = 0; i < nx - 1; i++) {
       const a = j * nx + i;
-      index.push(a, a + 1, a + nx, a + 1, a + nx + 1, a + nx);
+      for (const tri of [[a, a + 1, a + nx], [a + 1, a + nx + 1, a + nx]]) {
+        if (!tri.every((v) => inside[v])) continue;
+        index.push(...tri);
+        lowIndex.push(tri[0], tri[2], tri[1]);
+        edge(tri[0], tri[1]); edge(tri[1], tri[2]); edge(tri[2], tri[0]);
+      }
     }
   }
   setGeometry(top, pos, col, index);
+  setGeometry(base, low, null, lowIndex);
+  const wall = [];
+  for (const [key, count] of edges) {
+    if (count !== 1) continue;
+    const [a, b] = key.split(':').map(Number);
+    wall.push(...pos.slice(a * 3, a * 3 + 3), ...pos.slice(b * 3, b * 3 + 3), ...low.slice(b * 3, b * 3 + 3),
+              ...pos.slice(a * 3, a * 3 + 3), ...low.slice(b * 3, b * 3 + 3), ...low.slice(a * 3, a * 3 + 3));
+  }
+  setGeometry(walls, wall);
+  const outline = [];
+  if (state.shackleton) {
+    const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && data.lens[j * nx + i] > 0;
+    const yAt = (j, i) => yOf(h[Math.min(ny - 1, j) * nx + Math.min(nx - 1, i)] / 1000) + 0.004;
+    const xm = (i) => xAt(i) + (xAt(1) - xAt(0)) * 0.5 * Math.sign(i) * 0;
+    void xm;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        if (!cellIn(j, i)) continue;
+        const half = (xAt(1) - xAt(0)) / 2;
+        const halfZ = (zAt(1) - zAt(0)) / 2;
+        const cx = xAt(i);
+        const cz = zAt(j);
+        const y = yAt(j, i);
+        if (!cellIn(j, i - 1)) outline.push(cx - half, y, cz - halfZ, cx - half, y, cz + halfZ);
+        if (!cellIn(j, i + 1)) outline.push(cx + half, y, cz - halfZ, cx + half, y, cz + halfZ);
+        if (!cellIn(j - 1, i)) outline.push(cx - half, y, cz - halfZ, cx + half, y, cz - halfZ);
+        if (!cellIn(j + 1, i)) outline.push(cx - half, y, cz + halfZ, cx + half, y, cz + halfZ);
+      }
+    }
+  }
+  setGeometry(limestoneEdge, outline);
   const x0 = xAt(0);
   const x1 = xAt(nx - 1);
   const z1 = zAt(ny - 1);
   setGeometry(water, [x0, 0, 0, x1, 0, 0, x1, 0, z1, x0, 0, 0, x1, 0, z1, x0, 0, z1]);
+  // The box itself, top at sea level, bottom at the depth shown.
+  const corners = [[x0, 0], [x1, 0], [x1, z1], [x0, z1]];
+  const frame = [];
+  for (let c = 0; c < 4; c++) {
+    const [ax, az] = corners[c];
+    const [bx, bz] = corners[(c + 1) % 4];
+    frame.push(ax, 0, az, bx, 0, bz, ax, bottom, az, bx, bottom, bz, ax, 0, az, ax, bottom, az);
+  }
+  setGeometry(box, frame);
 
   // Section face, along the first row (the line A–A′ itself).
   const xs = [];
@@ -323,29 +428,15 @@ function update() {
   band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere));
   band(out, xs, surfaceY, crustBottomY, (i) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[i]));
   band(out, xs, seaY, surfaceY.map((y) => Math.min(0, y)), () => colour(COLOURS.water).multiplyScalar(0.8));
+  if (state.shackleton && grown > 0) {
+    // The limestone on the section face: from the surface down by its thickness.
+    const lower = surfaceY.map((y, i) => y - yOf(state.limestoneKm * (data.lens[i] / 255) * grown));
+    band(out, xs, surfaceY, lower, () => limestone, 0.0007);
+  }
   setGeometry(face, out.p, out.c);
   state.profile = { xs, surfaceY, crustBottomY, lithY, bottom, share };
 
-  // Sides of the block: the two ends and the back, plain.
-  const s = [];
-  const quad = (a, b, c, d) => s.push(...a, ...b, ...c, ...a, ...c, ...d);
-  for (const [i, zEnd] of [[0, null], [nx - 1, null]]) {
-    for (let j = 0; j < ny - 1; j++) {
-      quad([xAt(i), yOf(h[j * nx + i] / 1000), zAt(j)], [xAt(i), yOf(h[(j + 1) * nx + i] / 1000), zAt(j + 1)],
-           [xAt(i), bottom, zAt(j + 1)], [xAt(i), bottom, zAt(j)]);
-    }
-    void zEnd;
-  }
-  for (let i = 0; i < nx - 1; i++) {
-    const j = ny - 1;
-    quad([xAt(i), yOf(h[j * nx + i] / 1000), zAt(j)], [xAt(i + 1), yOf(h[j * nx + i + 1] / 1000), zAt(j)],
-         [xAt(i + 1), bottom, zAt(j)], [xAt(i), bottom, zAt(j)]);
-  }
-  quad([x0, bottom, 0], [x1, bottom, 0], [x1, bottom, z1], [x0, bottom, z1]);
-  setGeometry(sides, s);
-
   // Merdith's continental-crust edge along the line, as dashed ticks from the surface down.
-  const k = Math.round(meta.ages[0] - state.age);
   const cob = [];
   for (let i = 0; i < nx - 1; i++) {
     const a = data.crust[k * data.cells + i] >= 128;
@@ -362,22 +453,21 @@ function update() {
   // Plate boundaries on the top surface.
   const lines = [];
   const lineColours = [];
-  const frame = data.boundaries[String(Math.round(state.age))];
+  const boundaryFrame_ = data.boundaries[String(Math.round(state.age))];
   const heightOn = (xkm, zkm) => {
     const i = Math.round((xkm - meta.along_km[0]) / meta.step_km);
     const j = Math.round((zkm - meta.across_km[0]) / meta.step_km);
     if (i < 0 || j < 0 || i >= nx || j >= ny) return null;
     return h[j * nx + i];
   };
-  if (state.boundaries && frame) {
-    for (const piece of frame.pieces) {
+  if (state.boundaries && boundaryFrame_) {
+    for (const piece of boundaryFrame_.pieces) {
       const c = colour('#' + KINDS[piece.k].toString(16).padStart(6, '0'));
       for (let n = 0; n + 3 < piece.xy.length; n += 2) {
         const ha = heightOn(piece.xy[n], piece.xy[n + 1]);
         const hb = heightOn(piece.xy[n + 2], piece.xy[n + 3]);
         if (ha === null || hb === null) continue;
-        lines.push(piece.xy[n] / 1000, Math.max(0, yOf(ha / 1000)) + 0.004, -piece.xy[n + 1] / 1000,
-                   piece.xy[n + 2] / 1000, Math.max(0, yOf(hb / 1000)) + 0.004, -piece.xy[n + 3] / 1000);
+        lines.push(piece.xy[n] / 1000, 0.004, -piece.xy[n + 1] / 1000, piece.xy[n + 2] / 1000, 0.004, -piece.xy[n + 3] / 1000);
         lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
       }
     }
@@ -404,7 +494,7 @@ function update() {
     strip(OCEANIC_CRUST_KM, SLAB_KM, colour(COLOURS.slabMantle));
     const field = subductionFlow(side, SLAB_DIP);
     const convergence = (trench.rate_cm_yr ?? 0) * side;
-    flow = { field, xT, side, speed: Math.max(0.5, Math.abs(convergence)), depth, lithY, xs };
+    flow = { field, xT, side, dip: SLAB_DIP, speed: Math.max(0.5, Math.abs(convergence)), depth, lithY, xs };
   } else {
     flow = null;
   }
@@ -415,6 +505,8 @@ function update() {
   const i0 = Math.round((0 - meta.along_km[0]) / meta.step_km);
   pin.position.set(0, Math.max(0, surfaceY[i0]) + 0.05, 0.001);
 
+  updateGlobe();
+  $('inset-caption').textContent = `${format(t().globeCaption, { age: Math.round(state.age) })} · ${t().boxNote}`;
   renderAge();
   renderNow(h[i0]);
   drawColumn();
@@ -423,8 +515,12 @@ function update() {
 // ---------- mantle flow particles ----------
 
 const PARTICLES = 700;
-const particles = { pos: new Float32Array(PARTICLES * 3), life: new Float32Array(PARTICLES) };
+const particles = { pos: new Float32Array(PARTICLES * 3), life: new Float32Array(PARTICLES), born: new Float32Array(PARTICLES) };
 flowPoints.geometry.setAttribute('position', new THREE.BufferAttribute(particles.pos, 3));
+const tint = colour(COLOURS.flow);
+const particleColours = new Float32Array(PARTICLES * 4);
+for (let n = 0; n < PARTICLES; n++) particleColours.set([tint.r, tint.g, tint.b, 0], n * 4);
+flowPoints.geometry.setAttribute('color', new THREE.BufferAttribute(particleColours, 4));
 
 // Slab coordinates of a point (x along, d depth, km): u down-dip from the trench along the
 // slab top, n below the slab top (positive into the slab).
@@ -453,25 +549,61 @@ function respawn(n) {
     if (inMantle(x, d)) {
       particles.pos[n * 3] = x;
       particles.pos[n * 3 + 1] = d;
-      particles.life[n] = 2 + Math.random() * 4;
+      particles.life[n] = 3 + Math.random() * 5;
+      particles.born[n] = 0;
       return;
     }
   }
   particles.life[n] = 0;
 }
 
+// Streamlines: the paths the tracers follow, traced once for each slab position.
+function traceStreamlines() {
+  const lines = [];
+  if (!flow) return lines;
+  const seeds = [];
+  for (const r of [120, 220, 330, 450]) {
+    seeds.push([flow.dip / 2, r], [(flow.dip + Math.PI) / 2, r]);
+  }
+  for (const [phi, r] of seeds) {
+    for (const direction of [1, -1]) {
+      let x = flow.xT + flow.side * r * Math.cos(phi);
+      let d = r * Math.sin(phi);
+      for (let step = 0; step < 400; step++) {
+        const v = flow.field(x - flow.xT, -d);
+        if (!v) break;
+        const speed = Math.hypot(v[0], v[1]) || 1;
+        const nx_ = x + direction * (v[0] / speed) * 8;
+        const nd = d - direction * (v[1] / speed) * 8;
+        if (!inMantle(x, d) || !inMantle(nx_, nd)) break;
+        lines.push(x / 1000, yOf(-d), 0.0025, nx_ / 1000, yOf(-nd), 0.0025);
+        x = nx_;
+        d = nd;
+      }
+    }
+  }
+  return lines;
+}
+
 let flowKey = '';
 function stepFlow(dt) {
+  streamlines.visible = Boolean(flow) && state.flow;
   if (!flow || !state.flow) return;
   const key = `${flow.xT}:${flow.side}:${state.ve}`;
-  if (key !== flowKey) { flowKey = key; for (let n = 0; n < PARTICLES; n++) respawn(n); }
+  if (key !== flowKey) {
+    flowKey = key;
+    for (let n = 0; n < PARTICLES; n++) respawn(n);
+    setGeometry(streamlines, traceStreamlines());
+  }
   // Shown speed: 18 km per second of animation for each cm/yr of convergence.
   const scale = 18 * flow.speed;
   const shown = flowPoints.geometry.attributes.position;
+  const colours = flowPoints.geometry.attributes.color;
   for (let n = 0; n < PARTICLES; n++) {
     let x = particles.pos[n * 3];
     let d = particles.pos[n * 3 + 1];
     particles.life[n] -= dt;
+    particles.born[n] += dt;
     const v = flow.field(x - flow.xT, -d);
     if (!v || particles.life[n] <= 0 || !inMantle(x, d)) { respawn(n); x = particles.pos[n * 3]; d = particles.pos[n * 3 + 1]; }
     else {
@@ -481,8 +613,154 @@ function stepFlow(dt) {
       particles.pos[n * 3 + 1] = d;
     }
     shown.setXYZ(n, x / 1000, yOf(-d), 0.003);
+    // Fade in after birth and out before the end, so nothing blinks.
+    colours.setW(n, 0.9 * Math.min(1, particles.born[n] / 0.8, Math.max(0, particles.life[n]) / 0.8));
   }
   shown.needsUpdate = true;
+  colours.needsUpdate = true;
+}
+
+// ---------- the small globe ----------
+// The Merdith 2021 reconstruction at the age on screen (the main page's frame: land in
+// green, plate index in red), with this block drawn on it as a red box: its top outline on
+// the surface, its edges and bottom at true depth. It turns with East Antarctica.
+
+const globeScene = new THREE.Scene();
+globeScene.background = new THREE.Color(0x0f1a2c);
+const globeCamera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+const landTexture = new THREE.Texture(document.createElement('canvas'));
+const plateTexture = new THREE.Texture(document.createElement('canvas'));
+for (const [texture, filter] of [[landTexture, THREE.LinearFilter], [plateTexture, THREE.NearestFilter]]) {
+  texture.flipY = false;
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.generateMipmaps = false;
+  texture.magFilter = texture.minFilter = filter;
+  texture.wrapS = THREE.RepeatWrapping;
+}
+const antarcticIndex = new Uint8Array(256 * 4);
+const antarcticTexture = new THREE.DataTexture(antarcticIndex, 256, 1, THREE.RGBAFormat);
+antarcticTexture.magFilter = antarcticTexture.minFilter = THREE.NearestFilter;
+const globeMaterial = new THREE.ShaderMaterial({
+  uniforms: { land: { value: landTexture }, plates: { value: plateTexture }, antarctic: { value: antarcticTexture }, ready: { value: 0 } },
+  vertexShader: `varying vec3 vPos; varying vec3 vN;
+    void main(){ vPos = position; vN = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D land; uniform sampler2D plates; uniform sampler2D antarctic; uniform float ready;
+    varying vec3 vPos; varying vec3 vN; const float PI = 3.141592653589793;
+    void main(){
+      vec3 p = normalize(vPos);
+      vec2 uv = vec2((atan(-p.z, p.x) + PI) / (2.0 * PI), (0.5 * PI - asin(clamp(p.y, -1.0, 1.0))) / PI);
+      float crust = texture2D(land, uv).g * ready;
+      float index = floor(texture2D(plates, uv).r * 255.0 + 0.5);
+      float isAnt = texture2D(antarctic, vec2((index + 0.5) / 256.0, 0.5)).a;
+      vec3 ocean = vec3(0.09, 0.18, 0.31);
+      vec3 landColour = mix(vec3(0.62, 0.56, 0.45), vec3(0.96, 0.90, 0.77), isAnt);
+      vec3 c = mix(ocean, landColour, smoothstep(0.3, 0.7, crust));
+      float light = max(dot(normalize(vN), normalize(vec3(0.3, 0.4, 1.0))), 0.0);
+      gl_FragColor = vec4(c * (0.55 + 0.5 * light), 1.0);
+    }`,
+});
+globeScene.add(new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), globeMaterial));
+const globeBoundaries = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
+const boxOnGlobe = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff3b3b }));
+const boxInside = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
+  color: 0xff6b6b, transparent: true, opacity: 0.7, depthTest: false }));
+globeScene.add(globeBoundaries, boxOnGlobe, boxInside);
+
+const globeFrames = new Map();
+let globeShown = null;
+async function globeFrame(age) {
+  if (globeFrames.has(age)) return globeFrames.get(age);
+  const promise = Promise.all([
+    fetch(`../data/merdith2021/frames/${age}.json`).then((r) => r.json()),
+    fetch(`../data/merdith2021/frames/${age}.png`).then((r) => r.blob())
+      .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })),
+  ]).then(([json, bitmap]) => ({ json, bitmap }));
+  globeFrames.set(age, promise);
+  if (globeFrames.size > 12) {
+    const oldest = globeFrames.keys().next().value;
+    if (oldest !== age) { globeFrames.get(oldest).then((f) => f.bitmap.close?.()); globeFrames.delete(oldest); }
+  }
+  return promise;
+}
+
+async function updateGlobe() {
+  if (!state.data) return;
+  const age = Math.round(state.age);
+  const { meta, merdith } = state.data;
+  const q = merdith.rotation(meta.section.frame_plate, state.age);
+  if (q) {
+    const depth = depthShownKm(state.ve);
+    const deep = 1 - depth / 6371;
+    const outline = meta.outline.map(([lon, lat]) => turn(q, lon, lat));
+    const top_ = [];
+    const inner = [];
+    for (let i = 0; i < outline.length; i++) {
+      const a = outline[i];
+      const b = outline[(i + 1) % outline.length];
+      top_.push(...toVector(a[0], a[1], 1.004), ...toVector(b[0], b[1], 1.004));
+      inner.push(...toVector(a[0], a[1], deep), ...toVector(b[0], b[1], deep));
+    }
+    const { nx, ny } = meta;
+    for (const c of [0, nx - 1, nx + ny - 1, 2 * nx + ny - 1]) {
+      inner.push(...toVector(outline[c][0], outline[c][1], 1.004), ...toVector(outline[c][0], outline[c][1], deep));
+    }
+    setGeometry(boxOnGlobe, top_);
+    setGeometry(boxInside, inner);
+    // Look at the middle of the box.
+    const centre = new THREE.Vector3();
+    for (const [lon, lat] of outline) centre.add(new THREE.Vector3(...toVector(lon, lat)));
+    centre.normalize();
+    globeCamera.position.copy(centre.multiplyScalar(4.4));
+    globeCamera.up.set(0, 1, 0);
+    globeCamera.lookAt(0, 0, 0);
+  }
+  if (globeShown === age) return;
+  const frame = await globeFrame(age).catch(() => null);
+  if (!frame || Math.round(state.age) !== age) return;
+  globeShown = age;
+  for (const texture of [landTexture, plateTexture]) { texture.image = frame.bitmap; texture.needsUpdate = true; }
+  antarcticIndex.fill(0);
+  const antarctic = new Set(meta.section.antarctic_plates);
+  for (const [index, plate] of frame.json.plates) if (antarctic.has(plate)) antarcticIndex[index * 4 + 3] = 255;
+  antarcticTexture.needsUpdate = true;
+  globeMaterial.uniforms.ready.value = 1;
+  const lines = [];
+  const colours = [];
+  for (const piece of frame.json.boundaries) {
+    const c = colour('#' + KINDS[piece.k].toString(16).padStart(6, '0'));
+    for (let n = 0; n + 3 < piece.c.length; n += 2) {
+      lines.push(...toVector(piece.c[n], piece.c[n + 1], 1.002), ...toVector(piece.c[n + 2], piece.c[n + 3], 1.002));
+      colours.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    }
+  }
+  setGeometry(globeBoundaries, lines, colours);
+}
+
+// Bottom right, above the timeline.
+function insetRect() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const timeline = document.querySelector('.timeline').getBoundingClientRect();
+  const size = W < 640 ? 130 : Math.min(230, Math.round(W * 0.2));
+  return { left: W - size - 16, top: timeline.top - size - 12, size };
+}
+
+function renderInset() {
+  const r = insetRect();
+  const node = $('inset');
+  const style = `${r.left}px,${r.top}px,${r.size}px`;
+  if (node.dataset.at !== style) {
+    node.dataset.at = style;
+    Object.assign(node.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.size}px`, height: `${r.size}px` });
+  }
+  const bottomUp = window.innerHeight - r.top - r.size;
+  renderer.setScissorTest(true);
+  renderer.setScissor(r.left, bottomUp, r.size, r.size);
+  renderer.setViewport(r.left, bottomUp, r.size, r.size);
+  renderer.render(globeScene, globeCamera);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
 }
 
 // ---------- labels ----------
@@ -497,9 +775,27 @@ function placeLabels() {
   const depth = depthShownKm(state.ve);
   anchors.push({ id: 'A', at: [x0, 0.08, 0], text: 'A', cls: 'end' });
   anchors.push({ id: 'A2', at: [x1, 0.08, 0], text: 'A′', cls: 'end' });
-  anchors.push({ id: 'loc', at: [0, 0.16, 0], text: t().locality, cls: 'obs' });
+  if (!state.shackleton) anchors.push({ id: 'loc', at: [0, 0.16, 0], text: t().locality, cls: 'obs' });
   anchors.push({ id: 'interior', at: [-1.8, 0.1, 0], text: t().interior, cls: '' });
   if (state.trench) anchors.push({ id: 'trench', at: [state.trench.s_km / 1000, 0.08, 0], text: t().trench, cls: '' });
+  if (flow && depth >= 200) {
+    const along = Math.min(depth * 0.55, 300) / Math.sin(SLAB_DIP);
+    anchors.push({ id: 'slab', at: [(flow.xT + flow.side * Math.cos(SLAB_DIP) * along) / 1000, yOf(-Math.sin(SLAB_DIP) * along), 0.004],
+                   text: t().slabLabel, cls: 'boundary' });
+    if (state.flow) {
+      const r = Math.min(depth * 0.6, 320);
+      for (const [id, phi, text] of [['wedge', SLAB_DIP / 2 + 0.25, t().wedgeLabel], ['under', (SLAB_DIP + Math.PI) / 2, t().underLabel]]) {
+        const x = flow.xT + flow.side * r * Math.cos(phi);
+        const d = r * Math.sin(phi);
+        if (d < depth) anchors.push({ id, at: [x / 1000, yOf(-d), 0.004], text, cls: 'boundary' });
+      }
+    }
+  }
+  if (state.shackleton) {
+    const g = state.limestone?.grown ?? 0;
+    anchors.push({ id: 'limestone', at: [0, 0.07, 0], cls: 'obs',
+                   text: g > 0 ? format(t().limestoneLabel, { km: (state.limestoneKm * g).toFixed(1) }) : t().limestoneNotYet });
+  }
   if (state.cob) anchors.push({ id: 'cob', at: [state.cob, Math.max(yOf(-depth), yOf(-60)) - 0.02, 0.002], text: t().cob, cls: 'depth' });
   // Names of the layers on the face, a little in from A, where each is thick enough to hold one.
   const pr = state.profile;
@@ -766,7 +1062,7 @@ function applyLanguage() {
   renderVe();
   renderLegend();
   renderPeriods();
-  if (state.data) { renderUnits(); renderSources(); update(); }
+  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); update(); }
 }
 
 // ---------- controls ----------
@@ -789,6 +1085,22 @@ $('play').addEventListener('click', () => {
 $('slider').addEventListener('input', (e) => { setPlaying(false); goTo(state.oldest - Number(e.target.value)); });
 $('show-flow').addEventListener('change', (e) => { state.flow = e.target.checked; update(); });
 $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.target.checked; update(); });
+function keepParams() {
+  const params = new URLSearchParams(location.search);
+  if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
+  params.set('limestone', String(state.limestoneKm));
+  history.replaceState(null, '', `?${params}`);
+}
+$('show-limestone').checked = state.shackleton;
+$('show-limestone').addEventListener('change', (e) => { state.shackleton = e.target.checked; keepParams(); renderLimestoneNote(); update(); });
+$('limestone-km').value = String(state.limestoneKm);
+$('limestone-km').addEventListener('change', (e) => { state.limestoneKm = Number(e.target.value); keepParams(); update(); });
+function renderLimestoneNote() {
+  const note = $('limestone-note');
+  const area = state.data?.meta.section.shackleton_area;
+  note.hidden = !state.shackleton || !area;
+  if (area) note.textContent = `${area.note[state.lang]} ${area.thickness_note[state.lang]}`;
+}
 for (const b of document.querySelectorAll('[data-lang]')) {
   b.addEventListener('click', () => { state.lang = b.dataset.lang; keepLanguage(state.lang); applyLanguage(); });
 }
@@ -838,6 +1150,34 @@ function aim(move = true) {
   controls.update();
 }
 
+// Close up on the Shackleton Limestone area, or back to the whole block.
+let flight = null;
+function flyTo(target, position) {
+  flight = { from: [controls.target.clone(), camera.position.clone()], to: [target, position], t: 0 };
+}
+function closeUp() {
+  const target = new THREE.Vector3(0.02, yOf(-6), -0.1);
+  flyTo(target, target.clone().add(new THREE.Vector3(-0.25, 0.28, 0.62)));
+}
+function wholeBlock() {
+  const saved = [controls.target.clone(), camera.position.clone()];
+  aim(true);
+  const to = [controls.target.clone(), camera.position.clone()];
+  controls.target.copy(saved[0]);
+  camera.position.copy(saved[1]);
+  flyTo(...to);
+}
+$('close-up').addEventListener('click', closeUp);
+$('whole').addEventListener('click', wholeBlock);
+function stepFlight(dt) {
+  if (!flight) return;
+  flight.t = Math.min(1, flight.t + dt / 1.2);
+  const e = flight.t < 0.5 ? 2 * flight.t * flight.t : 1 - (-2 * flight.t + 2) ** 2 / 2;
+  controls.target.lerpVectors(flight.from[0], flight.to[0], e);
+  camera.position.lerpVectors(flight.from[1], flight.to[1], e);
+  if (flight.t >= 1) flight = null;
+}
+
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   lastFrame = '';
@@ -854,9 +1194,13 @@ renderer.setAnimationLoop((now) => {
     if (next <= state.youngest) { goTo(state.youngest); setPlaying(false); } else { state.age = next; update(); }
   }
   stepFlow(dt);
+  stepFlight(dt);
+  // Keep the locality pin about the same size on screen at any distance.
+  pin.scale.setScalar(Math.min(1, camera.position.distanceTo(pin.position) / 4));
   frameView();
   controls.update();
   renderer.render(scene, camera);
+  renderInset();
   placeLabels();
 });
 
@@ -881,4 +1225,5 @@ async function start() {
 }
 
 start();
-window.cplates = { state, goTo, setVe, camera, controls, visibleRect, flowCount: () => particles.life.filter((v) => v > 0).length };
+window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeShown: () => globeShown,
+  flowCount: () => particles.life.filter((v) => v > 0).length };
