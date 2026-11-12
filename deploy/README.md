@@ -37,7 +37,7 @@ ssh dolfinid 'sudo install -m 644 /tmp/cplates.nginx /etc/nginx/sites-available/
   sudo nginx -t && sudo systemctl reload nginx'
 ```
 
-## DNS가 풀린 뒤 (남은 일)
+## DNS가 풀린 뒤 (2026-11-12에 함)
 
 ```sh
 dig +short cplates.nopeoplestime.info        # 34.64.158.160 이어야 함
@@ -46,4 +46,9 @@ scp deploy/nginx-cplates-tls.conf dolfinid:/tmp/cplates.nginx
 ssh dolfinid 'sudo install -m 644 /tmp/cplates.nginx /etc/nginx/sites-available/cplates &&
   sudo nginx -t && sudo systemctl reload nginx'
 curl -sI https://cplates.nopeoplestime.info/ | head -1
+# 갱신 뒤 nginx가 새 인증서를 읽도록 (earththrutime3d와 같은 훅)
+ssh dolfinid 'sudo certbot reconfigure --cert-name cplates.nopeoplestime.info --deploy-hook "nginx -t && systemctl reload nginx"'
+ssh dolfinid 'sudo certbot renew --cert-name cplates.nopeoplestime.info --dry-run'
 ```
+
+HTTP 단계 설정은 `/etc/nginx/sites-available/cplates.bak-http-20261112`에 남겨 두었다(sites-enabled에는 없음).
