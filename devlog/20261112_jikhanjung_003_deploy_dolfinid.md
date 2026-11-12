@@ -44,3 +44,17 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   (스크린샷 `test-results/deployed-https/`, git 밖).
 
 남은 일: 없음(배포 완료). push는 하지 않았다.
+
+## 재배포: f6b01c9 (현생누대, 기준틀 전환, 메인 지구본 위치)
+
+2026-11-12, 사용자 직접 지시(반장 전달): "다 해줘." (메인 지구본 위치 수정 → GitHub push → 재배포)
+
+- 메인 지구본 위치: 캄브리아기 쪽과 같은 방식으로, 정보 칸·시간 막대를 뺀 영역 가운데에 맞추고 크기를
+  맞췄다. `tests/browser.mjs`가 데스크톱·랩톱·휴대폰 크기에서, 점을 고른 뒤에도 중심(±3%)과 크기를 확인한다(f6b01c9).
+- push: push 전에 기록 전체에서 큰 파일(가장 큰 것은 벤더 three.core.js 1.5 MB), `data/`·`site/data/`, 비밀값
+  꼴의 문자열이 없음을 확인했다. 서버 이름·사용자 이름·호스트 이름은 EarthThruTime3D 공개 저장소와 같은
+  수준으로만 들어 있다. `origin/main` 6820513 → f6b01c9 (빨리 감기).
+- 배포 전: `make test` 16개, 브라우저 점검 전체 통과. dolfinid 디스크 여유 25 GB.
+- `deploy/deploy.sh f6b01c9`: 110 MB, `current -> releases/f6b01c9`(이전 cc9901d는 되돌리기용으로 남김).
+- 배포 뒤: https 메인·/cambrian/·두 모델의 자료·JS 200, `version.json` f6b01c9, http → https 301(질의 유지),
+  인증서 만료 2027-02-09, earththrutime3d `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https 주소에 대고 전체 통과.
