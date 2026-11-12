@@ -136,3 +136,19 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
 - 배포 뒤: `/`, `/section/`, `/cambrian/`, 새 JS(slabcut.js, trenchfit.js), 단면 자료 200, meta 213×117·box 확인,
   `version.json` c417757. 자료는 버전 꼬리표를 붙여 받으므로 1시간 캐시에 옛 격자가 남지 않는다.
   earththrutime 200, cdgts.paleobytes.info 200. `tests/browser.mjs`를 https에 대고 전체 통과.
+
+## 재배포: 259cb61 (스케일바, 새 배포 흐름) — 첫 push 선행 배포와 첫 릴리스 정리
+
+2026-11-12, 사용자 직접 지시(banjang 전달): "push 배포 모두 진행해줘." (로컬 커밋 push, 첫 정리 때 이전 릴리스 7개 삭제 승인)
+
+- 새 배포 흐름(devdocs guides/web/deployment.md §10–11): main에 있는 커밋만 배포, https 스모크 뒤 이전 릴리스는
+  지금 것 + 2개.
+- push 전 점검: 6커밋 15파일, 200 KB 넘는 파일·생성 자료·비밀값 없음. node 시험 30개 통과. `09dfb7a..259cb61` push.
+- `CPLATES_PRUNE=0 deploy/deploy.sh 259cb61`: origin/main 확인 → 119 MB → `current -> releases/259cb61`(이전 c417757)
+  → 스모크 통과(쪽 200, `version.json` 259cb61).
+- 정리: 새 릴리스가 생겨 "지금 것 + 2"로는 승인 목록에 없던 7e49aca까지 8개가 지워지므로, 이번에는 승인된 7개만
+  지웠다(`CPLATES_KEEP=3 deploy/prune.sh`, 지우기 전 current가 259cb61인지 확인). 지운 것: 6d4a683 6838391 2736d00
+  bb1afb1 236fb99 f6b01c9 cc9901d. 남은 것: 259cb61(current) c417757 25990e4 7e49aca, 465 MB. 7e49aca는 다음
+  배포의 정리에서 빠진다.
+- 배포 뒤: `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz` 200, earththrutime·cdgts.paleobytes.info
+  200. 디스크 여유 24 GB.
