@@ -25,6 +25,12 @@ For the Cambrian Antarctica page (`scripts/build_cambrian.py`, `site/data/cambri
   (2016)** PALEOMAP PaleoAtlas for GPlates, whose Zenodo record lists CC BY 4.0. Only the
   rotation file and plate polygons are used, as in EarthThruTime3D;
 - the Transantarctic Mountains outline from **Natural Earth** (public domain);
+
+For the A–A′ section page (`scripts/build_section.py`, `site/data/section/`): the surface
+heights (PaleoDEM, Scotese & Wright 2018, CC BY 4.0, carried into Merdith et al. 2021 with
+the PALEOMAP rotations), the continental-crust mask and boundaries along the section (from
+the Merdith 2021 frames), and the hand-compiled stratigraphy in
+`sources/sections/tam_a.json` with its references;
 - the observation list `sources/observations/cambrian_antarctica.json`, this project's
   compilation with its references, CC BY 4.0.
 

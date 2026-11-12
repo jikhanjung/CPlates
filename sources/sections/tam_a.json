@@ -1,0 +1,53 @@
+{
+  "id": "tam-a",
+  "title": {"ko": "단면 A–A′: 동남극 내륙에서 섀클턴 석회암을 지나 고태평양 해구까지", "en": "Section A–A′: from inner East Antarctica through the Shackleton Limestone to the palaeo-Pacific trench"},
+  "note": "A–A′ follows the line the user drew on the Cambrian page (Merdith 2021, about 520 Ma): a great circle through a point in inner East Antarctica (90°E, 78°S today) and the Shackleton Limestone locality (158.5°E, 82°S today), from the Prydz Bay coast (A) to about 1,300 km beyond the locality (A′). The block is fixed to East Antarctica (plate 802 of Merdith 2021): every point keeps its place relative to the East Antarctic craton, and the model is asked which plate's rock is there at each age.",
+  "great_circle_through": [[90.0, -78.0], [158.5, -82.0]],
+  "anchor": [158.5, -82.0],
+  "frame_plate": 802,
+  "along_deg": [-29.0, 12.0],
+  "across_deg": [0.0, 10.0],
+  "step_deg": 0.25,
+  "ages": [540, 460],
+  "stratigraphy": {
+    "where": {"ko": "섀클턴 석회암 산지 (버드 빙하–홀리오크 산맥, 대략의 위치)", "en": "Shackleton Limestone area (Byrd Glacier–Holyoake Range, approximate)"},
+    "units": [
+      {
+        "id": "shackleton", "kind": "observed", "age": [525, 512], "colour": "#9fd3e0",
+        "name": {"ko": "섀클턴 석회암", "en": "Shackleton Limestone"},
+        "what": {"ko": "탄산염 램프. 조간대에서 폭풍파 기저까지, 고배류–미생물 초. 맨 위는 높이 40 m에 이르는 고배류 생물초.", "en": "Carbonate ramp, intertidal to storm-wave base, archaeocyath–microbial reefs; capped by archaeocyathan bioherms up to 40 m high."},
+        "refs": ["Myrow et al. 2002, GSA Bulletin 114, 1070–1088", "Gootee & Stump 2006 (about 525 Ma at the base, early Atdabanian)"]
+      },
+      {
+        "id": "hardground", "kind": "observed", "age": [512, 512], "colour": "#5b3a29",
+        "name": {"ko": "인산염 껍질 (하드그라운드)", "en": "Phosphatic crust (hardground)"},
+        "what": {"ko": "생물초 위를 덮은 인산염 껍질. 램프가 물에 잠기고(drowning) 로스 조산운동이 시작된 표지.", "en": "A phosphatic crust over the bioherms, marking the drowning of the ramp and the onset of the Ross orogeny."},
+        "refs": ["Myrow et al. 2002 (late Botomian)"]
+      },
+      {
+        "id": "holyoake", "kind": "observed", "age": [512, 509], "colour": "#6f7f8f",
+        "name": {"ko": "홀리오크층 (셰일·단괴 석회암)", "en": "Holyoake Formation (shale, nodular limestone)"},
+        "what": {"ko": "물에 잠긴 면 위의 전이층. 위로 스타샷층으로 바뀐다. 캄브리아기 3–4절 (Dailyatia odyssei 대).", "en": "Transitional unit above the drowning surface, grading up into the Starshot Formation; Cambrian Stages 3–4 (Dailyatia odyssei Zone)."},
+        "refs": ["Myrow et al. 2002", "Claybourn et al. 2019, Journal of Paleontology, doi:10.1017/jpa.2018.84"]
+      },
+      {
+        "id": "starshot", "kind": "observed", "age": [511, 503], "colour": "#8a8f6a",
+        "name": {"ko": "스타샷층 (석회질 실트암·저탁암)", "en": "Starshot Formation (calcareous siltstone, turbidites)"},
+        "what": {"ko": "삼엽충·히올리스가 든 석회질 실트암. 서쪽 충상 시트에 눌려 가라앉은 전면 분지를 채운 퇴적층으로 해석된다. 끝 연대는 잘 묶이지 않았다.", "en": "Trilobite- and hyolith-bearing calcareous siltstone, read as the fill of a basin depressed by thrust sheets to the west. Its upper age is poorly constrained."},
+        "refs": ["Myrow et al. 2002", "Gootee & Stump 2006 (about 512 Ma)"]
+      },
+      {
+        "id": "douglas", "kind": "observed", "age": [503, 492], "colour": "#b0855a",
+        "name": {"ko": "더글러스 역암", "en": "Douglas Conglomerate"},
+        "what": {"ko": "충상지에 쌓인 선상지 역암 (얕은·육상 환경). 섀클턴 석회암의 습곡과 카르스트보다 뒤. 492 ± 2 Ma 심성암보다 젊지 않다.", "en": "Alluvial-fan conglomerate (shallow to subaerial), postdating folding and karst in the Shackleton Limestone; no younger than 492 ± 2 Ma plutonism."},
+        "refs": ["Myrow et al. 2002", "Gootee & Stump 2006", "Rees, Rowell & Pratt (1980s)"]
+      },
+      {
+        "id": "uplift", "kind": "interpretation", "age": [490, 470], "colour": "#d7c49e",
+        "name": {"ko": "융기와 삭박", "en": "Uplift and erosion"},
+        "what": {"ko": "로스 조산운동의 끝에 수면 위로 올라와 깎인 것으로 본다(사용자 해석, 이 화면의 구성). 이후 고생대 중후반·중생대에 퇴적–융기–삭박이 되풀이된다(이 화면의 범위 밖).", "en": "Raised above sea level and eroded at the end of the Ross orogeny (the user's interpretation, as set up here). Deposition, uplift and erosion repeat through the later Palaeozoic and Mesozoic (outside this view)."},
+        "refs": []
+      }
+    ]
+  }
+}

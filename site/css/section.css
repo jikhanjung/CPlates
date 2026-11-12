@@ -1,0 +1,45 @@
+/* The A–A′ section page, on top of site.css. */
+:root { --observed: #ff9f43; --model: #9cc7ff; }
+.top.wide { width: 350px; }
+.top h2 { margin-top: 10px; }
+.seg.ve button { font-variant-numeric: tabular-nums; }
+.tools { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin: 4px 0 8px; }
+.tools label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+
+.now { border-top: 1px solid var(--panel-line); padding-top: 8px; font-size: 12px; line-height: 1.45; }
+.now p { margin: 4px 0; }
+.now .unit { font-weight: 700; font-size: 13px; }
+.now .unit i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.now dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 4px 0; }
+.now dt { color: var(--muted); }
+.now dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.column-box { border-top: 1px solid var(--panel-line); padding-top: 8px; margin-top: 8px; }
+#column { width: 100%; height: auto; display: block; background: #0b1220; border-radius: 4px; }
+#column text { font-size: 10px; fill: var(--muted); font-family: inherit; }
+#column .label { fill: var(--text); font-size: 10.5px; }
+.units { list-style: none; padding: 0; margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; }
+.units li { margin: 0 0 6px; padding-left: 8px; border-left: 3px solid var(--observed); }
+.units li.interpretation { border-left-color: var(--model); }
+.units li.inactive { opacity: 0.5; }
+.units .refs { color: var(--muted); font-size: 10.5px; }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; vertical-align: 1px; text-transform: none; letter-spacing: 0; }
+.badge.observed { background: var(--observed); color: #1a1208; }
+.badge.model { background: var(--model); color: #0b1220; }
+
+.sw.fill { height: 12px; border-radius: 2px; }
+.sw.dash { height: 0; border-top: 2px dashed #fff; }
+.sw.dots { height: 8px; background: radial-gradient(circle, #ffe8b0 1.5px, transparent 2px) 0 0 / 7px 8px; }
+
+.source h3 { font-size: 12px; margin: 10px 0 2px; color: var(--text); }
+
+.labels { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.labels span { position: absolute; transform: translate(-50%, -100%); font-size: 12px; font-weight: 600; color: #f5f0e0; text-shadow: 0 1px 3px #000, 0 0 2px #000; white-space: nowrap; }
+.labels span.end { font-size: 18px; font-weight: 800; color: #ff6b6b; }
+.labels span.obs { color: var(--observed); }
+.labels span.depth { font-size: 10px; font-weight: 500; color: var(--muted); transform: translate(-100%, -50%); }
+
+@media (max-width: 640px) {
+  .top.wide { width: auto; }
+  .column-box, .legend { display: none; }
+}

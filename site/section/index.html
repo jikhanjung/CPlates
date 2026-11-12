@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPlates — 단면 A–A′</title>
+  <meta name="description" content="A 3D block and cross-section through East Antarctica and the Transantarctic Mountains, 540–460 Ma: PaleoDEM relief carried into Merdith 2021, crust by Airy isostasy, a schematic slab and corner flow, and the Byrd Group record.">
+  <link rel="stylesheet" href="../css/site.css">
+  <link rel="stylesheet" href="../css/section.css">
+  <script type="importmap">
+    { "imports": { "three": "../vendor/three/three.module.js" } }
+  </script>
+</head>
+<body class="section-page">
+  <canvas id="globe" aria-label="3D block diagram of section A–A′"></canvas>
+  <div id="labels" class="labels" aria-hidden="true"></div>
+
+  <header class="panel top wide" id="panel">
+    <div class="row">
+      <h1 data-t="heading"></h1>
+      <nav class="lang" aria-label="Language">
+        <button type="button" data-lang="ko">KO</button><span aria-hidden="true">|</span><button type="button" data-lang="en">EN</button>
+      </nav>
+    </div>
+    <p class="sub" data-t="subtitle"></p>
+    <a class="back" id="to-cambrian" href="../cambrian/" data-t="toCambrian"></a>
+
+    <div class="age-block">
+      <div class="age" id="age"></div>
+      <div class="period" id="period"></div>
+    </div>
+
+    <h2 data-t="veHeading"></h2>
+    <div class="seg ve" role="radiogroup" aria-label="Vertical exaggeration" id="ve"></div>
+    <p class="frame-note" id="ve-note"></p>
+
+    <div class="tools">
+      <label><input type="checkbox" id="show-flow" checked> <span data-t="showFlow"></span></label>
+      <label><input type="checkbox" id="show-boundaries" checked> <span data-t="showBoundaries"></span></label>
+    </div>
+
+    <section class="now" id="now" aria-live="polite"></section>
+
+    <section class="column-box" aria-labelledby="column-h">
+      <h2 id="column-h"><span class="badge observed" data-t="observedBadge"></span> <span data-t="columnHeading"></span></h2>
+      <svg id="column" viewBox="0 0 300 230" role="img"></svg>
+      <ul id="units" class="units"></ul>
+    </section>
+
+    <section class="legend" aria-labelledby="legend-h">
+      <h2 id="legend-h" data-t="legend"></h2>
+      <ul id="legend"></ul>
+    </section>
+
+    <details class="source">
+      <summary data-t="sourceHeading"></summary>
+      <div id="sources"></div>
+    </details>
+  </header>
+
+  <footer class="panel timeline">
+    <button type="button" id="play" class="play" aria-pressed="false"><span class="icon" aria-hidden="true">▶</span><span class="label" data-t="play"></span></button>
+    <div class="track">
+      <div class="periods" id="periods" aria-hidden="true"></div>
+      <input type="range" id="slider" min="0" max="80" step="0.5" value="0" aria-label="Age">
+      <div class="ends"><span id="oldest"></span><span id="youngest"></span></div>
+    </div>
+    <label class="speed"><span data-t="speed"></span>
+      <select id="speed">
+        <option value="1">1 Myr/s</option>
+        <option value="2" selected>2 Myr/s</option>
+        <option value="4">4 Myr/s</option>
+      </select>
+    </label>
+    <div class="status" id="status"></div>
+  </footer>
+
+  <script type="module" src="../js/section.js"></script>
+</body>
+</html>

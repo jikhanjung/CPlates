@@ -251,6 +251,60 @@ for (const [viewport, tag] of [[{ width: 1400, height: 900 }, 'desktop'], [{ wid
   await page.close();
 }
 
+// The A–A′ section page.
+async function openSection(viewport, query) {
+  const page = await browser.newPage({ viewport });
+  page.on('pageerror', (error) => failures.push(`section pageerror: ${error.message}`));
+  page.on('console', (message) => { if (message.type() === 'error') failures.push(`section console: ${message.text()}`); });
+  await page.goto(`${base}section/${query}`);
+  await page.waitForFunction(() => window.cplates?.state.data, null, { timeout: 60000 });
+  await page.waitForTimeout(2000);
+  return page;
+}
+{
+  const page = await openSection({ width: 1400, height: 900 }, '?age=520&ve=5');
+  const s = await page.evaluate(() => ({ trench: window.cplates.state.trench, flow: window.cplates.flowCount() }));
+  check(s.trench && s.trench.over_side === -1, `520 Ma: a trench on the line with the slab under East Antarctica, got ${JSON.stringify(s.trench)}`);
+  check(s.flow > 100, `520 Ma at 5×: mantle-flow particles should be moving, got ${s.flow}`);
+  check((await page.locator('#now').innerText()).includes('섀클턴 석회암'), '520 Ma: the Shackleton Limestone is being laid down');
+  await page.screenshot({ path: 'test-results/section-520-5x.png' });
+  await page.click('[data-ve="25"]');
+  await page.waitForTimeout(500);
+  check((await page.locator('#ve-note').innerText()).includes('56 km'), '25× should show 56 km of depth');
+  check(new URL(page.url()).searchParams.get('ve') === '25', 'the address should carry the exaggeration');
+  await page.evaluate(() => window.cplates.goTo(500));
+  await page.waitForTimeout(500);
+  check((await page.locator('#now').innerText()).includes('더글러스'), '500 Ma: the Douglas Conglomerate');
+  await page.screenshot({ path: 'test-results/section-500-25x.png' });
+  // Play, and turn the block while it plays.
+  await page.click('[data-ve="2"]');
+  await page.click('#play');
+  await page.waitForTimeout(1500);
+  const before = await page.evaluate(() => window.cplates.camera.position.toArray());
+  await page.mouse.move(900, 450);
+  await page.mouse.down();
+  await page.mouse.move(1000, 400, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => ({ cam: window.cplates.camera.position.toArray(), age: window.cplates.state.age,
+                                             playing: window.cplates.state.playing }));
+  check(after.playing && after.age < 500, `section playback should run, at ${after.age}`);
+  check(before.some((v, i) => Math.abs(v - after.cam[i]) > 1e-3), 'dragging during section playback should turn the block');
+  await page.click('#play');
+  await page.close();
+}
+{
+  const page = await openSection({ width: 390, height: 844 }, '?age=505&ve=25&lang=en');
+  await page.screenshot({ path: 'test-results/section-phone.png' });
+  check(!(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), 'section page: no horizontal scroll on a phone');
+  await page.close();
+}
+{
+  const page = await openCambrian({ width: 1400, height: 900 }, '?age=520');
+  check((await page.locator('#to-section').getAttribute('href')) === '../section/?age=520', 'the Cambrian page should link to the section at its age');
+  await page.close();
+}
+
 await browser.close();
 if (failures.length) {
   console.error(failures.join('\n'));

@@ -4,7 +4,7 @@
   "title": "PALEOMAP Paleodigital Elevation Models (PaleoDEMs) for the Phanerozoic, 1 degree grids",
   "short_title": "Scotese & Wright 2018 PaleoDEM",
   "covers_ma": [
-    485,
+    460,
     540
   ],
   "retrieved_at": "2026-09-12",
@@ -95,8 +95,38 @@
       "name": "Map82.5_PALEOMAP_1deg_Cambro-Ordovician_Boundary_485Ma.nc",
       "bytes": 51545,
       "sha256": "c61937182c76be7e5b91e329adb8543e5f3320611011e7d75fef3be8dc488a9b"
+    },
+    {
+      "role": "grid",
+      "name": "Map82_PALEOMAP_1deg_Early_Ordovician_480Ma.nc",
+      "bytes": 50127,
+      "sha256": "2bbcba236f97c7406710a669a5ca98531dff397913e3e8718815c2dea9f55b82"
+    },
+    {
+      "role": "grid",
+      "name": "Map81.5_PALEOMAP_1deg_Early_Ordovician_475Ma.nc",
+      "bytes": 51570,
+      "sha256": "27bb4377541bd1e88f32042810d82d6030ff6cb6caad9f5b9afa7c4267a8d727"
+    },
+    {
+      "role": "grid",
+      "name": "Map81_PALEOMAP_1deg_Early_Ordovician_470Ma.nc",
+      "bytes": 51929,
+      "sha256": "25f28bd8a16282a54595b594743ebfd04e4960f390102df233f77189a7ee86fa"
+    },
+    {
+      "role": "grid",
+      "name": "Map80.5_PALEOMAP_1deg_Middle_Ordovician_465Ma.nc",
+      "bytes": 52072,
+      "sha256": "b5998abcec832f116ed23253223672df0272c1fa7bf246d969655bec7307f48f"
+    },
+    {
+      "role": "grid",
+      "name": "Map80_PALEOMAP_1deg_Middle_Ordovician_460Ma.nc",
+      "bytes": 50673,
+      "sha256": "7c463009d7148aaf1a7c40451dd40fc516d7542d92f07fcedca0b10bc41ba108"
     }
   ],
-  "notes": "Only the twelve Cambrian grids (540 to 485 Ma, 5 Myr apart) are unpacked. Archive pinned from EarthThruTime3D sources/paleodem.json at be59c3a. The grids are in the PALEOMAP reconstruction (sources/plate-models/paleomap2016.json).",
+  "notes": "Only the grids from 540 to 460 Ma (5 Myr apart) are unpacked: the Cambrian page uses 540–485, the A–A′ section 540–460. Archive pinned from EarthThruTime3D sources/paleodem.json at be59c3a. The grids are in the PALEOMAP reconstruction (sources/plate-models/paleomap2016.json).",
   "limitations": "Elevations and depths are the authors' reconstruction from palaeogeographic maps, not measurements; 1 degree cells (about 110 km)."
 }

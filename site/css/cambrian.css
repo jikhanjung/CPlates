@@ -47,6 +47,7 @@
 .labels { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .labels span { position: absolute; transform: translate(-50%, -50%); font-size: 12px; font-weight: 600; color: #f5f0e0; text-shadow: 0 1px 3px #000, 0 0 2px #000; white-space: nowrap; }
 .labels span.antarctic { color: #fff6d8; font-size: 13px; }
+.labels span.section-end { color: #ff6b6b; font-size: 16px; font-weight: 800; }
 .labels span.obs { color: var(--observed); font-size: 11px; transform: translate(10px, -50%); }
 
 @media (max-width: 640px) {

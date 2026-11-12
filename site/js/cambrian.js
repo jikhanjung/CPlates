@@ -54,6 +54,7 @@ const STRINGS = {
     heading: '캄브리아기의 남극대륙',
     subtitle: '540–485 Ma, 곤드와나 가장자리의 남극과 지금의 남극종단산맥',
     back: '← 판의 움직임 (현생누대, 같은 나이로)',
+    toSection: '빨간 선 A–A′의 단면 보기 (3D, 540–460 Ma) →',
     age: '{age} Ma',
     play: '재생', pause: '일시정지', speed: '속도',
     modePlates: '판 모델 (Merdith 2021)',
@@ -106,6 +107,7 @@ const STRINGS = {
     heading: 'Antarctica in the Cambrian',
     subtitle: '540–485 Ma: Antarctica on the edge of Gondwana, and where today’s Transantarctic Mountains were',
     back: '← Plate motion (Phanerozoic, same age)',
+    toSection: 'Cross-section along the red line A–A′ (3D, 540–460 Ma) →',
     age: '{age} Ma',
     play: 'Play', pause: 'Pause', speed: 'Speed',
     modePlates: 'Plate model (Merdith 2021)',
@@ -267,6 +269,11 @@ const tamCentre = new LineSegments2(new LineSegmentsGeometry(),
 tamCentre.renderOrder = 5;
 scene.add(tamOutline, tamCentre);
 
+// Section A–A′, fixed to East Antarctica (plate 802 in both models), in red as drawn by the user.
+const sectionLine = new LineSegments2(new LineSegmentsGeometry(), new LineMaterial({ color: 0xff4d4d, linewidth: 3 }));
+sectionLine.renderOrder = 6;
+scene.add(sectionLine);
+
 const markerGroup = new THREE.Group();
 scene.add(markerGroup);
 const markers = new Map();
@@ -286,6 +293,8 @@ async function load() {
                                                   ...names.map((name) => get(`${BASE}${name}.json`))]);
   const data = Object.fromEntries(names.map((name, i) => [name, values[i]]));
   data.merdith = new RotationModel(merdith);
+  // The A–A′ section line (site/section/), if its data is built.
+  data.section = await fetch('../data/section/meta.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
   data.boundaries = new Map();
   data.paleomap = new RotationModel(data['rotations-paleomap']);
   data.grids = new Map();
@@ -520,6 +529,35 @@ function update() {
   }
   if (tamAt) anchors.push({ id: 'tam', where: tamAt, text: t().tam, className: 'antarctic' });
 
+  // A–A′: interpolate along the great circle in present-day coordinates, then turn with 802.
+  const line = data.section?.line;
+  sectionLine.visible = Boolean(line);
+  if (line) {
+    const q = model.rotation(data.section.section.frame_plate, placeAge);
+    if (q) {
+      const a = toVector(...line.A);
+      const b = toVector(...line.A_prime);
+      const angle = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+      const points = [];
+      let previous = null;
+      for (let i = 0; i <= 80; i++) {
+        const f = i / 80;
+        const w0 = Math.sin((1 - f) * angle) / Math.sin(angle);
+        const w1 = Math.sin(f * angle) / Math.sin(angle);
+        const p = toLonLat(a.map((v, k) => v * w0 + b[k] * w1));
+        const v = toVector(...turn(q, p[0], p[1]), 1.006);
+        if (previous) points.push(...previous, ...v);
+        previous = v;
+        if (i === 0) anchors.push({ id: 'secA', where: turn(q, p[0], p[1]), text: 'A', className: 'section-end' });
+        if (i === 80) anchors.push({ id: 'secA2', where: turn(q, p[0], p[1]), text: 'A′', className: 'section-end' });
+      }
+      sectionLine.geometry.dispose();
+      sectionLine.geometry = new LineSegmentsGeometry().setPositions(points);
+    } else {
+      sectionLine.visible = false;
+    }
+  }
+
   if (state.follow) {
     const target = focusPoint();
     // A jump (another view, another model, a far slider move) is taken at once; small
@@ -635,6 +673,7 @@ function stageAt(age) {
 function renderAge() {
   const age = state.age;
   $('back').href = `../?age=${Math.round(age)}&frame=merdith2021`;
+  $('to-section').href = `../section/?age=${Math.round(age)}`;
   $('age').textContent = format(t().age, { age: age.toFixed(1) });
   const [, , epoch, stage, colour] = stageAt(age);
   const inCambrian = age <= 538.8 && age > 486.85;

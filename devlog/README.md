@@ -19,6 +19,7 @@ EarthThruTime3D의 `devlog/` 규칙을 따르고, 번호는 이 저장소에서 
 
 ## 작업 기록
 
+- [jikhanjung 005 — 단면 A–A′: 동남극–섀클턴 석회암–고태평양 해구, 540–460 Ma](20261112_jikhanjung_005_section_a_a.md)
 - [jikhanjung 004 — 메인 화면을 현생누대로, 기본 기준틀은 Merdith 2021](20261112_jikhanjung_004_phanerozoic_frames.md)
 - [jikhanjung 003 — dolfinid 첫 배포 (cc9901d), HTTPS까지](20261112_jikhanjung_003_deploy_dolfinid.md)
 - [jikhanjung 002 — 캄브리아기의 남극대륙: 판 모델, 남극종단산맥, 얕은 바다](20261112_jikhanjung_002_cambrian_antarctica.md)
