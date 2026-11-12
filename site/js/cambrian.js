@@ -11,6 +11,7 @@
 // says so; observations (rock units) are marked apart from either model.
 
 import * as THREE from 'three';
+import { vfetch } from './version.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { LineSegments2 } from '../vendor/three/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from '../vendor/three/lines/LineSegmentsGeometry.js';
@@ -287,19 +288,19 @@ function threeQuaternion(q) {
 
 async function load() {
   const names = ['meta', 'continents', 'rotations-paleomap', 'tam', 'observations', 'labels'];
-  const get = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.json(); });
+  const get = (url) => vfetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.json(); });
   // Merdith rotations and plate boundaries are the main page's (data/merdith2021/), not copies.
   const [merdith, ...values] = await Promise.all([get(`${MERDITH}rotations.json`),
                                                   ...names.map((name) => get(`${BASE}${name}.json`))]);
   const data = Object.fromEntries(names.map((name, i) => [name, values[i]]));
   data.merdith = new RotationModel(merdith);
   // The A–A′ section line (site/section/), if its data is built.
-  data.section = await fetch('../data/section/meta.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  data.section = await vfetch('../data/section/meta.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
   data.boundaries = new Map();
   data.paleomap = new RotationModel(data['rotations-paleomap']);
   data.grids = new Map();
   await Promise.all(data.meta.grid_ages.map(async (age) => {
-    const blob = await fetch(`${BASE}paleodem/${age}.png`).then((r) => r.blob());
+    const blob = await vfetch(`${BASE}paleodem/${age}.png`).then((r) => r.blob());
     data.grids.set(age, await createImageBitmap(blob));
   }));
   return data;
@@ -401,7 +402,7 @@ function boundaryPieces(age) {
   const cache = state.data.boundaries;
   if (cache.has(age)) return cache.get(age);
   cache.set(age, null);
-  fetch(`${MERDITH}frames/${age}.json`).then((r) => r.json()).then((frame) => {
+  vfetch(`${MERDITH}frames/${age}.json`).then((r) => r.json()).then((frame) => {
     cache.set(age, frame.boundaries);
     if (Math.round(state.age) === age) { shownBoundaries = null; boundaryFrame(state.age); }
   }).catch(() => cache.delete(age));

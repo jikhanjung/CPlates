@@ -13,6 +13,7 @@
 //   environment at the same place beside it (reconstruction) for comparison.
 
 import * as THREE from 'three';
+import { vfetch } from './version.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { subductionFlow } from './cornerflow.js';
 import { RotationModel, turn } from './rotation.js';
@@ -83,7 +84,7 @@ const STRINGS = {
       miaolingian: '캄브리아기 · 먀오링세', furongian: '캄브리아기 · 푸룽세',
       earlyOrdovician: '오르도비스기 · 전기', middleOrdovician: '오르도비스기 · 중기',
     },
-    loading: '불러오는 중…', error: '자료를 불러오지 못했습니다. scripts/build_section.py 를 먼저 실행하세요.',
+    loading: '불러오는 중…', error: '자료를 불러오지 못했거나 서로 맞지 않습니다. 새로고침(Ctrl+F5)해 보세요.',
   },
   en: {
     title: 'CPlates — Section A–A′',
@@ -128,7 +129,7 @@ const STRINGS = {
       miaolingian: 'Cambrian · Miaolingian', furongian: 'Cambrian · Furongian',
       earlyOrdovician: 'Ordovician · Early', middleOrdovician: 'Ordovician · Middle',
     },
-    loading: 'Loading…', error: 'Could not load the data. Run scripts/build_section.py first.',
+    loading: 'Loading…', error: 'The data could not be loaded or does not match. Try reloading (Ctrl+F5).',
   },
 };
 
@@ -178,7 +179,7 @@ const face = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMater
 const slab = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
 // Antarctica as a solid: relief on top, the base of the crust underneath, walls between.
 const base = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour('#8f6f52'), side: THREE.DoubleSide }));
-const walls = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: colour(COLOURS.continental), side: THREE.DoubleSide }));
+const walls = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
 const box = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
 const streamlines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
   color: colour(COLOURS.flow), transparent: true, opacity: 0.22, depthTest: false }));
@@ -200,13 +201,19 @@ scene.add(top, base, walls, box, water, face, slab, boundaryLines, cobLines, lim
 // ---------- data ----------
 
 async function load() {
-  const get = (name) => fetch(`${BASE}${name}`).then((r) => { if (!r.ok) throw new Error(name); return r; });
+  const get = (name) => vfetch(`${BASE}${name}`).then((r) => { if (!r.ok) throw new Error(name); return r; });
   const [meta, surface, crust, region, boundaries, lens, rotations] = await Promise.all([
     get('meta.json').then((r) => r.json()), get('surface.bin').then((r) => r.arrayBuffer()),
     get('crust.bin').then((r) => r.arrayBuffer()), get('region.bin').then((r) => r.arrayBuffer()),
     get('boundaries.json').then((r) => r.json()), get('shackleton.bin').then((r) => r.arrayBuffer()),
-    fetch('../data/merdith2021/rotations.json').then((r) => r.json())]);
+    vfetch('../data/merdith2021/rotations.json').then((r) => r.json())]);
   const cells = meta.nx * meta.ny;
+  // Files from two releases must not be mixed: check the grid sizes agree.
+  const expected = meta.ages.length * cells;
+  if (surface.byteLength !== expected * 2 || crust.byteLength !== expected || region.byteLength !== expected
+      || lens.byteLength !== cells || !meta.outline) {
+    throw new Error('mismatch');
+  }
   return { meta, surface: new Int16Array(surface), crust: new Uint8Array(crust), region: new Uint8Array(region),
            boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
 }
@@ -248,8 +255,7 @@ function setGeometry(mesh, positions, colours, index) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   if (colours) g.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
   if (index) g.setIndex(index);
-  if (mesh.isMesh && !colours) g.computeVertexNormals();
-  else if (mesh.isMesh && index) g.computeVertexNormals();
+  if (mesh.isMesh) g.computeVertexNormals();
   mesh.geometry = g;
   return g;
 }
@@ -290,42 +296,22 @@ function update() {
   // Antarctica only: grid points on an Antarctic plate whose rock is continental (Merdith's
   // mask, or PaleoDEM shallower than −1000 m). Other continents in the box are left out.
   const k = Math.max(0, Math.min(meta.ages.length - 1, Math.round(meta.ages[0] - state.age)));
+  // Everything except other continents: Antarctica's continental crust and the shelf and
+  // ocean floor around it, one solid, so the continent runs on into oceanic crust as on
+  // the A–A′ face. Australia and India (another continent's block) are left out.
   const inside = new Uint8Array(nx * ny);
-  const queue = [];
-  for (let n = 0; n < nx * ny; n++) {
-    const c = k * data.cells + n;
-    if (data.region[c] === 1 && (data.crust[c] >= 128 || h[n] > -1000)) { inside[n] = 1; queue.push(n); }
-  }
-  // Grow into the shelf joined to it (PaleoDEM above −1000 m, not another continent): the
-  // Transantarctic margin, where the Shackleton Limestone lies, is outside Merdith's
-  // continent polygons until 410 Ma.
-  while (queue.length) {
-    const n = queue.pop();
-    const i = n % nx;
-    const j = (n - i) / nx;
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const ii = i + di;
-      const jj = j + dj;
-      if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue;
-      const m = jj * nx + ii;
-      if (inside[m] || data.region[k * data.cells + m] === 2 || h[m] <= -1000) continue;
-      inside[m] = 1;
-      queue.push(m);
-    }
-  }
-  // Shackleton Limestone: laid down evenly over 525–512 Ma (sketch), lens weight from the build.
-  const [lsStart, lsEnd] = [525, 512];
-  const grown = Math.min(1, Math.max(0, (lsStart - state.age) / (lsStart - lsEnd)));
-  const limestone = colour('#bdeef7');
-  state.limestone = { grown };
+  for (let n = 0; n < nx * ny; n++) inside[n] = data.region[k * data.cells + n] === 2 ? 0 : 1;
   const pos = [];
   const col = [];
   const low = [];
+  const crustColour = [];
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
       const height = h[j * nx + i];
       pos.push(xAt(i), yOf(height / 1000), zAt(j));
       low.push(xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
+      const cc = colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), continentalShare(height));
+      crustColour.push(cc.r, cc.g, cc.b);
       const c = hypsometric(height);
       const w = data.lens[j * nx + i] / 255;
       if (state.shackleton && w > 0) c.lerp(limestone, grown > 0 ? 0.85 : 0.45);
@@ -349,14 +335,20 @@ function update() {
   }
   setGeometry(top, pos, col, index);
   setGeometry(base, low, null, lowIndex);
+  // Walls on the outside of the solid (the block's sides, and around other continents),
+  // coloured by the crust they cut: continental or oceanic, as on the face.
   const wall = [];
+  const wallColours = [];
   for (const [key, count] of edges) {
     if (count !== 1) continue;
     const [a, b] = key.split(':').map(Number);
     wall.push(...pos.slice(a * 3, a * 3 + 3), ...pos.slice(b * 3, b * 3 + 3), ...low.slice(b * 3, b * 3 + 3),
               ...pos.slice(a * 3, a * 3 + 3), ...low.slice(b * 3, b * 3 + 3), ...low.slice(a * 3, a * 3 + 3));
+    const ca = crustColour.slice(a * 3, a * 3 + 3);
+    const cb = crustColour.slice(b * 3, b * 3 + 3);
+    wallColours.push(...ca, ...cb, ...cb, ...ca, ...cb, ...ca);
   }
-  setGeometry(walls, wall);
+  setGeometry(walls, wall, wallColours);
   const outline = [];
   if (state.shackleton) {
     const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && data.lens[j * nx + i] > 0;
@@ -672,8 +664,8 @@ let globeShown = null;
 async function globeFrame(age) {
   if (globeFrames.has(age)) return globeFrames.get(age);
   const promise = Promise.all([
-    fetch(`../data/merdith2021/frames/${age}.json`).then((r) => r.json()),
-    fetch(`../data/merdith2021/frames/${age}.png`).then((r) => r.blob())
+    vfetch(`../data/merdith2021/frames/${age}.json`).then((r) => r.json()),
+    vfetch(`../data/merdith2021/frames/${age}.png`).then((r) => r.blob())
       .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })),
   ]).then(([json, bitmap]) => ({ json, bitmap }));
   globeFrames.set(age, promise);

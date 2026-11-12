@@ -7,6 +7,7 @@
 // seam to manage and the same arithmetic serves clicks on the CPU.
 
 import * as THREE from 'three';
+import { vfetch } from './version.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { LineSegments2 } from '../vendor/three/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from '../vendor/three/lines/LineSegmentsGeometry.js';
@@ -307,8 +308,8 @@ function showFrame(age) {
 async function ensureModel(model) {
   if (state.models[model]) return state.models[model];
   const [meta, rotations] = await Promise.all([
-    fetch(`${base(model)}model.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
-    fetch(`${base(model)}rotations.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
+    vfetch(`${base(model)}model.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
+    vfetch(`${base(model)}rotations.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
   ]);
   state.models[model] = { meta, rotations: new RotationModel(rotations), frames: new Map(), pending: new Map() };
   return state.models[model];
@@ -333,8 +334,8 @@ async function loadFrame(age, model = state.model) {
   const name = `${age}`;
   const promise = (async () => {
     const [json, blob] = await Promise.all([
-      fetch(`${base(model)}frames/${name}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      fetch(`${base(model)}frames/${name}.png`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }),
+      vfetch(`${base(model)}frames/${name}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      vfetch(`${base(model)}frames/${name}.png`).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }),
     ]);
     // No colour conversion: the red channel is an index, not a colour.
     const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
