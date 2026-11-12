@@ -2,7 +2,7 @@
 
 정적 사이트라 컨테이너도 데이터베이스도 없다. nginx가 파일을 바로 내보낸다.
 dolfinid의 다른 서비스(Docker + nginx 프록시)와 달리 백업할 운영 자료가 없고, 모든 파일은
-저장소의 커밋과 `make frames cambrian`으로 다시 만들 수 있다.
+저장소의 커밋과 `make frames cambrian phanerozoic section`으로 다시 만들 수 있다.
 
 - 주소: https://cplates.nopeoplestime.info (DNS A 레코드 → 34.64.158.160 필요)
 - 호스트 배치:

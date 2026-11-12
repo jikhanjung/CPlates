@@ -172,3 +172,15 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   정리로 c417757 삭제. 남은 것 f668ec3 b2e6765 259cb61. 디스크 여유 24 GB.
 - 배포 뒤: 운영 meta에 노두 윤곽 6개와 새 지층(goldie 포함) 확인. `tests/browser.mjs`를 https에 대고 전체 통과.
   earththrutime3d `/healthz` 200, cdgts 200.
+
+## 재배포: 0db5733 (버드층군 노두를 GeoMAP으로, 현생누대의 남극대륙 새 페이지)
+
+2026-11-13, 사용자 직접 지시(이 세션): "진행해줘. 다음 작업도 계속." (push·배포 물음에 대한 답)
+
+- push 전 점검: 2커밋 21파일, 가장 큰 파일 `byrd_outcrops.json` 143 KB, 생성 자료·비밀값 없음(GeoMAP 원본은
+  `data/`, git 밖). node 시험 30개, 로컬 브라우저 시험 통과. `da9ddf7..0db5733` push.
+- `deploy/deploy.sh 0db5733`: origin/main 확인 → 릴리스 161 MB(현생누대 자료 43 MB 더함) →
+  `current -> releases/0db5733`(이전 f668ec3) → 스모크(`/phanerozoic/` 포함) 통과 → 정리로 259cb61 삭제.
+  남은 것 0db5733 f668ec3 b2e6765. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/data/phanerozoic/meta.json`(540–0 Ma) 확인. `tests/browser.mjs`를 https에 대고 전체 통과
+  (현생누대 페이지 검사 포함). earththrutime3d `/healthz` 200(주소는 earththrutime.nopeoplestime.info), cdgts 200.
