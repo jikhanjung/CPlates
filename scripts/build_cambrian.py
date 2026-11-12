@@ -402,6 +402,12 @@ def main():
     print(f"  paleodem/*.png              {len(GRID_AGES)} grids")
 
     observations = json.loads((ROOT / "sources/observations/cambrian_antarctica.json").read_text())
+    if PAGE == "phanerozoic":
+        # The later record too (Devonian to Cenozoic), placed with GeoMAP.
+        later = json.loads((ROOT / "sources/observations/phanerozoic_antarctica.json").read_text())
+        observations["title"] = "Geological record along the Transantarctic Mountains"
+        observations["note"] += " " + later["note"]
+        observations["items"] += later["items"]
     for item in observations["items"]:
         lat, lon = item["present"][1], item["present"][0]
         item["m"] = plate_of(merdith_cut, lat, lon)

@@ -174,7 +174,6 @@ const PHANEROZOIC = {
     tamNote: '남극종단산맥 윤곽은 지금의 산맥(Natural Earth)을 판과 함께 옮긴 것입니다. 그때의 산맥 모양이 아니고, 판 안의 늘어남·줄어듦(로스해 열개, 로스 조산운동 등)도 들어 있지 않습니다. 지금의 산맥은 주로 신생대에 솟았습니다.',
     timeScale: '연대: ICS 국제 층서 차트 v2023/09.',
     error: '자료를 불러오지 못했습니다. scripts/build_cambrian.py --page phanerozoic 를 먼저 실행하세요.',
-    obsHeading: '지질 기록 (캄브리아기)',
   },
   en: {
     title: 'CPlates — Antarctica through the Phanerozoic',
@@ -185,7 +184,6 @@ const PHANEROZOIC = {
     tamNote: 'The Transantarctic Mountains outline is today’s range (Natural Earth) carried with its plate. It is not the shape of a range at that time, and stretching or shortening within the plate (the Ross Sea rift, the Ross orogeny) is not in it. Today’s range rose mainly in the Cenozoic.',
     timeScale: 'Ages: ICS International Chronostratigraphic Chart v2023/09.',
     error: 'Could not load the data. Run scripts/build_cambrian.py --page phanerozoic first.',
-    obsHeading: 'Geological record (Cambrian)',
   },
 };
 STRINGS.ko.toOther = '현생누대 전체로 보기 (540–0 Ma) →';
@@ -844,11 +842,14 @@ function drawStrip() {
       if (d < bestD) { bestD = d; best = point; }
     }
     const yy = y(best.s_km);
+    // At least 3 px wide, so a short event (the Ferrar, 0.4 Myr) shows on 540 Myr.
+    const x0 = x(Math.min(state.oldest, item.age[0]));
+    const w = Math.max(3, x(Math.max(state.youngest, item.age[1])) - x0);
     g.fillStyle = '#ff9f43';
-    g.fillRect(x(Math.min(state.oldest, item.age[0])), yy - 3, x(Math.max(state.youngest, item.age[1])) - x(Math.min(state.oldest, item.age[0])), 6);
+    g.fillRect(x0, yy - 3, w, 6);
     g.strokeStyle = '#1a1208';
     g.lineWidth = 1;
-    g.strokeRect(x(Math.min(state.oldest, item.age[0])), yy - 3, x(Math.max(state.youngest, item.age[1])) - x(Math.min(state.oldest, item.age[0])), 6);
+    g.strokeRect(x0, yy - 3, w, 6);
   }
   // Now.
   g.strokeStyle = '#ffffff';

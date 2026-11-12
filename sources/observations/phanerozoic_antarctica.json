@@ -1,0 +1,221 @@
+{
+ "title": "Post-Cambrian geological record along the Transantarctic Mountains",
+ "note": "Observations, not model output: rock units and their published ages and settings, for the Phanerozoic page (with the Cambrian items of cambrian_antarctica.json). Each place is the area-weighted centre of the unit's SCAR GeoMAP v2022-08 polygons in the area named (Cox et al. 2023), rounded; it is carried to the past with the plate under it, which is the model's part. Ages: as cited; where a source gives only a period, the ICS chart v2023/09 bounds. Compiled 2026-11-13.",
+ "items": [
+  {
+   "id": "taylor",
+   "present": [
+    161.4,
+    -77.73
+   ],
+   "age": [
+    419.2,
+    382.7
+   ],
+   "name": {
+    "ko": "테일러층군 (비컨 누층군)",
+    "en": "Taylor Group (Beacon Supergroup)"
+   },
+   "where": {
+    "ko": "남빅토리아 랜드, 드라이 밸리 일대",
+    "en": "Southern Victoria Land, Dry Valleys area"
+   },
+   "what": {
+    "ko": "데본기 석영질 사암. 로스 조산대의 기반암을 깎은 평탄한 침식면(쿠크리 침식면) 위에 쌓였다. 하천과 얕은 바닷가 환경의 퇴적물이다. 융기·삭박 뒤 그 자리에 다시 쌓인 지층이다.",
+    "en": "Devonian quartz sandstones laid on a flat erosion surface (the Kukri surface) cut across the Ross orogen's basement: river and shallow coastal deposits, laid down where the orogen had been uplifted and worn away."
+   },
+   "says": {
+    "ko": "육지·얕은 물 (관측)",
+    "en": "Land, shallow water (observed)"
+   },
+   "refs": [
+    "Elliot, D. H., 2013. The geological and tectonic evolution of the Transantarctic Mountains: a review. Geological Society, London, Special Publications, 381, 7–35.",
+    "Cox, S. C., et al., 2023. The GeoMAP (v.2022-08) continent-wide detailed geological dataset of Antarctica. PANGAEA, doi:10.1594/PANGAEA.951482 (age range of the unit)."
+   ]
+  },
+  {
+   "id": "pagoda",
+   "present": [
+    165.96,
+    -83.77
+   ],
+   "age": [
+    298.9,
+    290.1
+   ],
+   "name": {
+    "ko": "파고다층 (빙하 퇴적층)",
+    "en": "Pagoda Formation (glacial deposits)"
+   },
+   "where": {
+    "ko": "중부 남극종단산맥, 비어드모어 빙하 일대",
+    "en": "Central Transantarctic Mountains, Beardmore Glacier area"
+   },
+   "what": {
+    "ko": "후기 고생대 곤드와나 빙하기의 빙성 다이아믹타이트. 곤드와나가 남극 가까이 있던 때 대륙빙하가 이 지역을 덮었다. 나이는 페름기 초로 보며, 여기 범위(아셀절–사크마르절)는 대략이다.",
+    "en": "Glacial diamictite of the late Palaeozoic Gondwana glaciation, when ice sheets covered the area as Gondwana lay near the South Pole. It is taken as earliest Permian; the span here (Asselian–Sakmarian) is approximate."
+   },
+   "says": {
+    "ko": "빙하 (관측)",
+    "en": "Glacial (observed)"
+   },
+   "refs": [
+    "Elliot, D. H., 2013. The geological and tectonic evolution of the Transantarctic Mountains: a review. Geological Society, London, Special Publications, 381, 7–35.",
+    "Cox, S. C., et al., 2023. GeoMAP v2022-08, doi:10.1594/PANGAEA.951482 (Permian age of the unit)."
+   ]
+  },
+  {
+   "id": "buckley",
+   "present": [
+    165.46,
+    -84.29
+   ],
+   "age": [
+    290.1,
+    251.9
+   ],
+   "name": {
+    "ko": "버클리층 (석탄층, 글로소프테리스)",
+    "en": "Buckley Formation (coal measures, Glossopteris)"
+   },
+   "where": {
+    "ko": "중부 남극종단산맥, 비어드모어 빙하 일대",
+    "en": "Central Transantarctic Mountains, Beardmore Glacier area"
+   },
+   "what": {
+    "ko": "빙하가 물러간 뒤의 페름기 하천·늪 퇴적층. 석탄층과 글로소프테리스 식물 화석이 있다. 곤드와나 여러 대륙에 같은 식물상이 나온다.",
+    "en": "Permian river and swamp deposits after the ice retreated, with coal seams and Glossopteris plant fossils, the flora shared across the Gondwana continents."
+   },
+   "says": {
+    "ko": "육지 (하천·늪, 관측)",
+    "en": "Land: rivers and swamps (observed)"
+   },
+   "refs": [
+    "Elliot, D. H., 2013. Geological Society, London, Special Publications, 381, 7–35.",
+    "Cox, S. C., et al., 2023. GeoMAP v2022-08, doi:10.1594/PANGAEA.951482 (Permian age of the unit)."
+   ]
+  },
+  {
+   "id": "fremouw",
+   "present": [
+    167.47,
+    -84.65
+   ],
+   "age": [
+    251.9,
+    237.0
+   ],
+   "name": {
+    "ko": "프리모우층 (리스트로사우루스)",
+    "en": "Fremouw Formation (Lystrosaurus)"
+   },
+   "where": {
+    "ko": "중부 남극종단산맥, 비어드모어 빙하 일대 (화석은 콜색 블러프)",
+    "en": "Central Transantarctic Mountains, Beardmore Glacier area (the fossils: Coalsack Bluff)"
+   },
+   "what": {
+    "ko": "트라이아스기 전기–중기의 하천 퇴적층. 1969–70년에 리스트로사우루스 등 네발 척추동물 화석이 나왔다. 남아프리카·인도와 같은 동물상이라 곤드와나가 한 덩어리였다는 증거가 되었다.",
+    "en": "Early to Middle Triassic river deposits that yielded tetrapods, Lystrosaurus among them, in 1969–70: the same fauna as in southern Africa and India, and evidence that Gondwana had been one landmass."
+   },
+   "says": {
+    "ko": "육지 (하천, 관측)",
+    "en": "Land: rivers (observed)"
+   },
+   "refs": [
+    "Elliot, D. H., Colbert, E. H., Breed, W. J., Jensen, J. A., and Powell, J. S., 1970. Triassic tetrapods from Antarctica: evidence for continental drift. Science, 169, 1197–1201.",
+    "Cox, S. C., et al., 2023. GeoMAP v2022-08, doi:10.1594/PANGAEA.951482."
+   ]
+  },
+  {
+   "id": "ferrar",
+   "present": [
+    168.78,
+    -85.06
+   ],
+   "age": [
+    182.8,
+    182.4
+   ],
+   "name": {
+    "ko": "페라 대화성암구 (커크패트릭 현무암, 페라 조립현무암)",
+    "en": "Ferrar large igneous province (Kirkpatrick Basalt, Ferrar Dolerite)"
+   },
+   "where": {
+    "ko": "남극종단산맥 전체 (용암은 비어드모어 빙하 일대의 커크패트릭 현무암)",
+    "en": "The whole Transantarctic Mountains (the lavas: Kirkpatrick Basalt, Beardmore Glacier area)"
+   },
+   "what": {
+    "ko": "쥐라기 전기의 짧은 화성 활동. 조립현무암 암상이 비컨 누층군 사이로 들어가고 그 위를 현무암 용암이 덮었다. 곤드와나가 갈라지기 시작할 때의 일이며, 연대는 약 40만 년 안에 몰려 있다.",
+    "en": "A brief Early Jurassic magmatic event: dolerite sills intruded the Beacon Supergroup and basalt lavas covered it, as Gondwana began to break apart; the dates fall within about 0.4 Myr."
+   },
+   "says": {
+    "ko": "화산 활동 (관측)",
+    "en": "Volcanism (observed)"
+   },
+   "refs": [
+    "Burgess, S. D., Bowring, S. A., Fleming, T. H., and Elliot, D. H., 2015. High-precision geochronology links the Ferrar large igneous province with early-Jurassic ocean anoxia and biotic crisis. Earth and Planetary Science Letters, 415, 90–99."
+   ]
+  },
+  {
+   "id": "uplift",
+   "present": [
+    161.2,
+    -77.5
+   ],
+   "age": [
+    55.0,
+    0.0
+   ],
+   "name": {
+    "ko": "남극종단산맥의 융기",
+    "en": "Uplift of the Transantarctic Mountains"
+   },
+   "where": {
+    "ko": "남빅토리아 랜드",
+    "en": "Southern Victoria Land"
+   },
+   "what": {
+    "ko": "인회석 피션 트랙 냉각 나이로 본 빠른 융기와 삭박. 약 55 Ma에 시작했고, 로스해 쪽 열개의 어깨로 솟았다. 지금의 산맥은 이때 생겼다.",
+    "en": "Rapid uplift and erosion read from apatite fission-track cooling ages, starting about 55 Ma, as the shoulder of the Ross Sea rift: today's range dates from this."
+   },
+   "says": {
+    "ko": "융기 (관측: 냉각 나이)",
+    "en": "Uplift (observed: cooling ages)"
+   },
+   "refs": [
+    "Fitzgerald, P. G., 1992. The Transantarctic Mountains of southern Victoria Land: the application of apatite fission track analysis to a rift shoulder uplift. Tectonics, 11, 634–662."
+   ]
+  },
+  {
+   "id": "sirius",
+   "present": [
+    167.27,
+    -85.01
+   ],
+   "age": [
+    33.9,
+    2.6
+   ],
+   "name": {
+    "ko": "시리우스층군 (빙하 퇴적층)",
+    "en": "Sirius Group (glacial deposits)"
+   },
+   "where": {
+    "ko": "중부 남극종단산맥, 비어드모어 빙하 상류 (도미니언 산맥 등)",
+    "en": "Central Transantarctic Mountains, upper Beardmore Glacier (Dominion Range and others)"
+   },
+   "what": {
+    "ko": "높은 곳에 남은 신생대 빙하 퇴적물. 나이는 논쟁 중이다(플라이오세라는 설과 더 오래되었다는 설). 여기 범위는 GeoMAP이 단위에 준 것이다.",
+    "en": "Cenozoic glacial deposits left high in the range. Their age is debated (Pliocene, or older); the span here is the one GeoMAP gives the unit."
+   },
+   "says": {
+    "ko": "빙하 (관측)",
+    "en": "Glacial (observed)"
+   },
+   "refs": [
+    "Webb, P.-N., Harwood, D. M., McKelvey, B. C., Mercer, J. H., and Stott, L. D., 1984. Cenozoic marine sedimentation and ice-volume variation on the East Antarctic craton. Geology, 12, 287–291.",
+    "Cox, S. C., et al., 2023. GeoMAP v2022-08, doi:10.1594/PANGAEA.951482 (age range of the unit)."
+   ]
+  }
+ ]
+}

@@ -227,10 +227,16 @@ async function openCambrian(viewport, query) {
   const bands = await page.locator('#periods b').allInnerTexts();
   check(bands.indexOf('캄브리아기') < bands.indexOf('백악기'), `the timeline runs old to young, left to right: ${bands}`);
   await page.screenshot({ path: 'test-results/phanerozoic-plates-180.png' });
+  check((await page.locator('#observations li').count()) === 10, 'the Phanerozoic page lists the Cambrian and the later record');
+  await page.evaluate(() => window.cplates.goTo(245));
+  await page.waitForTimeout(300);
+  const active = await page.locator('#observations li.active strong').allInnerTexts();
+  check(active.some((x) => x.includes('프리모우층')), `at 245 Ma the Fremouw Formation should be active: ${active}`);
+  await page.screenshot({ path: 'test-results/phanerozoic-plates-245.png' });
   await page.click('[data-mode="paleodem"]');
-  await page.waitForFunction(() => window.cplates.state.data.grids.get(180), null, { timeout: 20000 });
+  await page.waitForFunction(() => window.cplates.state.data.grids.get(245), null, { timeout: 20000 });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/phanerozoic-paleodem-180.png' });
+  await page.screenshot({ path: 'test-results/phanerozoic-paleodem-245.png' });
   await page.click('[data-mode="plates"]');
   await page.evaluate(() => window.cplates.goTo(10));
   await page.click('#play');
