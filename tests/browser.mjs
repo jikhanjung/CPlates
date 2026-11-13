@@ -473,21 +473,43 @@ async function openSection(viewport, query) {
     const shown = await page.evaluate(() => Object.fromEntries(Object.entries(window.cplates.handles).map(([k, m]) => [k, m.visible])));
     check(shown.front && !shown.back, `from the front, the back handle should be hidden: ${JSON.stringify(shown)}`);
   }
-  // Byrd Group outcrops from SCAR GeoMAP, draped on the surface.
+  // The lower and upper Byrd Group from SCAR GeoMAP outcrops, cell by cell, laid down in turn.
   {
-    await page.evaluate(() => window.cplates.goTo(520));
+    await page.evaluate(() => window.cplates.goTo(530));
     await page.click('#show-outcrops');
     await page.waitForTimeout(400);
-    check(new URL(page.url()).searchParams.get('outcrops') === '1', 'the address should remember the outcrops');
-    check(!(await page.locator('#outcrop-note').isHidden()), 'the outcrop note should say what the outlines are');
-    check((await page.locator('#legend').innerText()).includes('GeoMAP'), 'the legend should name the outcrops');
-    const labels = await page.evaluate(() => [...document.querySelectorAll('#labels span.outcrop')].map((s) => s.textContent));
-    check(labels.some((x) => x.includes('버드층군 노두')), `the outcrops should be named: ${labels}`);
-    await page.screenshot({ path: 'test-results/section-outcrops.png' });
+    check(new URL(page.url()).searchParams.get('outcrops') === '1', 'the address should remember the Byrd Group layer');
+    check(!(await page.locator('#outcrop-note').isHidden()), 'the Byrd Group note should say what the cells are');
+    const legend = await page.locator('#legend').innerText();
+    check(legend.includes('하부 버드층군') && legend.includes('상부 버드층군'), `the legend should name lower and upper: ${legend}`);
+    const byrd = await page.evaluate(() => window.cplates.byrd());
+    check(byrd.visible && byrd.cells > 20, `the Byrd Group cells should be drawn: ${JSON.stringify(byrd)}`);
+    const label = () => page.evaluate(() => [...document.querySelectorAll('#labels span.outcrop')].map((s) => s.textContent).join(' | '));
+    check(byrd.state === 'none' && (await label()).includes('아직 쌓이기 전'), `530 Ma: nothing laid down yet: ${byrd.state}, ${await label()}`);
+    await page.evaluate(() => window.cplates.goTo(518));
+    await page.waitForTimeout(300);
+    check((await page.evaluate(() => window.cplates.byrd().state)) === 'lower' && /하부 [\d.]+ km/.test(await label()) && !(await label()).includes('상부'),
+          `518 Ma: the lower Byrd Group only: ${await label()}`);
+    await page.evaluate(() => window.cplates.goTo(500));
+    await page.waitForTimeout(300);
+    check((await page.evaluate(() => window.cplates.byrd().state)) === 'upper' && (await label()).includes('하부 2.0 km + 상부'),
+          `500 Ma: the upper on top of the whole lower: ${await label()}`);
+    // The lower is the Shackleton Limestone: one thickness for both menus.
+    await page.selectOption('#byrd-lower-km', '5.4');
+    await page.selectOption('#byrd-upper-km', '3');
+    await page.waitForTimeout(300);
+    const params = new URL(page.url()).searchParams;
+    check(params.get('limestone') === '5.4' && params.get('upper') === '3' && (await page.inputValue('#limestone-km')) === '5.4',
+          `the thickness menus should be kept in the address and in step: ${params}`);
+    check((await label()).includes('하부 5.4 km'), `the label should follow the thickness: ${await label()}`);
+    await page.screenshot({ path: 'test-results/section-byrd-500.png' });
+    await page.selectOption('#byrd-lower-km', '2');
+    await page.selectOption('#byrd-upper-km', '2');
     await page.click('#show-outcrops');
     await page.waitForTimeout(200);
+    check(!(await page.evaluate(() => window.cplates.byrd().visible)), 'unticked, the Byrd Group cells should go');
   }
-  // Rock by age from SCAR GeoMAP, laid on the surface; rock still to come is greyed.
+  // Rock by age from SCAR GeoMAP, cell by cell on the surface; rock still to come is greyed.
   {
     await page.evaluate(() => window.cplates.goTo(520));
     await page.click('#show-geology');

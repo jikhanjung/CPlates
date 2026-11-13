@@ -72,12 +72,15 @@ const STRINGS = {
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
     resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
-    showOutcrops: '버드층군 노두 (GeoMAP)',
-    outcropNote: '지금 드러난 노두입니다. SCAR GeoMAP v2022-08(Cox et al. 2023, 1:25만)의 버드층군 지질 단위를 층별로 그렸고, 250 m 안쪽으로 간추렸습니다. 얼음과 침식이 남긴 범위라 그 시대에 쌓인 범위가 아닙니다. 하늘색은 섀클턴 석회암, 주황은 스타샷층, 분홍은 더글러스 역암, 노랑은 층을 나누지 않은 버드층군이고, 쌓이던 시기에 밝게 보입니다. 나이는 기록 그림(Myrow et al. 2002)을 따릅니다.',
-    lgOutcrop: '{unit} 노두 (GeoMAP)', outcropLabel: '버드층군 노두',
+    showOutcrops: '버드층군 하부·상부 (GeoMAP)',
+    byrdLowerKm: '하부', byrdUpperKm: '상부',
+    outcropNote: 'SCAR GeoMAP v2022-08(Cox et al. 2023, 1:25만)의 버드층군 노두를 단면 격자 칸(약 28 km)으로 모았습니다. 노두가 조금이라도 든 칸은 칸 전체를 칠합니다. 하부 버드층군(하늘색)은 섀클턴 석회암, 상부(주황)는 스타샷층과 더글러스 역암이며, 층을 나누지 않은 버드층군 칸은 둘 다 있다고 봅니다. 상부가 드러난 칸에는 그 아래에 하부도 있다고 둡니다. 하부는 525–512 Ma, 상부는 511–485 Ma 동안 고르게 쌓이고, 앞면 단면에서는 먼저 쌓인 하부 위에 상부가 더해집니다(지표는 PaleoDEM 그대로 두고 아래로 쌓아 내림). 이미 쌓인 층은 진하게, 아직 쌓이기 전은 흐리게 칠합니다. 지금의 노두는 그 뒤의 침식과 충상(겹쳐 올라탐)으로 줄어든 범위라, 쌓일 때는 더 넓게 분포했을 것입니다. 그래서 노두를 동남극(판 802)과 함께 그 시대로 옮겼을 때 노두가 든 칸에는 칸 전체에 그 층이 있다고 봅니다(근사). 두께는 모식입니다: 하부는 섀클턴 석회암 두께와 같고, 상부 두께는 문헌에서 잰 값을 찾지 못해 고른 값입니다.',
+    lgByrdLower: '하부 버드층군 (섀클턴 석회암) · 525–512 Ma', lgByrdUpper: '상부 버드층군 (스타샷층·더글러스 역암) · 511–485 Ma',
+    lgByrdNotYet: '흐린 칸: 아직 쌓이기 전',
+    byrdLabel: '버드층군 · 하부 {lower} km{upper} (모식)', byrdUpperPart: ' + 상부 {km} km', byrdNotYet: '버드층군 분포 (아직 쌓이기 전)',
     outcropSections: '측정 단면 S1·S2·HR (Myrow 2002)',
     showGeology: '시대별 암석 분포 (GeoMAP)',
-    geologyNote: '지금 드러난 암석을 SCAR GeoMAP v2022-08(Cox et al. 2023)의 간추린 분류(SIMPCODE)로 나눠 생긴 때 순으로 칠했습니다. 2 km 칸마다 가장 많은 암석의 색이고, 칸에서 암석이 차지하는 몫이 클수록 진합니다(작은 노두도 보이도록 암석이 조금이라도 있으면 칠함). 빙퇴석·얼음·분류 안 된 것은 뺐습니다. 흐린 회색빛은 화면의 나이에 아직 생기지 않은 암석입니다(비컨 누층군, 페라 등). 동남극(판 802)과 함께 옮긴 지금의 자리이며, 그 시대에 그 암석이 있던 범위가 아닙니다. 대륙 대부분이 얼음 밑이라 드러난 곳은 산맥에 몰려 있습니다.',
+    geologyNote: '지금 드러난 암석을 SCAR GeoMAP v2022-08(Cox et al. 2023)의 간추린 분류(SIMPCODE)로 나눠 생긴 때 순으로 칠했습니다. 단면 격자 칸(약 28 km)마다 그 칸에서 가장 넓게 드러난 암석의 색으로 칸 전체를 칠합니다(암석이 조금이라도 있으면 칠함). 빙퇴석·얼음·분류 안 된 것은 뺐습니다. 흐린 회색빛은 화면의 나이에 아직 생기지 않은 암석입니다(비컨 누층군, 페라 등). 동남극(판 802)과 함께 옮긴 지금의 자리이며, 그 시대에 그 암석이 있던 범위가 아닙니다. 대륙 대부분이 얼음 밑이라 드러난 곳은 산맥에 몰려 있습니다.',
     lgGeologyLater: '흐린 색: 이 나이에는 아직 생기지 않은 암석',
     fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
     fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
@@ -139,12 +142,15 @@ const STRINGS = {
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
     resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
-    showOutcrops: 'Byrd Group outcrops (GeoMAP)',
-    outcropNote: 'Today’s outcrop: the Byrd Group units of SCAR GeoMAP v2022-08 (Cox et al. 2023, 1:250 000), by formation, simplified within 250 m. It is what ice and erosion leave exposed, not where the units were laid down. Light blue: Shackleton Limestone; orange: Starshot Formation; pink: Douglas Conglomerate; yellow: Byrd Group not divided. Each is bright while it was being laid down; the ages follow the record (Myrow et al. 2002).',
-    lgOutcrop: '{unit} outcrop (GeoMAP)', outcropLabel: 'Byrd Group outcrops',
+    showOutcrops: 'Lower and upper Byrd Group (GeoMAP)',
+    byrdLowerKm: 'Lower', byrdUpperKm: 'Upper',
+    outcropNote: 'The Byrd Group outcrops of SCAR GeoMAP v2022-08 (Cox et al. 2023, 1:250 000), gathered into the section grid’s cells (about 28 km): a cell with any outcrop at all is filled whole. The lower Byrd Group (light blue) is the Shackleton Limestone; the upper (orange) the Starshot Formation and Douglas Conglomerate; cells of Byrd Group not divided are taken to hold both, and where the upper crops out the lower is taken to lie beneath it. The lower is laid down evenly over 525–512 Ma and the upper over 511–485 Ma; on the front section the upper is added on top of the lower already there (the surface stays at PaleoDEM’s height and the pile builds downward). Units already laid down are strong, those still to come faint. Today’s outcrop is what later erosion and thrusting (sheets stacked over each other) left, so the units were laid down over a wider area: carried back with East Antarctica (plate 802), every cell the outcrop reaches is taken to hold the unit throughout (an approximation). The thicknesses are a sketch: the lower is the Shackleton Limestone’s thickness, and no measured thickness was found for the upper, so it is a chosen value.',
+    lgByrdLower: 'Lower Byrd Group (Shackleton Limestone) · 525–512 Ma', lgByrdUpper: 'Upper Byrd Group (Starshot Formation, Douglas Conglomerate) · 511–485 Ma',
+    lgByrdNotYet: 'Faint cells: not yet laid down',
+    byrdLabel: 'Byrd Group · lower {lower} km{upper} (sketch)', byrdUpperPart: ' + upper {km} km', byrdNotYet: 'Byrd Group area (not yet laid down)',
     outcropSections: 'Measured sections S1, S2, HR (Myrow 2002)',
     showGeology: 'Rock by age (GeoMAP)',
-    geologyNote: 'Rock exposed today, in the simplified classes (SIMPCODE) of SCAR GeoMAP v2022-08 (Cox et al. 2023), coloured in order of when it formed. Each 2 km cell takes the colour of its most common rock, stronger the more of the cell is rock (any rock at all is shown, so small outcrops stay visible); moraine, ice and unclassified rock are left out. Greyed colours are rock that did not yet exist at the age on screen (the Beacon Supergroup, the Ferrar, …). The places are today’s, carried with East Antarctica (plate 802), not where the rock was at the time. Most of the continent is under ice, so what is exposed lies mostly in the mountains.',
+    geologyNote: 'Rock exposed today, in the simplified classes (SIMPCODE) of SCAR GeoMAP v2022-08 (Cox et al. 2023), coloured in order of when it formed. Each cell of the section grid (about 28 km) is filled whole with the colour of the rock exposed over most of it (any rock at all is shown); moraine, ice and unclassified rock are left out. Greyed colours are rock that did not yet exist at the age on screen (the Beacon Supergroup, the Ferrar, …). The places are today’s, carried with East Antarctica (plate 802), not where the rock was at the time. Most of the continent is under ice, so what is exposed lies mostly in the mountains.',
     lgGeologyLater: 'Greyed: rock not yet formed at this age',
     fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
     fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
@@ -192,6 +198,8 @@ const state = {
   // Trench from Merdith 2021 as it is, or moved onto PaleoDEM's slope foot (?trench=paleodem).
   fit: ASKED.get('trench') === 'paleodem',
   outcrops: ASKED.get('outcrops') === '1',
+  // Upper Byrd Group thickness (km, sketch); the lower one is the Shackleton Limestone's (limestoneKm).
+  byrdUpperKm: Number(ASKED.get('upper')) || 2,
   geology: ASKED.get('geology') === '1',
 };
 const t = () => STRINGS[state.lang];
@@ -228,15 +236,20 @@ const colour = (hex) => {
   return parsedColours.get(hex).clone();
 };
 const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-// Rock by age (SCAR GeoMAP), a picture laid on the top surface. Its colours are premultiplied
-// by the share of each cell that is rock, so the picture's smaller copies (far away) average
-// right and small outcrops fade rather than vanish.
-const geologyTexture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
-const geologyTop = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
-  map: geologyTexture, transparent: true, premultipliedAlpha: true, depthWrite: false, side: THREE.DoubleSide,
-  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 }));
-geologyTop.renderOrder = 1;
-geologyTop.visible = false;
+// GeoMAP layers as pictures with one texel per grid cell, laid on the top surface: each cell
+// (centred on its grid point, like the Shackleton Limestone's area) is filled whole.
+function cellOverlay(order, offsetUnits) {
+  const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
+    map: texture, transparent: true, premultipliedAlpha: true, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: offsetUnits }));
+  mesh.renderOrder = order;
+  mesh.visible = false;
+  return { mesh, texture, key: '' };
+}
+// Rock by age, and over it the lower and upper Byrd Group.
+const geologyLayer = cellOverlay(1, -4);
+const byrdLayer = cellOverlay(2, -8);
 const water = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
   color: colour(COLOURS.water), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
 const face = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
@@ -273,9 +286,9 @@ const scaleBar = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.Li
 const SCALE_STEPS = [1, 2, 5, 10, 20, 50, 100, 200];
 // The step nearest a quarter of a scene unit tall: 10 km at the default 25×.
 const scaleKm = (ve) => SCALE_STEPS.reduce((a, b) => (Math.abs(Math.log((b * ve) / 250)) < Math.abs(Math.log((a * ve) / 250)) ? b : a));
-// Byrd Group outcrops (SCAR GeoMAP), draped on the surface.
-const outcropLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
-const OUTCROP_COLOURS = { shackleton: '#5fd3ff', starshot: '#ffb347', douglas: '#ff7eb6', byrd: '#e8d36a' };
+// The Byrd Group's footprint (cells with outcrop), outlined on the surface.
+const byrdEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffd59a }));
+const BYRD = { lower: { bit: 1, colour: '#5fc8ee' }, upper: { bit: 2, colour: '#f0a04b' }, undivided: { bit: 4 } };
 const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
@@ -287,7 +300,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, geologyTop, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, outcropLines, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, geologyLayer.mesh, byrdLayer.mesh, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, byrdEdge, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -309,24 +322,39 @@ async function load() {
            boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
 }
 
-// The rock map: fetched when first asked for. Red is the class (meta.geology.classes), alpha
-// the share of the cell that is rock.
-let geologyPixels = null;
-let geologyLoading = false;
-function loadGeology() {
-  const g = state.data?.meta.geology;
-  if (!g || geologyPixels || geologyLoading) return;
-  geologyLoading = true;
-  vfetch(`${BASE}${g.image}`).then((r) => r.blob())
-    .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }))
-    .then((bitmap) => {
-      const canvas2d = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const context = canvas2d.getContext('2d');
-      context.drawImage(bitmap, 0, 0);
-      geologyPixels = { width: bitmap.width, height: bitmap.height, data: context.getImageData(0, 0, bitmap.width, bitmap.height).data };
-      update();
-    })
-    .catch(() => { geologyLoading = false; });
+// A cell picture: colour (sRGB bytes, premultiplied by alpha) per grid cell, row j = across.
+function paintCell(out, n, c, alpha) {
+  const rgb = c.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
+  out[n * 4] = rgb[0] * alpha;
+  out[n * 4 + 1] = rgb[1] * alpha;
+  out[n * 4 + 2] = rgb[2] * alpha;
+  out[n * 4 + 3] = alpha * 255;
+}
+function setCells(layer, out, key) {
+  const { nx, ny } = state.data.meta;
+  layer.texture.image = { data: out, width: nx, height: ny };
+  layer.texture.colorSpace = THREE.SRGBColorSpace;
+  layer.texture.generateMipmaps = false;
+  // Nearest: each cell is one flat colour with a sharp edge halfway between grid points.
+  layer.texture.minFilter = THREE.NearestFilter;
+  layer.texture.magFilter = THREE.NearestFilter;
+  layer.texture.needsUpdate = true;
+  layer.key = key;
+}
+// The layer on the top surface: same triangles, each grid point at the middle of its texel.
+function layOnTop(layer, pos, index) {
+  const { nx, ny } = state.data.meta;
+  if (!layer.uv) {
+    layer.uv = new Float32Array(nx * ny * 2);
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        layer.uv[(j * nx + i) * 2] = (i + 0.5) / nx;
+        layer.uv[(j * nx + i) * 2 + 1] = (j + 0.5) / ny;
+      }
+    }
+  }
+  setGeometry(layer.mesh, pos, null, index);
+  layer.mesh.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(layer.uv, 2));
 }
 
 // When each class's rock formed, against the age on screen: 'later' (not yet), else shown.
@@ -334,46 +362,64 @@ function geologyStates(age) {
   return state.data.meta.geology.classes.map((c) => (age > c.age[0] ? 'later' : age >= c.age[1] ? 'forming' : 'formed'));
 }
 
-let geologyKey = '';
+// Rock by age: each cell (meta.geology.cells: i, j, class, rock km²) in its class's colour,
+// greyed while that rock is still to come.
 function colourGeology(states) {
   const key = states.join();
-  if (key === geologyKey) return;
-  geologyKey = key;
-  const { width, height, data } = geologyPixels;
+  if (key === geologyLayer.key) return;
+  const { nx, ny, geology } = state.data.meta;
   const grey = colour('#9a9a9a');
-  const palette = new Map(state.data.meta.geology.classes.map((c, k) => {
+  const palette = new Map(geology.classes.map((c, k) => {
     const later = states[k] === 'later';
     const c3 = colour(c.colour);
     if (later) c3.lerp(grey, 0.7);
-    // The texture is sRGB; three.js decodes it, so store the colour as sRGB bytes.
-    const rgb = c3.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
-    return [c.index, { rgb, alpha: later ? 0.45 : 1 }];
+    return [c.index, { c: c3, alpha: later ? 0.45 : 0.9 }];
   }));
-  const out = new Uint8Array(width * height * 4);
-  // Rows run from the far side (largest across) down; the texture's first row is v = 0.
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const src = (y * width + x) * 4;
-      const k = data[src];
-      if (!k || !data[src + 3]) continue;
-      const entry = palette.get(k);
-      if (!entry) continue;
-      // Any rock in the cell shows; more rock, stronger (outcrops are small next to 2 km).
-      const a = (0.45 + 0.55 * (data[src + 3] / 255)) * entry.alpha;
-      const dst = ((height - 1 - y) * width + x) * 4;
-      out[dst] = entry.rgb[0] * a;
-      out[dst + 1] = entry.rgb[1] * a;
-      out[dst + 2] = entry.rgb[2] * a;
-      out[dst + 3] = a * 255;
-    }
+  const out = new Uint8Array(nx * ny * 4);
+  for (const [i, j, k] of geology.cells) {
+    const entry = palette.get(k);
+    if (entry) paintCell(out, j * nx + i, entry.c, entry.alpha);
   }
-  geologyTexture.image = { data: out, width, height };
-  geologyTexture.colorSpace = THREE.SRGBColorSpace;
-  geologyTexture.generateMipmaps = true;
-  geologyTexture.minFilter = THREE.LinearMipmapLinearFilter;
-  geologyTexture.magFilter = THREE.LinearFilter;
-  geologyTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  geologyTexture.needsUpdate = true;
+  setCells(geologyLayer, out, key);
+}
+
+// The Byrd Group per cell (meta.outcrops.cells: i, j, bits). Where the upper crops out the
+// lower lies beneath it; a cell of Byrd Group not divided holds both.
+let byrdBits = null;
+function byrdAt(n) {
+  if (!byrdBits) {
+    const { nx, ny, outcrops } = state.data.meta;
+    byrdBits = new Uint8Array(nx * ny);
+    for (const [i, j, bits] of outcrops.cells) byrdBits[j * nx + i] = bits;
+  }
+  const bits = byrdBits[n];
+  return { lower: bits !== 0, upper: (bits & (BYRD.upper.bit | BYRD.undivided.bit)) !== 0 };
+}
+// How much of each is laid down at the age on screen (0–1), evenly over its span.
+function byrdGrowth() {
+  const u = state.data.meta.outcrops.units;
+  const lower = u.shackleton.age;
+  const upper = [Math.max(u.starshot.age[0], u.douglas.age[0]), Math.min(u.starshot.age[1], u.douglas.age[1])];
+  const grown = ([a, b]) => Math.min(1, Math.max(0, (a - state.age) / (a - b)));
+  return { lower, upper, gl: grown(lower), gu: grown(upper) };
+}
+// Each cell in the colour of the youngest unit already laid down there; faint before any.
+function colourByrd() {
+  const { gl, gu } = byrdGrowth();
+  const key = gu > 0 ? 'upper' : gl > 0 ? 'lower' : 'none';
+  if (key === byrdLayer.key) return;
+  const { nx, ny, outcrops } = state.data.meta;
+  const [lowerColour, upperColour] = [colour(BYRD.lower.colour), colour(BYRD.upper.colour)];
+  const faint = lowerColour.clone().lerp(colour('#9a9a9a'), 0.5);
+  const out = new Uint8Array(nx * ny * 4);
+  for (const [i, j] of outcrops.cells) {
+    const n = j * nx + i;
+    const units = byrdAt(n);
+    if (units.upper && gu > 0) paintCell(out, n, upperColour, 0.9);
+    else if (gl > 0) paintCell(out, n, lowerColour, 0.9);
+    else paintCell(out, n, faint, 0.35);
+  }
+  setCells(byrdLayer, out, key);
 }
 
 function heightsAt(age) {
@@ -420,6 +466,25 @@ function setGeometry(mesh, positions, colours, index) {
 
 // A band between two curves along the section face (z = 0), coloured per column.
 // With `cut`, each quad goes through it instead (to leave out the slab).
+// Cell by cell along a row: each grid point's value held flat over its cell (halfway to the
+// next point), so a band drawn on these steps has straight sides at the cell edges. The surface
+// is kept as it is, with points at the cell edges between.
+function cellSteps(xs, surface, values) {
+  const out = { xs: [], surface: [], values: values.map(() => []) };
+  const last = xs.length - 1;
+  for (let n = 0; n <= last; n++) {
+    const left = n > 0 ? [(xs[n - 1] + xs[n]) / 2, (surface[n - 1] + surface[n]) / 2] : null;
+    const right = n < last ? [(xs[n] + xs[n + 1]) / 2, (surface[n] + surface[n + 1]) / 2] : null;
+    for (const point of [left, [xs[n], surface[n]], right]) {
+      if (!point) continue;
+      out.xs.push(point[0]);
+      out.surface.push(point[1]);
+      values.forEach((v, k) => out.values[k].push(v[n]));
+    }
+  }
+  return out;
+}
+
 function band(out, xs, upper, lower, colourAt, z = 0.0005, cut = null) {
   for (let i = 0; i < xs.length - 1; i++) {
     const c0 = colourAt(i);
@@ -780,24 +845,16 @@ function update() {
   for (let i = ci0; i < ci1; i++) rim.push([cj1 * nx + i, cj1 * nx + i + 1]);
   for (let j = cj0; j < cj1; j++) rim.push([j * nx + ci0, (j + 1) * nx + ci0], [j * nx + ci1, (j + 1) * nx + ci1]);
   setGeometry(top, pos, col, index);
-  // Rock by age, on the same surface.
-  const geology = meta.geology;
-  geologyTop.visible = Boolean(state.geology && geology && geologyPixels);
-  if (state.geology && geology && !geologyPixels) loadGeology();
-  if (geologyTop.visible) {
+  // Rock by age and the Byrd Group, cell by cell on the same surface.
+  geologyLayer.mesh.visible = Boolean(state.geology && meta.geology?.cells);
+  if (geologyLayer.mesh.visible) {
     colourGeology(geologyStates(state.age));
-    const uv = new Float32Array(nx * ny * 2);
-    const [a0, a1] = geology.along_km;
-    const [b0, b1] = geology.across_km;
-    for (let j = cj0; j <= cj1; j++) {
-      for (let i = ci0; i <= ci1; i++) {
-        const n = j * nx + i;
-        uv[n * 2] = (xAt(i) * 1000 - a0) / (a1 - a0);
-        uv[n * 2 + 1] = (-zAt(j) * 1000 - b0) / (b1 - b0);
-      }
-    }
-    setGeometry(geologyTop, pos, null, index);
-    geologyTop.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    layOnTop(geologyLayer, pos, index);
+  }
+  byrdLayer.mesh.visible = Boolean(state.outcrops && meta.outcrops?.cells);
+  if (byrdLayer.mesh.visible) {
+    colourByrd();
+    layOnTop(byrdLayer, pos, index);
   }
   setGeometry(base, low, null, lowIndex);
   const wall = [];
@@ -863,10 +920,12 @@ function update() {
         const cx = xAt(i);
         const cz = zAt(j);
         const y = yOf(h[j * nx + i] / 1000) + 0.004;
-        if (!cellIn(j, i - 1)) outline.push(cx - half, y, cz - halfZ, cx - half, y, cz + halfZ);
-        if (!cellIn(j, i + 1)) outline.push(cx + half, y, cz - halfZ, cx + half, y, cz + halfZ);
-        if (!cellIn(j - 1, i)) outline.push(cx - half, y, cz - halfZ, cx + half, y, cz - halfZ);
-        if (!cellIn(j + 1, i)) outline.push(cx - half, y, cz + halfZ, cx + half, y, cz + halfZ);
+        const [xl, xr] = [Math.max(xAt(ci0), cx - half), Math.min(xAt(ci1), cx + half)];
+        const [zl, zr] = [Math.min(zAt(cj0), cz - halfZ), Math.max(zAt(cj1), cz + halfZ)];
+        if (!cellIn(j, i - 1)) outline.push(xl, y, zl, xl, y, zr);
+        if (!cellIn(j, i + 1)) outline.push(xr, y, zl, xr, y, zr);
+        if (!cellIn(j - 1, i)) outline.push(xl, y, zl, xr, y, zl);
+        if (!cellIn(j + 1, i)) outline.push(xl, y, zr, xr, y, zr);
       }
     }
   }
@@ -885,12 +944,11 @@ function update() {
     if (sw) state.limestoneAt = [sx / sw, Math.max(0, sy) + 0.07, sz / sw];
   }
 
-  // Byrd Group outcrops: each outline draped on the surface, inside the box; bright while
-  // its unit was being laid down.
-  const drape = [];
-  const drapeColours = [];
+  // The Byrd Group's cells inside the box: outlined, and named over their middle with the
+  // thickness laid down so far.
+  const byrdOutline = [];
   state.outcropLabels = [];
-  if (state.outcrops && meta.outcrops) {
+  if (state.outcrops && meta.outcrops?.cells) {
     const [ka, kb] = [xAt(ci0) * 1000, xAt(ci1) * 1000];
     const [kc, kd] = [meta.across_km[0] + cj0 * meta.step_km, meta.across_km[0] + cj1 * meta.step_km];
     const inBox = (a, b) => a >= ka && a <= kb && b >= kc && b <= kd;
@@ -903,30 +961,31 @@ function update() {
       const z = (v(j, i) * (1 - fi) + v(j, i + 1) * fi) * (1 - fj) + (v(j + 1, i) * (1 - fi) + v(j + 1, i + 1) * fi) * fj;
       return Math.max(0, yOf(z / 1000)) + 0.006;
     };
-    let [sumA, sumB, count] = [0, 0, 0];
-    for (const o of meta.outcrops.outlines) {
-      const unit = meta.outcrops.units[o.unit];
-      const active = state.age <= unit.age[0] && state.age >= unit.age[1];
-      const c = colour(OUTCROP_COLOURS[o.unit]);
-      if (!active) c.lerp(colour('#707070'), 0.55);
-      for (let k = 0; k < o.ab.length; k++) {
-        const [a0, b0] = o.ab[k];
-        const [a1, b1] = o.ab[(k + 1) % o.ab.length];
-        const steps = Math.max(1, Math.ceil(Math.hypot(a1 - a0, b1 - b0) / 5));
-        for (let q = 0; q < steps; q++) {
-          const [pa, pb] = [a0 + ((a1 - a0) * q) / steps, b0 + ((b1 - b0) * q) / steps];
-          const [qa, qb] = [a0 + ((a1 - a0) * (q + 1)) / steps, b0 + ((b1 - b0) * (q + 1)) / steps];
-          if (!inBox(pa, pb) || !inBox(qa, qb)) continue;
-          drape.push(pa / 1000, surfaceAt(pa, pb), -pb / 1000, qa / 1000, surfaceAt(qa, qb), -qb / 1000);
-          drapeColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
-          sumA += pa; sumB += pb; count++;
-        }
+    const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && inCrop(i, j) && byrdAt(j * nx + i).lower;
+    const half = (xAt(1) - xAt(0)) / 2;
+    const halfZ = (zAt(1) - zAt(0)) / 2;
+    let [sumX, sumZ, topY, count, upperHere] = [0, 0, 0, 0, false];
+    for (let j = cj0; j <= cj1; j++) {
+      for (let i = ci0; i <= ci1; i++) {
+        if (!cellIn(j, i)) continue;
+        const [cx, cz] = [xAt(i), zAt(j)];
+        const y = yOf(h[j * nx + i] / 1000) + 0.005;
+        // The cell's edges, cut at the box (its outer cells are half inside).
+        const [xl, xr] = [Math.max(xAt(ci0), cx - half), Math.min(xAt(ci1), cx + half)];
+        const [zl, zr] = [Math.min(zAt(cj0), cz - halfZ), Math.max(zAt(cj1), cz + halfZ)];
+        if (!cellIn(j, i - 1)) byrdOutline.push(xl, y, zl, xl, y, zr);
+        if (!cellIn(j, i + 1)) byrdOutline.push(xr, y, zl, xr, y, zr);
+        if (!cellIn(j - 1, i)) byrdOutline.push(xl, y, zl, xr, y, zl);
+        if (!cellIn(j + 1, i)) byrdOutline.push(xl, y, zr, xr, y, zr);
+        sumX += cx; sumZ += cz; topY = Math.max(topY, y); count++;
+        upperHere ||= byrdAt(j * nx + i).upper;
       }
     }
-    // One name for them all: the patches are small, and the colours tell the units apart.
     if (count) {
-      const [a, b] = [sumA / count, sumB / count];
-      state.outcropLabels.push({ id: 'outcrop', at: [a / 1000, surfaceAt(a, b) + 0.05, -b / 1000], text: t().outcropLabel, cls: 'outcrop' });
+      const { gl, gu } = byrdGrowth();
+      const upper = upperHere && gu > 0 ? format(t().byrdUpperPart, { km: (state.byrdUpperKm * gu).toFixed(1) }) : '';
+      state.outcropLabels.push({ id: 'outcrop', at: [sumX / count, topY + 0.07, sumZ / count], cls: 'outcrop',
+                                 text: gl > 0 ? format(t().byrdLabel, { lower: (state.limestoneKm * gl).toFixed(1), upper }) : t().byrdNotYet });
     }
     const secs = meta.outcrops.sections.filter((x) => inBox(...x.ab));
     if (secs.length) {
@@ -935,7 +994,7 @@ function update() {
       state.outcropLabels.push({ id: 'outcrop-sections', at: [a / 1000, surfaceAt(a, b) + 0.02, -b / 1000], text: t().outcropSections, cls: 'outcrop sec' });
     }
   }
-  setGeometry(outcropLines, drape, drapeColours);
+  setGeometry(byrdEdge, byrdOutline);
 
   // Sea level and the box, at the box's extent.
   const x0 = xAt(ci0);
@@ -1011,7 +1070,20 @@ function update() {
   band(out, xs, mantleTopY, bottomY, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0005, faceCut);
   band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere), faceZ + 0.0005, faceCut);
   band(out, xs, surfaceY, crustBottomY, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[n]), faceZ + 0.0005, faceCut);
-  if (state.shackleton && grown > 0) {
+  if (state.outcrops && meta.outcrops?.cells) {
+    // The Byrd Group on the face, cell by cell: the upper on top of the lower laid down
+    // before it. The surface stays at PaleoDEM's height; the pile builds downward.
+    const { gl, gu } = byrdGrowth();
+    const units = xs.map((_, n) => byrdAt(cj0 * nx + ci0 + n));
+    const steps = cellSteps(xs, surfaceY, [units.map((u) => (u.upper ? yOf(state.byrdUpperKm * gu) : 0)),
+                                           units.map((u) => (u.lower ? yOf(state.limestoneKm * gl) : 0))]);
+    const [upperThick, lowerThick] = steps.values;
+    const upperBase = steps.surface.map((y, n) => y - upperThick[n]);
+    const lowerBase = upperBase.map((y, n) => y - lowerThick[n]);
+    if (gl > 0) band(out, steps.xs, upperBase, lowerBase, () => colour(BYRD.lower.colour), faceZ + 0.0007, faceCut);
+    if (gu > 0) band(out, steps.xs, steps.surface, upperBase, () => colour(BYRD.upper.colour), faceZ + 0.0007, faceCut);
+  } else if (state.shackleton && grown > 0) {
+    // The Shackleton Limestone's area alone (the Byrd Group layer, when on, draws it instead).
     const lower = surfaceY.map((y, n) => y - yOf(state.limestoneKm * lensRow[n] * grown));
     band(out, xs, surfaceY, lower, () => limestone, faceZ + 0.0007, faceCut);
   }
@@ -1856,7 +1928,8 @@ function renderLegend() {
                  ['dots', '', t().lgFlow], ['dash', '', t().lgCob],
                  state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch],
                  ...(state.outcrops && state.data?.meta.outcrops
-                   ? Object.entries(state.data.meta.outcrops.units).map(([id, u]) => ['line', OUTCROP_COLOURS[id], t().lgOutcrop.replace('{unit}', u.name[state.lang])])
+                   ? [['fill', BYRD.lower.colour, t().lgByrdLower], ['fill', BYRD.upper.colour, t().lgByrdUpper],
+                      ['fill', '#7d8a90', t().lgByrdNotYet]]
                    : []),
                  ...(state.geology && state.data?.meta.geology
                    ? [...state.data.meta.geology.classes.filter((c) => c.area_km2 > 0).map((c) =>
@@ -1993,12 +2066,22 @@ function keepParams() {
   if (state.geology) params.set('geology', '1'); else params.delete('geology');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
+  if (state.outcrops) params.set('upper', String(state.byrdUpperKm)); else params.delete('upper');
   history.replaceState(null, '', `?${params}`);
 }
 $('show-limestone').checked = state.shackleton;
 $('show-limestone').addEventListener('change', (e) => { state.shackleton = e.target.checked; keepParams(); renderLimestoneNote(); update(); });
-$('limestone-km').value = String(state.limestoneKm);
-$('limestone-km').addEventListener('change', (e) => { state.limestoneKm = Number(e.target.value); keepParams(); update(); });
+// The lower Byrd Group is the Shackleton Limestone: its two thickness menus are one setting.
+for (const id of ['limestone-km', 'byrd-lower-km']) {
+  $(id).value = String(state.limestoneKm);
+  $(id).addEventListener('change', (e) => {
+    state.limestoneKm = Number(e.target.value);
+    for (const other of ['limestone-km', 'byrd-lower-km']) $(other).value = String(state.limestoneKm);
+    keepParams(); update();
+  });
+}
+$('byrd-upper-km').value = String(state.byrdUpperKm);
+$('byrd-upper-km').addEventListener('change', (e) => { state.byrdUpperKm = Number(e.target.value); keepParams(); update(); });
 function renderLimestoneNote() {
   const note = $('limestone-note');
   const area = state.data?.meta.section.shackleton_area;
@@ -2135,4 +2218,5 @@ async function start() {
 start();
 window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, handles, update, globeShown: () => globeShown,
   flowCount: () => particles.life.filter((v) => v > 0).length,
-  geology: () => ({ visible: geologyTop.visible, states: geologyKey }) };
+  geology: () => ({ visible: geologyLayer.mesh.visible, states: geologyLayer.key }),
+  byrd: () => ({ visible: byrdLayer.mesh.visible, state: byrdLayer.key, cells: state.data.meta.outcrops.cells.length }) };

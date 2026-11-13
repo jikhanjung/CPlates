@@ -32,7 +32,6 @@ Output: site/data/section/{meta.json, surface.bin, crust.bin, boundaries.json}.
 """
 import json
 import math
-import shutil
 import sys
 from pathlib import Path
 
@@ -44,6 +43,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fetch_plate_model as plates  # noqa: E402
+import section_cells  # noqa: E402
 
 OUT = ROOT / "site/data/section"
 FRAMES = ROOT / "site/data/merdith2021/frames"
@@ -421,13 +421,14 @@ def main():
             "outlines": [r for r in rings if in_grid(r["ab"])],
             "sections": [{"id": x["id"], "ab": block_km(*x["at"])} for x in outcrops["sections"]],
         }
-    # Rock at the surface by age (SCAR GeoMAP, scripts/geology_geomap.py), a picture over the
-    # same grid in the same along/across km.
+    # Rock at the surface by age (SCAR GeoMAP, scripts/geology_geomap.py), over the same grid
+    # in the same along/across km.
     geology_path = ROOT / "sources/sections/geology_map.json"
     if geology_path.exists():
-        geology = json.loads(geology_path.read_text())
-        shutil.copyfile(ROOT / "sources/sections/geology_map.png", OUT / "geology.png")
-        meta["geology"] = {**geology, "image": "geology.png"}
+        meta["geology"] = json.loads(geology_path.read_text())
+    # Both GeoMAP layers summarised per grid cell, as the page draws them.
+    section_cells.add_cells(meta)
+    (OUT / "geology.png").unlink(missing_ok=True)
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     total = sum(p.stat().st_size for p in OUT.iterdir())
     print(f"section: {len(ages)} ages, grid {nx}×{ny}, {total / 1e6:.1f} MB")
