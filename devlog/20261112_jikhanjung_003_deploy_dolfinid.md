@@ -207,3 +207,13 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   스모크 통과 → 정리로 f668ec3 삭제. 남은 것 db8c15b ddb1f49 0db5733. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/data/section/geology.png`(82,985 B), `/js/projection.js` 200 확인. `tests/browser.mjs`를 https에
   대고 전체 통과(투영법·암석 레이어 검사 포함). earththrutime `/healthz` 200, cdgts 200.
+
+## 재배포: aac0ef8 (단면의 바다를 반투명 물 덩어리로)
+
+2026-11-13, 사용자 직접 지시(이 세션): "push/배포 해줘".
+
+- push 전 점검: 1커밋(aac0ef8, `section.js`와 devlog만). node 시험 35개, 로컬 브라우저 시험 통과. `0c664bc..aac0ef8` push.
+- `deploy/deploy.sh aac0ef8`: 릴리스 162 MB → `current -> releases/aac0ef8`(이전 db8c15b) → 스모크 통과(version.json
+  aac0ef8) → 정리로 0db5733 삭제. 남은 것 aac0ef8 db8c15b ddb1f49. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/js/section.js`에 새 코드 확인. `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz`
+  200, cdgts 200.
