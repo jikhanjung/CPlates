@@ -71,7 +71,7 @@ const STRINGS = {
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
     trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 (선을 따라) 약 {km} km 한 번에 옮겨집니다. 화면은 해구선의 각 점을 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
-    resetBox: '상자 원래대로', boxHint: '상자 옆면의 노란 점을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
+    resetBox: '상자 원래대로', boxHint: '상자 옆면 가운데의 공(면마다 색이 다름)을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
     showOutcrops: '버드층군 하부·상부 (GeoMAP)',
     byrdLowerKm: '하부', byrdUpperKm: '상부',
@@ -141,7 +141,7 @@ const STRINGS = {
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
     trenchEased: 'In the model the trench moves about {km} km (along its length) at once between {from} and {to} Ma; the screen eases each point of the line over 5 Myr either side (interpolation).',
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
-    resetBox: 'Reset box', boxHint: 'Drag the yellow dots on the box sides to move those faces: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
+    resetBox: 'Reset box', boxHint: 'Drag the ball in the middle of a box side (each side its own colour) to move that face: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
     showOutcrops: 'Lower and upper Byrd Group (GeoMAP)',
     byrdLowerKm: 'Lower', byrdUpperKm: 'Upper',
@@ -759,15 +759,18 @@ function keepBox() {
   history.replaceState(null, '', `?${params}`);
 }
 
-// Handles in the middle of the four side faces: drag one to move that face. Lit balls, set
-// partly into the face and depth-tested like the rest: the part inside the box is hidden by
-// opaque rock, and seen through translucent layers (mantle, sea) it is shaded by them.
+// Handles in the middle of the four side faces: drag one to move that face. Lit balls, a
+// colour for each face, centred on the face so that half of each is inside the box; they are
+// depth-tested like the rest, so that half is hidden by opaque rock, and seen through
+// translucent layers (mantle, sea) it is shaded by them.
 const handleGroup = new THREE.Group();
 const handleShape = new THREE.SphereGeometry(0.035, 32, 20);
-const handleMaterial = new THREE.MeshPhongMaterial({ color: 0xffd23f, specular: 0x777766, shininess: 60, emissive: 0x6a4f00 });
+const HANDLE_COLOURS = { front: 0xffd23f, back: 0x4fd1e8, left: 0xff6fae, right: 0x7ee07e };
 const handles = {};
 for (const side of ['front', 'back', 'left', 'right']) {
-  const mesh = new THREE.Mesh(handleShape, handleMaterial);
+  const c = new THREE.Color(HANDLE_COLOURS[side]);
+  const material = new THREE.MeshPhongMaterial({ color: c, specular: 0x777766, shininess: 60, emissive: c.clone().multiplyScalar(0.3) });
+  const mesh = new THREE.Mesh(handleShape, material);
   mesh.userData.side = side;
   handles[side] = mesh;
   handleGroup.add(mesh);
@@ -778,10 +781,10 @@ function placeHandles(x0, x1, zf, zb, bottom) {
   handleBox.min.set(x0, bottom, zb);
   handleBox.max.set(x1, 0, zf);
   const y = bottom / 2;
-  handles.front.position.set((x0 + x1) / 2, y, zf + 0.02);
-  handles.back.position.set((x0 + x1) / 2, y, zb - 0.02);
-  handles.left.position.set(x0 - 0.02, y, (zf + zb) / 2);
-  handles.right.position.set(x1 + 0.02, y, (zf + zb) / 2);
+  handles.front.position.set((x0 + x1) / 2, y, zf);
+  handles.back.position.set((x0 + x1) / 2, y, zb);
+  handles.left.position.set(x0, y, (zf + zb) / 2);
+  handles.right.position.set(x1, y, (zf + zb) / 2);
 }
 // A handle the box stands in front of is hidden: the line from the camera to it passes
 // through the box first. Hidden handles are neither drawn nor picked.
@@ -793,7 +796,9 @@ function showHandles() {
     sightRay.origin.copy(camera.position);
     sightRay.direction.subVectors(m.position, camera.position).normalize();
     const hit = sightRay.intersectBox(handleBox, sightHit);
-    m.visible = !hit || camera.position.distanceTo(hit) > distance - 1e-6;
+    // A handle's centre is on its face: for a face turned to the camera the line meets the box
+    // right there (allow for rounding); for one turned away, at the near side first.
+    m.visible = !hit || camera.position.distanceTo(hit) > distance - 1e-4;
   }
 }
 const shownHandles = () => Object.values(handles).filter((m) => m.visible);
