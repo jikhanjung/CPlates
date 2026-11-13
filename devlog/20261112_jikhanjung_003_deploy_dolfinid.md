@@ -184,3 +184,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   남은 것 0db5733 f668ec3 b2e6765. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/data/phanerozoic/meta.json`(540–0 Ma) 확인. `tests/browser.mjs`를 https에 대고 전체 통과
   (현생누대 페이지 검사 포함). earththrutime3d `/healthz` 200(주소는 earththrutime.nopeoplestime.info), cdgts 200.
+
+## 재배포: ddb1f49 (현생누대 페이지에 캄브리아기 뒤의 지질 기록 7건)
+
+2026-11-13, 사용자 직접 지시(이 세션): "진행해줘" (push·배포 물음에 대한 답). 첫 `deploy.sh` 실행은 auto mode
+권한 검사(Production Deploy)에 막혀 push만 했고, 사용자가 다시 "배포해줘"라고 해 배포했다.
+
+- push 전 점검: 1커밋, 생성 자료·비밀값 없음. node 시험 30개, 로컬 브라우저 시험 통과. `52f5a8e..ddb1f49` push.
+- `deploy/deploy.sh ddb1f49`: origin/main 확인 → 릴리스 162 MB → `current -> releases/ddb1f49`(이전 0db5733) →
+  스모크 통과 → 정리로 b2e6765 삭제. 남은 것 ddb1f49 0db5733 f668ec3. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/data/phanerozoic/observations.json` 관측 10건 확인. `tests/browser.mjs`를 https에 대고 전체
+  통과. earththrutime `/healthz` 200, cdgts 200.
