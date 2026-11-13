@@ -228,3 +228,15 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   b6b8402) → 정리로 ddb1f49 삭제. 남은 것 b6b8402 aac0ef8 db8c15b. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/data/section/surface.bin`이 새로 빌드한 로컬 파일과 같음. `tests/browser.mjs`를 https에 대고 전체 통과.
   earththrutime `/healthz` 200, cdgts 200.
+
+## 재배포: e3297b0 (GeoMAP 칸 단위, 버드층군 하부·상부 쌓기)
+
+2026-11-13, 사용자 직접 지시(이 세션): "push/배포 해줘".
+
+- push 전 점검: 1커밋(e3297b0). 단면 자료를 처음부터 다시 빌드해 meta가 같음을 확인(버드층군 61칸, 시대별 암석 883칸,
+  `geology.png`는 더 올리지 않음). node 시험 35개, 로컬 브라우저 시험 통과. `99e315d..e3297b0` push.
+- `deploy/deploy.sh e3297b0`: 릴리스 162 MB → `current -> releases/e3297b0`(이전 b6b8402) → 스모크 통과(version.json
+  e3297b0) → 정리로 db8c15b 삭제. 남은 것 e3297b0 b6b8402 aac0ef8. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/data/section/meta.json`이 로컬 빌드와 같음, `geology.png`는 404(더 쓰지 않음, 의도). earththrutime
+  `/healthz` 200, cdgts 200. `tests/browser.mjs`를 https에 대고 처음 돌린 것은 잡히지 않은 오류로 멈췄다(로그 끝 두 줄만
+  남겨 오류 내용을 놓침; 같은 때 로컬에서 Chromium 스크린샷을 함께 돌리던 중). 다시 돌려 전체 통과.
