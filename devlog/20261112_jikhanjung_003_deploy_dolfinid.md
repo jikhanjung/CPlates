@@ -251,3 +251,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   7860567) → 정리로 aac0ef8 삭제. 남은 것 7860567 e3297b0 b6b8402. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/js/section.js`가 커밋과 같음. `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz` 200,
   cdgts 200.
+
+## 재배포: c309ee5 (매끄러운 지표와 영역 경계)
+
+2026-11-13, 사용자 직접 지시(이 세션): "push/배포 해줘."
+
+- push 전 점검: 1커밋(c309ee5, 새 `site/js/surface.js`, `section.js`, 시험, devlog). node 시험 39개, 로컬 브라우저 시험
+  통과(이름표 검사 두 곳을 이름표가 바뀔 때까지 기다리게 고침). `be4f83a..c309ee5` push.
+- `deploy/deploy.sh c309ee5`: 릴리스 162 MB → `current -> releases/c309ee5`(이전 7860567) → 스모크 통과(version.json
+  c309ee5) → 정리로 b6b8402 삭제. 남은 것 c309ee5 7860567 e3297b0. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/js/section.js`, `/js/surface.js`가 커밋과 같음. `tests/browser.mjs`를 https에 대고 전체 통과.
+  earththrutime `/healthz` 200, cdgts 200.
