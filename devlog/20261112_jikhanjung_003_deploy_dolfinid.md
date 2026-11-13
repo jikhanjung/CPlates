@@ -217,3 +217,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   aac0ef8) → 정리로 0db5733 삭제. 남은 것 aac0ef8 db8c15b ddb1f49. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/js/section.js`에 새 코드 확인. `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz`
   200, cdgts 200.
+
+## 재배포: b6b8402 (단면의 외톨이 봉우리 칸 없앰)
+
+2026-11-13, 사용자 직접 지시(이 세션): "push/배포해줘."
+
+- push 전 점검: 1커밋(b6b8402, `build_section.py`와 devlog). 단면 자료를 다시 빌드했다(외톨이 봉우리 칸 1,570 → 0).
+  node 시험 35개, 로컬 브라우저 시험 통과. `68c57b5..b6b8402` push.
+- `deploy/deploy.sh b6b8402`: 릴리스 162 MB → `current -> releases/b6b8402`(이전 aac0ef8) → 스모크 통과(version.json
+  b6b8402) → 정리로 ddb1f49 삭제. 남은 것 b6b8402 aac0ef8 db8c15b. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/data/section/surface.bin`이 새로 빌드한 로컬 파일과 같음. `tests/browser.mjs`를 https에 대고 전체 통과.
+  earththrutime `/healthz` 200, cdgts 200.
