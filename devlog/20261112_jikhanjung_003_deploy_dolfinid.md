@@ -195,3 +195,15 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   스모크 통과 → 정리로 b2e6765 삭제. 남은 것 ddb1f49 0db5733 f668ec3. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/data/phanerozoic/observations.json` 관측 10건 확인. `tests/browser.mjs`를 https에 대고 전체
   통과. earththrutime `/healthz` 200, cdgts 200.
+
+## 재배포: db8c15b (투영법 몰바이데·정거원통, 단면의 시대별 암석 분포)
+
+2026-11-13, 사용자 직접 지시(이 세션): "push/배포 해줘".
+
+- push 전 점검: 2커밋(86efe6e 투영법, db8c15b 시대별 암석), 가장 큰 새 파일 `geology_map.png` 81 KB, 비밀값 없음
+  (GeoMAP 원본은 `data/`, git 밖). node 시험 35개, 로컬 브라우저 시험 통과. 단면 자료를 다시 빌드했다.
+  `d171760..db8c15b` push.
+- `deploy/deploy.sh db8c15b`: origin/main 확인 → 릴리스 162 MB → `current -> releases/db8c15b`(이전 ddb1f49) →
+  스모크 통과 → 정리로 f668ec3 삭제. 남은 것 db8c15b ddb1f49 0db5733. 디스크 여유 24 GB.
+- 배포 뒤: 운영 `/data/section/geology.png`(82,985 B), `/js/projection.js` 200 확인. `tests/browser.mjs`를 https에
+  대고 전체 통과(투영법·암석 레이어 검사 포함). earththrutime `/healthz` 200, cdgts 200.
