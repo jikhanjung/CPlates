@@ -246,6 +246,87 @@ async function openCambrian(viewport, query) {
   await page.close();
 }
 
+// The flat maps (Mollweide, equirectangular): they fit the free part, a click picks the
+// place under it, and the projection is kept in the address and in the links between pages.
+async function mapFits(page, label) {
+  const { m, r } = await page.evaluate(() => ({ m: window.cplates.mapOnScreen(), r: window.cplates.visibleRect() }));
+  const [left, top, right, bottom] = m;
+  const w = r.right - r.left;
+  const h = r.bottom - r.top;
+  check(left >= r.left - 1 && right <= r.right + 1 && top >= r.top - 1 && bottom <= r.bottom + 1,
+        `${label}: map ${m.map(Math.round)} should be inside the free area ${[r.left, r.top, r.right, r.bottom].map(Math.round)}`);
+  check(Math.abs((left + right) / 2 - (r.left + r.right) / 2) < 0.03 * w && Math.abs((top + bottom) / 2 - (r.top + r.bottom) / 2) < 0.03 * h,
+        `${label}: map should be centred in the free area`);
+  check(right - left > 0.9 * w || bottom - top > 0.9 * h, `${label}: map should fill the free area one way`);
+}
+for (const [viewport, tag] of [[{ width: 1400, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'phone']]) {
+  const page = await open(viewport, '?age=200&proj=mollweide');
+  check((await page.locator('[data-proj="mollweide"]').getAttribute('aria-checked')) === 'true', `${tag}: ?proj=mollweide should select Mollweide`);
+  await mapFits(page, `main mollweide ${tag}`);
+  await page.screenshot({ path: `test-results/map-mollweide-${tag}.png` });
+  await page.close();
+}
+{
+  const page = await open({ width: 1400, height: 900 }, '?age=200&proj=mollweide');
+  const [x, y] = await page.evaluate(() => window.cplates.screenOfLonLat(20, -20));
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(400);
+  const pin = await page.evaluate(() => window.cplates.state.pin);
+  check(pin?.where && Math.abs(pin.where[0] - 20) < 1 && Math.abs(pin.where[1] + 20) < 1,
+        `a click on the Mollweide map at 20°E 20°S should pin that place, got ${JSON.stringify(pin?.where)}`);
+  check((await page.locator('#info').innerText()).includes('판 ID'), 'the map pick should name a plate');
+  await page.click('[data-proj="equirect"]');
+  await page.waitForTimeout(500);
+  await mapFits(page, 'main equirect');
+  const url = await page.evaluate(() => location.search);
+  check(url.includes('proj=equirect'), `URL should name the projection, got ${url}`);
+  check((await page.locator('#to-cambrian').getAttribute('href')).includes('proj=equirect'), 'the Cambrian link should carry the projection');
+  const moved = await page.evaluate(() => window.cplates.state.pin?.where);
+  check(moved && Math.abs(moved[0] - pin.where[0]) < 1e-9, 'switching the projection should keep the pin');
+  await page.screenshot({ path: 'test-results/map-equirect-200.png' });
+  // Dragging moves the map, it does not turn anything.
+  const before = await page.evaluate(() => window.cplates.mapCamera.position.toArray());
+  await page.mouse.move(800, 400);
+  await page.mouse.down();
+  await page.mouse.move(900, 450, { steps: 6 });
+  await page.mouse.up();
+  const after = await page.evaluate(() => window.cplates.mapCamera.position.toArray());
+  check(Math.abs(after[0] - before[0]) > 1e-3 && Math.abs(after[2] - before[2]) < 1e-9, 'dragging should move the map');
+  await page.click('[data-proj="globe"]');
+  await page.waitForTimeout(500);
+  check(!(await page.evaluate(() => location.search)).includes('proj='), 'back on the globe, the URL should drop proj');
+  await globeFits(page, 'main back to the globe');
+  await page.close();
+}
+for (const [path, proj] of [['cambrian/?age=520', 'mollweide'], ['phanerozoic/?age=245', 'equirect']]) {
+  const page = await openCambrian({ width: 1400, height: 900 }, `../${path}&proj=${proj}`);
+  const tag = `${path.split('/')[0]} ${proj}`;
+  const { x, r, lon0, focus } = await page.evaluate(() => {
+    const c = window.cplates;
+    return { x: c.screenOf(c.focusPoint())[0], r: c.visibleRect(), lon0: c.mapView.lon0, focus: c.focusPoint() };
+  });
+  check(Math.abs(lon0 - Math.round(focus[0])) < 1e-9, `${tag}: following should put Antarctica on the central meridian (${lon0} vs ${focus[0]})`);
+  check(Math.abs(x - (r.left + r.right) / 2) < 0.03 * (r.right - r.left), `${tag}: Antarctica should be in the middle across`);
+  const labels = await page.locator('#labels span:visible').count();
+  check(labels >= 4, `${tag}: labels should show on the map, got ${labels}`);
+  await page.screenshot({ path: `test-results/map-${path.split('/')[0]}-${proj}.png` });
+  if (proj === 'mollweide') {
+    await page.click('#play');
+    await page.waitForTimeout(2000);
+    const playing = await page.evaluate(() => {
+      const c = window.cplates;
+      return { age: c.state.age, lon0: c.mapView.lon0, focus: c.focusPoint() };
+    });
+    check(playing.age < 520, `${tag}: playback should move the age, at ${playing.age}`);
+    check(Math.abs(((playing.lon0 - playing.focus[0] + 540) % 360) - 180) <= 1.5, `${tag}: the meridian should follow while playing`);
+    await page.click('#play');
+  }
+  await page.click('[data-proj="globe"]');
+  await page.waitForTimeout(1200);
+  await followCentred(page, `${tag} back to the globe`);
+  await page.close();
+}
+
 // "Follow Antarctica" keeps Antarctica and the Transantarctic Mountains band in the
 // middle of the part of the screen the panels leave free, in both views, at any age,
 // on a wide screen and on a phone.

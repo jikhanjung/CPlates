@@ -21,6 +21,10 @@ import { LineMaterial } from '../vendor/three/lines/LineMaterial.js';
 import { RotationModel, turn } from './rotation.js';
 import { toLonLat, toVector, sceneQuaternion } from './geo.js';
 import { format, initialLanguage, keepLanguage, PERIODS, periodAt, STRINGS as COMMON } from './i18n.js';
+import {
+  PROJECTIONS, EXTENT, MAP_GLSL, mapUniforms, mapView, setMapView, projectionFrom, mapSegments, mapPatch, toMap,
+  outlineSegments, wrap,
+} from './projection.js';
 
 const PAGE = document.body.dataset.page === 'phanerozoic' ? 'phanerozoic' : 'cambrian';
 const BASE = `../data/${PAGE}/`;
@@ -191,7 +195,8 @@ STRINGS.en.toOther = 'The whole Phanerozoic (540–0 Ma) →';
 STRINGS.ko.tamNote = PHANEROZOIC.ko.tamNote;
 STRINGS.en.tamNote = PHANEROZOIC.en.tamNote;
 const TEXT = Object.fromEntries(Object.keys(STRINGS).map((lang) => [lang, {
-  ...STRINGS[lang], ...(PAGE === 'phanerozoic' ? PHANEROZOIC[lang] : {}), periods: COMMON[lang].periods }]));
+  ...STRINGS[lang], ...(PAGE === 'phanerozoic' ? PHANEROZOIC[lang] : {}), periods: COMMON[lang].periods,
+  ...Object.fromEntries(['projection', 'projGlobe', 'projMollweide', 'projEquirect'].map((k) => [k, COMMON[lang][k]])) }]));
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -203,6 +208,7 @@ const state = {
   playing: false,
   follow: true,
   data: null,
+  proj: projectionFrom(new URLSearchParams(location.search)),
 };
 const t = () => TEXT[state.lang];
 
@@ -229,37 +235,80 @@ controls.rotateSpeed = 0.5;
 controls.zoomSpeed = 0.8;
 controls.addEventListener('start', () => setFollow(false));
 
+// The flat maps: seen square on, moved by dragging. "Follow Antarctica" turns the map's
+// central meridian instead of the camera.
+const mapCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 20);
+mapCamera.position.set(0, 0, 10);
+scene.add(mapCamera);
+const mapSun = new THREE.DirectionalLight(0xffffff, 2.2);
+mapSun.position.set(0.6, 0.8, 1);
+mapCamera.add(mapSun);
+const mapControls = new OrbitControls(mapCamera, canvas);
+mapControls.enableRotate = false;
+mapControls.screenSpacePanning = true;
+mapControls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+mapControls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+mapControls.minZoom = 1;
+mapControls.maxZoom = 12;
+mapControls.zoomSpeed = 0.8;
+mapControls.enabled = false;
+const view = () => (state.proj === 'globe' ? camera : mapCamera);
+
 const demTexture = new THREE.Texture();
 demTexture.colorSpace = THREE.SRGBColorSpace;
 demTexture.generateMipmaps = false;
 demTexture.minFilter = THREE.LinearFilter;
 demTexture.wrapS = THREE.RepeatWrapping;
+// The sphere's surface: the PaleoDEM picture, or plain sea. On a map, each pixel's
+// longitude and latitude come from the inverse projection.
+function surfaceShader(map) {
+  return `${map ? MAP_GLSL : ''}
+    uniform sampler2D dem; uniform float useDem;
+    ${map ? 'varying vec2 vXY;' : 'varying vec3 vPos; varying vec3 vN;'}
+    const float PI = 3.141592653589793;
+    void main(){
+      ${map ? `vec3 ll = mapInverse(vXY);
+      if (ll.z < 0.0) discard;
+      vec2 uv = vec2((ll.x + uLon0 + PI) / (2.0 * PI), (0.5 * PI - ll.y) / PI);
+      float light = 0.8;` : `vec3 p = normalize(vPos);
+      vec2 uv = vec2((atan(-p.z, p.x) + PI) / (2.0 * PI), (0.5 * PI - asin(clamp(p.y, -1.0, 1.0))) / PI);
+      float light = max(dot(normalize(vN), normalize(vec3(0.35, 0.45, 1.0))), 0.0);`}
+      vec3 ocean = vec3(0.012, 0.032, 0.075); // linear; shown through the sRGB output
+      vec3 colour = useDem > 0.5 ? texture2D(dem, uv).rgb : ocean;
+      gl_FragColor = vec4(colour * (0.5 + 0.6 * light), 1.0);
+      #include <colorspace_fragment>
+    }`;
+}
 const globeMaterial = new THREE.ShaderMaterial({
   uniforms: { dem: { value: demTexture }, useDem: { value: 0 } },
   vertexShader: `varying vec3 vPos; varying vec3 vN;
     void main(){ vPos = position; vN = normalize(normalMatrix * normal);
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D dem; uniform float useDem; varying vec3 vPos; varying vec3 vN;
-    const float PI = 3.141592653589793;
-    void main(){
-      vec3 p = normalize(vPos);
-      vec2 uv = vec2((atan(-p.z, p.x) + PI) / (2.0 * PI), (0.5 * PI - asin(clamp(p.y, -1.0, 1.0))) / PI);
-      vec3 ocean = vec3(0.012, 0.032, 0.075); // linear; shown through the sRGB output
-      vec3 colour = useDem > 0.5 ? texture2D(dem, uv).rgb : ocean;
-      float light = max(dot(normalize(vN), normalize(vec3(0.35, 0.45, 1.0))), 0.0);
-      gl_FragColor = vec4(colour * (0.5 + 0.6 * light), 1.0);
-      #include <colorspace_fragment>
-    }`,
+  fragmentShader: surfaceShader(false),
 });
 const globe = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), globeMaterial);
 scene.add(globe);
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.ShaderMaterial({
+const mapPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  uniforms: { ...globeMaterial.uniforms, ...mapUniforms },
+  vertexShader: `varying vec2 vXY;
+    void main(){ vXY = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: surfaceShader(true),
+}));
+mapPlane.visible = false;
+scene.add(mapPlane);
+const mapOutline = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
+  color: 0x9cc7ff, transparent: true, opacity: 0.35, depthWrite: false,
+}));
+mapOutline.visible = false;
+scene.add(mapOutline);
+const rim = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.ShaderMaterial({
   side: THREE.BackSide, transparent: true, depthWrite: false,
   vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `varying vec3 vN; void main(){ float f = pow(1.0 - abs(vN.z), 3.0);
     gl_FragColor = vec4(0.45, 0.65, 1.0, f * 0.35); }`,
-})));
+}));
+scene.add(rim);
 
 // Present-day graticule, faint, so the poles and the equator stay readable in any view.
 {
@@ -277,9 +326,9 @@ scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.Shade
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-  scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({
+  scene.add(new THREE.LineSegments(geometry, mapPatch(new THREE.LineBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.08, depthWrite: false,
-  })));
+  }))));
 }
 
 const continentGroup = new THREE.Group();
@@ -294,7 +343,7 @@ for (const kind of Object.keys(BOUNDARY)) {
   boundaryLayers[kind] = line;
 }
 const teeth = new THREE.Mesh(new THREE.BufferGeometry(),
-  new THREE.MeshBasicMaterial({ color: BOUNDARY.subduction, side: THREE.DoubleSide }));
+  mapPatch(new THREE.MeshBasicMaterial({ color: BOUNDARY.subduction, side: THREE.DoubleSide })));
 scene.add(teeth);
 
 const tamOutline = new LineSegments2(new LineSegmentsGeometry(),
@@ -364,7 +413,7 @@ function buildContinents(list) {
     geometry.setIndex(piece.t);
     geometry.computeVertexNormals();
     const group = new THREE.Group();
-    group.add(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: colours[kind], side: THREE.DoubleSide })));
+    group.add(new THREE.Mesh(geometry, mapPatch(new THREE.MeshLambertMaterial({ color: colours[kind], side: THREE.DoubleSide }))));
     const outline = [];
     for (const ring of piece.r) {
       for (let i = 0; i < ring.length; i++) {
@@ -375,9 +424,9 @@ function buildContinents(list) {
     }
     const lines = new THREE.BufferGeometry();
     lines.setAttribute('position', new THREE.Float32BufferAttribute(outline, 3));
-    group.add(new THREE.LineSegments(lines, new THREE.LineBasicMaterial({
+    group.add(new THREE.LineSegments(lines, mapPatch(new THREE.LineBasicMaterial({
       color: kind === 'antarctic' ? 0xc98a4b : 0x3a3328, transparent: true, opacity: kind === 'antarctic' ? 0.55 : 0.3,
-    })));
+    }))));
     group.userData = { plate: piece.plate, from: piece.from, to: piece.to };
     continentGroup.add(group);
   }
@@ -413,7 +462,7 @@ function placeTam(model, key, age) {
   }
   tamOutline.geometry.dispose();
   tamOutline.geometry = new LineSegmentsGeometry();
-  if (segments.length) tamOutline.geometry.setPositions(segments);
+  if (segments.length) tamOutline.geometry.setPositions(mapSegments(segments).positions);
 
   const grid = String(nearestGrid(age));
   const positions = [];
@@ -432,8 +481,9 @@ function placeTam(model, key, age) {
   tamCentre.geometry.dispose();
   tamCentre.geometry = new LineSegmentsGeometry();
   if (positions.length) {
-    tamCentre.geometry.setPositions(positions);
-    tamCentre.geometry.setColors(colours);
+    const flat = mapSegments(positions, colours);
+    tamCentre.geometry.setPositions(flat.positions);
+    tamCentre.geometry.setColors(flat.colours);
   }
   // Where the label goes: towards the Pensacola end, clear of the observation markers.
   const middle = centre[Math.floor(centre.length * 0.75)];
@@ -456,7 +506,7 @@ function boundaryPieces(age) {
 let shownBoundaries = null;
 function boundaryFrame(age) {
   const rounded = Math.round(age);
-  const key = `${state.mode}:${rounded}`;
+  const key = `${state.mode}:${rounded}:${mapView.proj}:${mapView.lon0}`;
   if (shownBoundaries === key) return;
   // The next few frames, so playback does not wait for them.
   for (let k = 1; k <= 6; k++) if (rounded - k >= state.youngest) boundaryPieces(rounded - k);
@@ -477,7 +527,7 @@ function boundaryFrame(age) {
   for (const [kind, line] of Object.entries(boundaryLayers)) {
     line.geometry.dispose();
     line.geometry = new LineSegmentsGeometry();
-    if (positions[kind].length) line.geometry.setPositions(positions[kind]);
+    if (positions[kind].length) line.geometry.setPositions(mapSegments(positions[kind]).positions);
     line.visible = state.mode === 'plates' && positions[kind].length > 0;
   }
   teeth.geometry.dispose();
@@ -600,7 +650,7 @@ function update() {
         if (i === 80) anchors.push({ id: 'secA2', where: turn(q, p[0], p[1]), text: 'A′', className: 'section-end' });
       }
       sectionLine.geometry.dispose();
-      sectionLine.geometry = new LineSegmentsGeometry().setPositions(points);
+      sectionLine.geometry = new LineSegmentsGeometry().setPositions(mapSegments(points).positions);
     } else {
       sectionLine.visible = false;
     }
@@ -665,9 +715,22 @@ function frameView() {
   const W = window.innerWidth;
   const H = window.innerHeight;
   const r = visibleRect();
-  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join();
+  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join() + state.proj;
   if (key === lastFrame) return;
   lastFrame = key;
+  if (state.proj !== 'globe') {
+    // The map fills the free part with a small margin, its middle on the free part's middle.
+    const [ex, ey] = EXTENT[state.proj];
+    const scale = Math.max((2.06 * ex) / Math.max(120, r.right - r.left), (2.06 * ey) / Math.max(120, r.bottom - r.top));
+    const cx = (r.left + r.right) / 2;
+    const cy = (r.top + r.bottom) / 2;
+    mapCamera.left = -cx * scale;
+    mapCamera.right = (W - cx) * scale;
+    mapCamera.top = cy * scale;
+    mapCamera.bottom = -(H - cy) * scale;
+    mapCamera.updateProjectionMatrix();
+    return;
+  }
   // 0.92: a little margin so the rim is not cut by the panels.
   const free = 0.92 * Math.max(120, Math.min(r.right - r.left, r.bottom - r.top));
   const across = Math.tan((35 / 2) * Math.PI / 180);
@@ -679,9 +742,15 @@ function frameView() {
   camera.updateProjectionMatrix();
 }
 
+// A point on the globe, or on the map, in scene coordinates.
+function scenePoint(lonLat, radius = 1) {
+  if (state.proj === 'globe') return new THREE.Vector3(...toVector(lonLat[0], lonLat[1], radius));
+  return new THREE.Vector3(...toMap(lonLat[0], lonLat[1]), radius - 1);
+}
+
 // Where a point on the globe is drawn, in CSS pixels (for tests and labels).
 function screenOf(lonLat, radius = 1) {
-  const v = new THREE.Vector3(...toVector(lonLat[0], lonLat[1], radius)).project(camera);
+  const v = scenePoint(lonLat, radius).project(view());
   return [((v.x + 1) / 2) * window.innerWidth, ((1 - v.y) / 2) * window.innerHeight];
 }
 
@@ -700,9 +769,9 @@ function placeLabels() {
     }
     node.textContent = anchor.text;
     node.className = anchor.className;
-    const v = new THREE.Vector3(...toVector(anchor.where[0], anchor.where[1], 1.02));
-    const facing = v.clone().normalize().dot(toCamera);
-    v.project(camera);
+    const v = scenePoint(anchor.where, 1.02);
+    const facing = state.proj === 'globe' ? v.clone().normalize().dot(toCamera) : 1;
+    v.project(view());
     node.style.display = facing > 0.15 ? '' : 'none';
     node.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
     node.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
@@ -720,13 +789,14 @@ function stageAt(age) {
 
 function renderAge() {
   const age = state.age;
-  $('back').href = `../?age=${Math.round(age)}&frame=merdith2021`;
+  const proj = state.proj === 'globe' ? '' : `&proj=${state.proj}`;
+  $('back').href = `../?age=${Math.round(age)}&frame=merdith2021${proj}`;
   const toSection = $('to-section');
   toSection.href = `../section/?age=${Math.round(age)}`;
   toSection.hidden = age > SECTION_SPAN[0] || age < SECTION_SPAN[1];
   $('to-other').href = PAGE === 'phanerozoic'
-    ? (age <= 540 && age >= 485 ? `../cambrian/?age=${Math.round(age)}` : '../cambrian/')
-    : `../phanerozoic/?age=${Math.round(age)}`;
+    ? (age <= 540 && age >= 485 ? `../cambrian/?age=${Math.round(age)}${proj}` : `../cambrian/${proj && `?${proj.slice(1)}`}`)
+    : `../phanerozoic/?age=${Math.round(age)}${proj}`;
   $('age').textContent = format(t().age, { age: age.toFixed(1) });
   const [, , epoch, stage, colour] = stageAt(age);
   const inCambrian = age <= 538.8 && age > 486.85;
@@ -948,6 +1018,10 @@ function applyLanguage() {
   for (const button of document.querySelectorAll('[data-mode]')) {
     button.setAttribute('aria-checked', String(button.dataset.mode === state.mode));
   }
+  for (const button of document.querySelectorAll('[data-proj]')) {
+    button.setAttribute('aria-checked', String(button.dataset.proj === state.proj));
+  }
+  $('projection').setAttribute('aria-label', t().projection);
   setPlaying(state.playing);
   renderLegend();
   renderPeriods();
@@ -991,6 +1065,49 @@ for (const button of document.querySelectorAll('[data-lang]')) {
 for (const button of document.querySelectorAll('[data-mode]')) {
   button.addEventListener('click', () => { state.mode = button.dataset.mode; state.snap = true; applyLanguage(); });
 }
+for (const button of document.querySelectorAll('[data-proj]')) {
+  button.addEventListener('click', () => setProjection(button.dataset.proj));
+}
+
+// Globe or a flat map. On a map, "follow" keeps Antarctica on the central meridian.
+function setProjection(proj) {
+  if (!PROJECTIONS.includes(proj)) return;
+  state.proj = proj;
+  const globeView = proj === 'globe';
+  setMapView(proj, globeView ? 0 : mapLon0());
+  globe.visible = rim.visible = globeView;
+  mapPlane.visible = mapOutline.visible = !globeView;
+  sun.visible = globeView;
+  mapSun.visible = !globeView;
+  controls.enabled = globeView;
+  mapControls.enabled = !globeView;
+  if (!globeView) {
+    const [ex, ey] = EXTENT[proj];
+    mapPlane.geometry.dispose();
+    mapPlane.geometry = new THREE.PlaneGeometry(2 * ex, 2 * ey);
+    mapOutline.geometry.dispose();
+    mapOutline.geometry = new THREE.BufferGeometry();
+    mapOutline.geometry.setAttribute('position', new THREE.Float32BufferAttribute(outlineSegments(proj, 0.0005), 3));
+    mapCamera.position.set(0, 0, 10);
+    mapCamera.zoom = 1;
+    mapControls.target.set(0, 0, 0);
+    mapControls.update();
+  }
+  lastFrame = '';
+  state.snap = true;
+  const params = new URLSearchParams(location.search);
+  if (globeView) params.delete('proj');
+  else params.set('proj', proj);
+  history.replaceState(null, '', params.size ? `?${params}` : location.pathname);
+  applyLanguage();
+}
+
+// The map's central meridian: the target's (Antarctica's, or a picked record's) longitude,
+// in whole degrees so the lines are not redrawn for every small step.
+function mapLon0() {
+  const target = state.target ?? (state.data ? focusPoint() : null);
+  return target ? Math.round(target[0]) : mapView.lon0;
+}
 
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -1011,7 +1128,16 @@ renderer.setAnimationLoop((now) => {
   // Turn the camera towards the target (Antarctica, or a picked observation). The easing
   // is by elapsed time, not by frame, so a slow renderer catches up just as fast.
   frameView();
-  if ((state.follow || state.flyOnce) && state.target) {
+  if (state.proj !== 'globe') {
+    if ((state.follow || state.flyOnce) && state.target) {
+      const lon0 = mapLon0();
+      if (wrap(lon0 - mapView.lon0) !== 0) {
+        setMapView(state.proj, lon0);
+        update();
+      }
+      state.flyOnce = false;
+    }
+  } else if ((state.follow || state.flyOnce) && state.target) {
     const distance = camera.position.length();
     const want = new THREE.Vector3(...toVector(state.target[0], state.target[1], 1)).normalize();
     const have = camera.position.clone().normalize();
@@ -1030,14 +1156,15 @@ renderer.setAnimationLoop((now) => {
     if (state.flyOnce && angle < 0.01) state.flyOnce = false;
   }
   state.lastCameraTime = now;
-  controls.update();
-  renderer.render(scene, camera);
+  if (state.proj === 'globe') controls.update();
+  else mapControls.update();
+  renderer.render(scene, view());
   placeLabels();
 });
 
 async function start() {
   resize();
-  applyLanguage();
+  setProjection(state.proj);
   $('status').textContent = t().loading;
   try {
     state.data = await load();
@@ -1059,7 +1186,7 @@ async function start() {
     }
   })();
   for (const item of state.data.observations.items) {
-    const marker = new THREE.Mesh(markerShape, new THREE.MeshBasicMaterial({ color: 0xff9f43, transparent: true }));
+    const marker = new THREE.Mesh(markerShape, mapPatch(new THREE.MeshBasicMaterial({ color: 0xff9f43, transparent: true })));
     markers.set(item.id, marker);
     markerGroup.add(marker);
   }
@@ -1071,7 +1198,10 @@ async function start() {
   if (start) camera.position.set(...toVector(start[0], start[1], 3.4));
   camera.lookAt(0, 0, 0);
   state.snap = true;
+  if (state.proj !== 'globe') setProjection(state.proj);
 }
 
 start();
-window.cplates = { state, goTo, camera, controls, setFollow, focusPoint, screenOf, visibleRect };
+window.cplates = {
+  state, goTo, camera, controls, mapCamera, setFollow, setProjection, focusPoint, screenOf, visibleRect, mapView,
+};

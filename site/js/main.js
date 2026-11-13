@@ -15,6 +15,10 @@ import { LineMaterial } from '../vendor/three/lines/LineMaterial.js';
 import { RotationModel } from './rotation.js';
 import { toLonLat, toVector, velocity, reconstruct, toPresent } from './geo.js';
 import {
+  PROJECTIONS, EXTENT, MAP_GLSL, mapUniforms, setMapView, projectionFrom, mapSegments, mapPatch, unproject,
+  outlineSegments, toMap,
+} from './projection.js';
+import {
   STRINGS, PERIODS, periodAt, plateName, compass, format, initialLanguage, keepLanguage,
 } from './i18n.js';
 
@@ -53,6 +57,7 @@ const state = {
   playing: false,
   pin: null,
   pixels: null,
+  proj: projectionFrom(ASKED),
 };
 
 const current = () => state.models[state.model];
@@ -73,6 +78,21 @@ controls.minDistance = 1.35;
 controls.maxDistance = 8;
 controls.rotateSpeed = 0.5;
 controls.zoomSpeed = 0.8;
+
+// The flat maps (Mollweide, equirectangular) are seen square on, without perspective, and
+// moved by dragging rather than turned.
+const mapCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 20);
+mapCamera.position.set(0, 0, 10);
+const mapControls = new OrbitControls(mapCamera, canvas);
+mapControls.enableRotate = false;
+mapControls.screenSpacePanning = true;
+mapControls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+mapControls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+mapControls.minZoom = 1;
+mapControls.maxZoom = 12;
+mapControls.zoomSpeed = 0.8;
+mapControls.enabled = false;
+const view = () => (state.proj === 'globe' ? camera : mapCamera);
 
 // A plain Texture, not a DataTexture: the image is swapped for each frame's ImageBitmap,
 // and a DataTexture would keep uploading it as raw data.
@@ -110,18 +130,53 @@ const globeMaterial = new THREE.ShaderMaterial({
       vNormalView = normalize(normalMatrix * normal);
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }`,
-  fragmentShader: /* glsl */`
+  fragmentShader: surfaceShader(false),
+});
+const globe = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), globeMaterial);
+scene.add(globe);
+
+// The same surface on a flat map: each pixel's longitude and latitude come from the inverse
+// projection, so the map is as sharp as the frame.
+const mapMaterial = new THREE.ShaderMaterial({
+  uniforms: { ...globeMaterial.uniforms, ...mapUniforms },
+  vertexShader: /* glsl */`
+    varying vec2 vXY;
+    void main() {
+      vXY = position.xy;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: surfaceShader(true),
+});
+const mapPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mapMaterial);
+mapPlane.visible = false;
+scene.add(mapPlane);
+const mapOutline = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
+  color: 0x9cc7ff, transparent: true, opacity: 0.35, depthWrite: false,
+}));
+mapOutline.visible = false;
+scene.add(mapOutline);
+
+function surfaceShader(map) {
+  return /* glsl */`
+    ${map ? MAP_GLSL : ''}
     uniform sampler2D plates;
     uniform sampler2D land;
     uniform sampler2D palette;
     uniform float selected;
-    varying vec3 vPos;
-    varying vec3 vNormalView;
+    ${map ? 'varying vec2 vXY;' : 'varying vec3 vPos;\n    varying vec3 vNormalView;'}
     const float PI = 3.141592653589793;
     void main() {
+      ${map ? `
+      vec3 ll = mapInverse(vXY);
+      if (ll.z < 0.0) discard;
+      float lat = ll.y;
+      float lon = ll.x + uLon0;
+      // Lit as the globe is on average, evenly.
+      float light = 0.8;` : `
       vec3 p = normalize(vPos);
       float lat = asin(clamp(p.y, -1.0, 1.0));
       float lon = atan(-p.z, p.x);
+      float light = max(dot(normalize(vNormalView), normalize(vec3(0.35, 0.45, 1.0))), 0.0);`}
       vec2 uv = vec2((lon + PI) / (2.0 * PI), (0.5 * PI - lat) / PI);
       float index = floor(texture2D(plates, uv).r * 255.0 + 0.5);
       vec3 plate = texture2D(palette, vec2((index + 0.5) / 256.0, 0.5)).rgb;
@@ -134,21 +189,19 @@ const globeMaterial = new THREE.ShaderMaterial({
       float rim = clamp(fwidth(crust) * 1.6, 0.0, 1.0);
       colour = mix(colour, vec3(0.16, 0.13, 0.10), rim * 0.65);
       if (abs(index - selected) < 0.5) colour = mix(colour, vec3(1.0), 0.22);
-      float light = max(dot(normalize(vNormalView), normalize(vec3(0.35, 0.45, 1.0))), 0.0);
       gl_FragColor = vec4(colour * (0.5 + 0.55 * light), 1.0);
-    }`,
-});
-const globe = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), globeMaterial);
-scene.add(globe);
+    }`;
+}
 
 // A faint rim so the globe's edge reads against the background.
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.ShaderMaterial({
+const rim = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.ShaderMaterial({
   side: THREE.BackSide, transparent: true, depthWrite: false,
   vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `varying vec3 vN; void main(){ float f = pow(1.0 - abs(vN.z), 3.0);
     gl_FragColor = vec4(0.45, 0.65, 1.0, f * 0.35); }`,
-})));
+}));
+scene.add(rim);
 
 // Graticule every 30 degrees, fixed to the present-day grid: it is a reference, not data.
 {
@@ -165,9 +218,9 @@ scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 32), new THREE.Shade
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-  scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({
+  scene.add(new THREE.LineSegments(geometry, mapPatch(new THREE.LineBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.07, depthWrite: false,
-  })));
+  }))));
 }
 
 const boundaryLayers = {};
@@ -180,17 +233,17 @@ for (const kind of Object.keys(COLORS)) {
   boundaryLayers[kind] = line;
 }
 const teeth = new THREE.Mesh(new THREE.BufferGeometry(),
-  new THREE.MeshBasicMaterial({ color: COLORS.subduction, side: THREE.DoubleSide }));
+  mapPatch(new THREE.MeshBasicMaterial({ color: COLORS.subduction, side: THREE.DoubleSide })));
 teeth.renderOrder = 2;
 scene.add(teeth);
 
 const pinGroup = new THREE.Group();
 const pinDot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 16, 8),
-  new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  mapPatch(new THREE.MeshBasicMaterial({ color: 0xffffff })));
 const arrow = new LineSegments2(new LineSegmentsGeometry(),
   new LineMaterial({ color: 0xffffff, linewidth: 3 }));
 const arrowHead = new THREE.Mesh(new THREE.BufferGeometry(),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+  mapPatch(new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })));
 pinGroup.add(pinDot, arrow, arrowHead);
 pinGroup.visible = false;
 scene.add(pinGroup);
@@ -289,7 +342,7 @@ function showFrame(age) {
   for (const [kind, line] of Object.entries(boundaryLayers)) {
     line.geometry.dispose();
     const geometry = new LineSegmentsGeometry();
-    if (positions[kind].length) geometry.setPositions(positions[kind]);
+    if (positions[kind].length) geometry.setPositions(mapSegments(positions[kind]).positions);
     line.geometry = geometry;
     line.visible = positions[kind].length > 0;
   }
@@ -439,10 +492,15 @@ canvas.addEventListener('pointerup', (event) => {
   if (!downAt || Math.hypot(event.clientX - downAt[0], event.clientY - downAt[1]) > 5) return;
   const rect = canvas.getBoundingClientRect();
   pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObject(globe)[0];
-  if (!hit) return;
-  pick(toLonLat(hit.point.toArray()));
+  raycaster.setFromCamera(pointer, view());
+  if (state.proj === 'globe') {
+    const hit = raycaster.intersectObject(globe)[0];
+    if (hit) pick(toLonLat(hit.point.toArray()));
+    return;
+  }
+  const hit = raycaster.intersectObject(mapPlane)[0];
+  const lonLat = hit && unproject(state.proj, hit.point.x, hit.point.y, 0);
+  if (lonLat) pick(lonLat);
 });
 
 function pick(lonLat) {
@@ -504,7 +562,7 @@ function updatePin() {
       previous = next;
     }
     arrow.geometry.dispose();
-    arrow.geometry = new LineSegmentsGeometry().setPositions(points);
+    arrow.geometry = new LineSegmentsGeometry().setPositions(mapSegments(points).positions);
     const tip = destination(where, v.bearing, length + 0.9 * Math.PI / 180);
     const left = destination(destination(where, v.bearing, length), v.bearing - 90, 0.5 * Math.PI / 180);
     const right = destination(destination(where, v.bearing, length), v.bearing + 90, 0.5 * Math.PI / 180);
@@ -573,12 +631,17 @@ function renderAge() {
   $('slider').setAttribute('aria-valuetext', format(t().age, { age }));
   // The Cambrian page covers 540–485 Ma in more detail, on Merdith 2021.
   const link = $('to-cambrian');
-  link.href = age >= 485 && age <= 540 ? `cambrian/?age=${age}` : 'cambrian/';
+  // The other pages are asked for the same projection.
+  const proj = state.proj === 'globe' ? '' : `proj=${state.proj}`;
+  const query = (...parts) => (parts.filter(Boolean).length ? `?${parts.filter(Boolean).join('&')}` : '');
+  link.href = `cambrian/${query(age >= 485 && age <= 540 ? `age=${age}` : '', proj)}`;
   link.classList.toggle('here', age >= 485 && age <= 540);
-  $('to-phanerozoic').href = age <= 540 ? `phanerozoic/?age=${age}` : 'phanerozoic/';
+  $('to-phanerozoic').href = `phanerozoic/${query(age <= 540 ? `age=${age}` : '', proj)}`;
   const params = new URLSearchParams(location.search);
   params.set('age', String(age));
   params.set('frame', state.model);
+  if (state.proj === 'globe') params.delete('proj');
+  else params.set('proj', state.proj);
   history.replaceState(null, '', `?${params}`);
 }
 
@@ -587,6 +650,39 @@ function renderFrame() {
     button.setAttribute('aria-checked', String(button.dataset.frame === state.model));
   }
   $('frame-note').textContent = t().frameNote[state.model];
+  for (const button of document.querySelectorAll('[data-proj]')) {
+    button.setAttribute('aria-checked', String(button.dataset.proj === state.proj));
+  }
+  $('projection').setAttribute('aria-label', t().projection);
+}
+
+// Globe or one of the flat maps. The map is centred on the Greenwich meridian; everything
+// drawn from a frame is drawn again for it.
+function setProjection(proj) {
+  if (!PROJECTIONS.includes(proj)) return;
+  state.proj = proj;
+  setMapView(proj, 0);
+  const globeView = proj === 'globe';
+  globe.visible = rim.visible = globeView;
+  mapPlane.visible = mapOutline.visible = !globeView;
+  controls.enabled = globeView;
+  mapControls.enabled = !globeView;
+  if (!globeView) {
+    const [ex, ey] = EXTENT[proj];
+    mapPlane.geometry.dispose();
+    mapPlane.geometry = new THREE.PlaneGeometry(2 * ex, 2 * ey);
+    mapOutline.geometry.dispose();
+    mapOutline.geometry = new THREE.BufferGeometry();
+    mapOutline.geometry.setAttribute('position', new THREE.Float32BufferAttribute(outlineSegments(proj, 0.0005), 3));
+    mapCamera.position.set(0, 0, 10);
+    mapCamera.zoom = 1;
+    mapControls.target.set(0, 0, 0);
+    mapControls.update();
+  }
+  lastFrame = '';
+  if (state.shown !== null && current()?.frames.has(state.shown)) showFrame(state.shown);
+  renderFrame();
+  renderAge();
 }
 
 function renderPeriods() {
@@ -637,10 +733,7 @@ function applyLanguage() {
   document.documentElement.lang = state.lang;
   document.title = t().title;
   for (const node of document.querySelectorAll('[data-t]')) node.textContent = t()[node.dataset.t];
-  for (const button of document.querySelectorAll('[data-frame]')) {
-  button.addEventListener('click', () => setModel(button.dataset.frame));
-}
-for (const button of document.querySelectorAll('[data-lang]')) {
+  for (const button of document.querySelectorAll('[data-lang]')) {
     button.setAttribute('aria-current', String(button.dataset.lang === state.lang));
   }
   setPlaying(state.playing);
@@ -677,6 +770,12 @@ $('slider').addEventListener('input', (event) => {
   setPlaying(false);
   goTo(state.maxAge - Number(event.target.value));
 });
+for (const button of document.querySelectorAll('[data-frame]')) {
+  button.addEventListener('click', () => setModel(button.dataset.frame));
+}
+for (const button of document.querySelectorAll('[data-proj]')) {
+  button.addEventListener('click', () => setProjection(button.dataset.proj));
+}
 for (const button of document.querySelectorAll('[data-lang]')) {
   button.addEventListener('click', () => {
     state.lang = button.dataset.lang;
@@ -723,9 +822,13 @@ function frameView() {
   const W = window.innerWidth;
   const H = window.innerHeight;
   const r = visibleRect();
-  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join();
+  const key = [W, H, r.left, r.top, r.right, r.bottom].map(Math.round).join() + state.proj;
   if (key === lastFrame) return;
   lastFrame = key;
+  if (state.proj !== 'globe') {
+    frameMap(mapCamera, state.proj, r, W, H);
+    return;
+  }
   // 0.92: a little margin so the rim is not cut by the panels.
   const free = 0.92 * Math.max(120, Math.min(r.right - r.left, r.bottom - r.top));
   const across = Math.tan((35 / 2) * Math.PI / 180);
@@ -735,9 +838,25 @@ function frameView() {
   camera.updateProjectionMatrix();
 }
 
+// The flat map fills the free part with a small margin, centred in it: the camera's view
+// is set in world units per CSS pixel, so the map's middle falls on the free part's middle.
+function frameMap(ortho, proj, r, W, H) {
+  const [ex, ey] = EXTENT[proj];
+  const w = Math.max(120, r.right - r.left);
+  const h = Math.max(120, r.bottom - r.top);
+  const scale = Math.max((2.06 * ex) / w, (2.06 * ey) / h);
+  const cx = (r.left + r.right) / 2;
+  const cy = (r.top + r.bottom) / 2;
+  ortho.left = -cx * scale;
+  ortho.right = (W - cx) * scale;
+  ortho.top = cy * scale;
+  ortho.bottom = -(H - cy) * scale;
+  ortho.updateProjectionMatrix();
+}
+
 // Where a scene point is drawn, in CSS pixels (for tests).
 function screenOf(point) {
-  const v = new THREE.Vector3(...point).project(camera);
+  const v = new THREE.Vector3(...point).project(view());
   return [((v.x + 1) / 2) * window.innerWidth, ((1 - v.y) / 2) * window.innerHeight];
 }
 
@@ -762,14 +881,16 @@ window.addEventListener('resize', resize);
 renderer.setAnimationLoop((now) => {
   tick(now);
   frameView();
-  controls.update();
-  renderer.render(scene, camera);
+  if (state.proj === 'globe') controls.update();
+  else mapControls.update();
+  renderer.render(scene, view());
 });
 
 // ---------- start ----------
 
 async function start() {
   resize();
+  setProjection(state.proj);
   applyLanguage();
   try {
     await ensureModel(state.model);
@@ -789,4 +910,20 @@ async function start() {
 start();
 
 // For tests and for looking around from the console.
-window.cplates = { state, goTo, pick, setModel, camera, controls, visibleRect, globeOnScreen };
+// The map's drawn corners in CSS pixels (for tests): [left, top, right, bottom].
+function mapOnScreen() {
+  const [ex, ey] = EXTENT[state.proj];
+  const [left, top] = screenOf([-ex, ey, 0]);
+  const [right, bottom] = screenOf([ex, -ey, 0]);
+  return [left, top, right, bottom];
+}
+
+// Where a place is drawn, in CSS pixels, on the globe or the map (for tests).
+function screenOfLonLat(lon, lat) {
+  return screenOf(state.proj === 'globe' ? toVector(lon, lat) : [...toMap(lon, lat), 0]);
+}
+
+window.cplates = {
+  state, goTo, pick, setModel, setProjection, camera, controls, mapCamera, visibleRect, globeOnScreen, mapOnScreen,
+  screenOfLonLat,
+};

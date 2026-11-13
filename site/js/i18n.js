@@ -10,6 +10,10 @@ export const STRINGS = {
     toCambrian: '캄브리아기의 남극대륙 자세히 (540–485 Ma) →',
     toPhanerozoic: '남극대륙을 따라 보기 (현생누대, 540–0 Ma) →',
     frameLabel: '기준틀',
+    projection: '투영법',
+    projGlobe: '지구본',
+    projMollweide: '몰바이데',
+    projEquirect: '정거원통',
     frameShort: { merdith2021: '고지자기 기준틀 (Merdith 2021)', muller2022: '맨틀 기준틀 (Müller 2022)' },
     frameNote: {
       merdith2021: '고지자기 기준틀. Müller 2022와 판의 상대 운동과 경계는 거의 같고, 대륙과 판이 놓인 절대 위치가 다릅니다.',
@@ -65,6 +69,10 @@ export const STRINGS = {
     toCambrian: 'Antarctica in the Cambrian, in detail (540–485 Ma) →',
     toPhanerozoic: 'Follow Antarctica (Phanerozoic, 540–0 Ma) →',
     frameLabel: 'Reference frame',
+    projection: 'Projection',
+    projGlobe: 'Globe',
+    projMollweide: 'Mollweide',
+    projEquirect: 'Equirectangular',
     frameShort: { merdith2021: 'palaeomagnetic frame (Merdith 2021)', muller2022: 'mantle frame (Müller 2022)' },
     frameNote: {
       merdith2021: 'Palaeomagnetic frame. Relative motions and boundaries are nearly the same as in Müller 2022; where the continents and plates sit on the globe differs.',
