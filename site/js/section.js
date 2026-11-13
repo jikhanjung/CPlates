@@ -76,6 +76,9 @@ const STRINGS = {
     outcropNote: '지금 드러난 노두입니다. SCAR GeoMAP v2022-08(Cox et al. 2023, 1:25만)의 버드층군 지질 단위를 층별로 그렸고, 250 m 안쪽으로 간추렸습니다. 얼음과 침식이 남긴 범위라 그 시대에 쌓인 범위가 아닙니다. 하늘색은 섀클턴 석회암, 주황은 스타샷층, 분홍은 더글러스 역암, 노랑은 층을 나누지 않은 버드층군이고, 쌓이던 시기에 밝게 보입니다. 나이는 기록 그림(Myrow et al. 2002)을 따릅니다.',
     lgOutcrop: '{unit} 노두 (GeoMAP)', outcropLabel: '버드층군 노두',
     outcropSections: '측정 단면 S1·S2·HR (Myrow 2002)',
+    showGeology: '시대별 암석 분포 (GeoMAP)',
+    geologyNote: '지금 드러난 암석을 SCAR GeoMAP v2022-08(Cox et al. 2023)의 간추린 분류(SIMPCODE)로 나눠 생긴 때 순으로 칠했습니다. 2 km 칸마다 가장 많은 암석의 색이고, 칸에서 암석이 차지하는 몫이 클수록 진합니다(작은 노두도 보이도록 암석이 조금이라도 있으면 칠함). 빙퇴석·얼음·분류 안 된 것은 뺐습니다. 흐린 회색빛은 화면의 나이에 아직 생기지 않은 암석입니다(비컨 누층군, 페라 등). 동남극(판 802)과 함께 옮긴 지금의 자리이며, 그 시대에 그 암석이 있던 범위가 아닙니다. 대륙 대부분이 얼음 밑이라 드러난 곳은 산맥에 몰려 있습니다.',
+    lgGeologyLater: '흐린 색: 이 나이에는 아직 생기지 않은 암석',
     fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
     fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
     mismatchNote: '해구는 Merdith 2021, 지형은 PaleoDEM(PALEOMAP)에서 옵니다. 두 복원이 대륙 가장자리를 다른 곳에 두어, 빨간 해구 구간은 PaleoDEM의 대륙붕이나 육지 위에 놓입니다.',
@@ -140,6 +143,9 @@ const STRINGS = {
     outcropNote: 'Today’s outcrop: the Byrd Group units of SCAR GeoMAP v2022-08 (Cox et al. 2023, 1:250 000), by formation, simplified within 250 m. It is what ice and erosion leave exposed, not where the units were laid down. Light blue: Shackleton Limestone; orange: Starshot Formation; pink: Douglas Conglomerate; yellow: Byrd Group not divided. Each is bright while it was being laid down; the ages follow the record (Myrow et al. 2002).',
     lgOutcrop: '{unit} outcrop (GeoMAP)', outcropLabel: 'Byrd Group outcrops',
     outcropSections: 'Measured sections S1, S2, HR (Myrow 2002)',
+    showGeology: 'Rock by age (GeoMAP)',
+    geologyNote: 'Rock exposed today, in the simplified classes (SIMPCODE) of SCAR GeoMAP v2022-08 (Cox et al. 2023), coloured in order of when it formed. Each 2 km cell takes the colour of its most common rock, stronger the more of the cell is rock (any rock at all is shown, so small outcrops stay visible); moraine, ice and unclassified rock are left out. Greyed colours are rock that did not yet exist at the age on screen (the Beacon Supergroup, the Ferrar, …). The places are today’s, carried with East Antarctica (plate 802), not where the rock was at the time. Most of the continent is under ice, so what is exposed lies mostly in the mountains.',
+    lgGeologyLater: 'Greyed: rock not yet formed at this age',
     fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
     fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
     mismatchNote: 'The trench comes from Merdith 2021, the relief from PaleoDEM (PALEOMAP). The two reconstructions put the margin in different places, so the red stretches of trench lie on PaleoDEM shelf or land.',
@@ -186,6 +192,7 @@ const state = {
   // Trench from Merdith 2021 as it is, or moved onto PaleoDEM's slope foot (?trench=paleodem).
   fit: ASKED.get('trench') === 'paleodem',
   outcrops: ASKED.get('outcrops') === '1',
+  geology: ASKED.get('geology') === '1',
 };
 const t = () => STRINGS[state.lang];
 
@@ -221,6 +228,15 @@ const colour = (hex) => {
   return parsedColours.get(hex).clone();
 };
 const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+// Rock by age (SCAR GeoMAP), a picture laid on the top surface. Its colours are premultiplied
+// by the share of each cell that is rock, so the picture's smaller copies (far away) average
+// right and small outcrops fade rather than vanish.
+const geologyTexture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
+const geologyTop = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
+  map: geologyTexture, transparent: true, premultipliedAlpha: true, depthWrite: false, side: THREE.DoubleSide,
+  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 }));
+geologyTop.renderOrder = 1;
+geologyTop.visible = false;
 const water = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
   color: colour(COLOURS.water), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
 const face = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
@@ -271,7 +287,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, outcropLines, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, geologyTop, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, outcropLines, limestoneEdge, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -291,6 +307,73 @@ async function load() {
   }
   return { meta, surface: new Int16Array(surface), crust: new Uint8Array(crust), region: new Uint8Array(region),
            boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
+}
+
+// The rock map: fetched when first asked for. Red is the class (meta.geology.classes), alpha
+// the share of the cell that is rock.
+let geologyPixels = null;
+let geologyLoading = false;
+function loadGeology() {
+  const g = state.data?.meta.geology;
+  if (!g || geologyPixels || geologyLoading) return;
+  geologyLoading = true;
+  vfetch(`${BASE}${g.image}`).then((r) => r.blob())
+    .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }))
+    .then((bitmap) => {
+      const canvas2d = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas2d.getContext('2d');
+      context.drawImage(bitmap, 0, 0);
+      geologyPixels = { width: bitmap.width, height: bitmap.height, data: context.getImageData(0, 0, bitmap.width, bitmap.height).data };
+      update();
+    })
+    .catch(() => { geologyLoading = false; });
+}
+
+// When each class's rock formed, against the age on screen: 'later' (not yet), else shown.
+function geologyStates(age) {
+  return state.data.meta.geology.classes.map((c) => (age > c.age[0] ? 'later' : age >= c.age[1] ? 'forming' : 'formed'));
+}
+
+let geologyKey = '';
+function colourGeology(states) {
+  const key = states.join();
+  if (key === geologyKey) return;
+  geologyKey = key;
+  const { width, height, data } = geologyPixels;
+  const grey = colour('#9a9a9a');
+  const palette = new Map(state.data.meta.geology.classes.map((c, k) => {
+    const later = states[k] === 'later';
+    const c3 = colour(c.colour);
+    if (later) c3.lerp(grey, 0.7);
+    // The texture is sRGB; three.js decodes it, so store the colour as sRGB bytes.
+    const rgb = c3.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
+    return [c.index, { rgb, alpha: later ? 0.45 : 1 }];
+  }));
+  const out = new Uint8Array(width * height * 4);
+  // Rows run from the far side (largest across) down; the texture's first row is v = 0.
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const src = (y * width + x) * 4;
+      const k = data[src];
+      if (!k || !data[src + 3]) continue;
+      const entry = palette.get(k);
+      if (!entry) continue;
+      // Any rock in the cell shows; more rock, stronger (outcrops are small next to 2 km).
+      const a = (0.45 + 0.55 * (data[src + 3] / 255)) * entry.alpha;
+      const dst = ((height - 1 - y) * width + x) * 4;
+      out[dst] = entry.rgb[0] * a;
+      out[dst + 1] = entry.rgb[1] * a;
+      out[dst + 2] = entry.rgb[2] * a;
+      out[dst + 3] = a * 255;
+    }
+  }
+  geologyTexture.image = { data: out, width, height };
+  geologyTexture.colorSpace = THREE.SRGBColorSpace;
+  geologyTexture.generateMipmaps = true;
+  geologyTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  geologyTexture.magFilter = THREE.LinearFilter;
+  geologyTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  geologyTexture.needsUpdate = true;
 }
 
 function heightsAt(age) {
@@ -697,6 +780,25 @@ function update() {
   for (let i = ci0; i < ci1; i++) rim.push([cj1 * nx + i, cj1 * nx + i + 1]);
   for (let j = cj0; j < cj1; j++) rim.push([j * nx + ci0, (j + 1) * nx + ci0], [j * nx + ci1, (j + 1) * nx + ci1]);
   setGeometry(top, pos, col, index);
+  // Rock by age, on the same surface.
+  const geology = meta.geology;
+  geologyTop.visible = Boolean(state.geology && geology && geologyPixels);
+  if (state.geology && geology && !geologyPixels) loadGeology();
+  if (geologyTop.visible) {
+    colourGeology(geologyStates(state.age));
+    const uv = new Float32Array(nx * ny * 2);
+    const [a0, a1] = geology.along_km;
+    const [b0, b1] = geology.across_km;
+    for (let j = cj0; j <= cj1; j++) {
+      for (let i = ci0; i <= ci1; i++) {
+        const n = j * nx + i;
+        uv[n * 2] = (xAt(i) * 1000 - a0) / (a1 - a0);
+        uv[n * 2 + 1] = (-zAt(j) * 1000 - b0) / (b1 - b0);
+      }
+    }
+    setGeometry(geologyTop, pos, null, index);
+    geologyTop.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  }
   setGeometry(base, low, null, lowIndex);
   const wall = [];
   const wallColours = [];
@@ -1738,6 +1840,11 @@ function renderLegend() {
                  state.fit ? ['dash', '#b8b8b8', t().lgMerdithTrench] : ['line', MISMATCH_COLOUR, t().lgMismatch],
                  ...(state.outcrops && state.data?.meta.outcrops
                    ? Object.entries(state.data.meta.outcrops.units).map(([id, u]) => ['line', OUTCROP_COLOURS[id], t().lgOutcrop.replace('{unit}', u.name[state.lang])])
+                   : []),
+                 ...(state.geology && state.data?.meta.geology
+                   ? [...state.data.meta.geology.classes.filter((c) => c.area_km2 > 0).map((c) =>
+                       ['fill', c.colour, `${c.name[state.lang]} · ${c.age[1] >= 1000 ? `${c.age[0] / 1000}–${c.age[1] / 1000} Ga` : `${c.age[0]}–${c.age[1]} Ma`}`]),
+                     ['fill', '#5e6470', t().lgGeologyLater]]
                    : [])];
   const list = $('legend');
   list.replaceChildren();
@@ -1822,7 +1929,7 @@ function applyLanguage() {
   renderVe();
   renderLegend();
   renderPeriods();
-  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); renderOutcropNote(); renderLegend(); update(); }
+  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); renderOutcropNote(); renderGeologyNote(); renderLegend(); update(); }
 }
 
 // ---------- controls ----------
@@ -1847,6 +1954,13 @@ $('show-flow').addEventListener('change', (e) => { state.flow = e.target.checked
 $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.target.checked; update(); });
 $('show-outcrops').checked = state.outcrops;
 $('show-outcrops').addEventListener('change', (e) => { state.outcrops = e.target.checked; keepParams(); renderLegend(); renderOutcropNote(); update(); });
+$('show-geology').checked = state.geology;
+$('show-geology').addEventListener('change', (e) => { state.geology = e.target.checked; keepParams(); renderLegend(); renderGeologyNote(); update(); });
+function renderGeologyNote() {
+  const note = $('geology-note');
+  note.hidden = !state.geology || !state.data?.meta.geology;
+  note.textContent = t().geologyNote;
+}
 function renderOutcropNote() {
   const note = $('outcrop-note');
   const o = state.data?.meta.outcrops;
@@ -1859,6 +1973,7 @@ function keepParams() {
   const params = new URLSearchParams(location.search);
   if (state.fit) params.set('trench', 'paleodem'); else params.delete('trench');
   if (state.outcrops) params.set('outcrops', '1'); else params.delete('outcrops');
+  if (state.geology) params.set('geology', '1'); else params.delete('geology');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
   history.replaceState(null, '', `?${params}`);
@@ -2002,4 +2117,5 @@ async function start() {
 
 start();
 window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, handles, update, globeShown: () => globeShown,
-  flowCount: () => particles.life.filter((v) => v > 0).length };
+  flowCount: () => particles.life.filter((v) => v > 0).length,
+  geology: () => ({ visible: geologyTop.visible, states: geologyKey }) };

@@ -87,13 +87,14 @@ def to_3031(lon, lat):
     return rho * math.sin(lam), rho * math.cos(lam)
 
 
-def rings_of(blob):
-    """GeoPackage geometry → polygon rings [[(x, y), …], …] (Polygon or MultiPolygon, any Z/M)."""
+def polygons_of(blob):
+    """GeoPackage geometry → polygons, each a list of rings [[(x, y), …], …] with the outer
+    ring first (Polygon or MultiPolygon, any Z/M)."""
     if blob[:2] != b"GP":
         raise ValueError("not a GeoPackage geometry")
     flags = blob[3]
     envelope = {0: 0, 1: 32, 2: 48, 3: 48, 4: 64}[(flags >> 1) & 7]
-    rings = []
+    polygons = []
 
     def geometry(off):
         order = "<" if blob[off] == 1 else ">"
@@ -104,12 +105,14 @@ def rings_of(blob):
         if base == 3:
             n, = struct.unpack_from(order + "I", blob, off)
             off += 4
+            rings = []
             for _ in range(n):
                 count, = struct.unpack_from(order + "I", blob, off)
                 off += 4
                 values = struct.unpack_from(order + "d" * (count * dims), blob, off)
                 off += 8 * count * dims
                 rings.append([(values[k * dims], values[k * dims + 1]) for k in range(count)])
+            polygons.append(rings)
         elif base == 6:
             n, = struct.unpack_from(order + "I", blob, off)
             off += 4
@@ -120,7 +123,12 @@ def rings_of(blob):
         return off
 
     geometry(8 + envelope)
-    return rings
+    return polygons
+
+
+def rings_of(blob):
+    """GeoPackage geometry → all its polygon rings, outer and inner, in one list."""
+    return [ring for polygon in polygons_of(blob) for ring in polygon]
 
 
 def simplify(points, tolerance):

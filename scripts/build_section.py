@@ -32,6 +32,7 @@ Output: site/data/section/{meta.json, surface.bin, crust.bin, boundaries.json}.
 """
 import json
 import math
+import shutil
 import sys
 from pathlib import Path
 
@@ -418,6 +419,13 @@ def main():
             "outlines": [r for r in rings if in_grid(r["ab"])],
             "sections": [{"id": x["id"], "ab": block_km(*x["at"])} for x in outcrops["sections"]],
         }
+    # Rock at the surface by age (SCAR GeoMAP, scripts/geology_geomap.py), a picture over the
+    # same grid in the same along/across km.
+    geology_path = ROOT / "sources/sections/geology_map.json"
+    if geology_path.exists():
+        geology = json.loads(geology_path.read_text())
+        shutil.copyfile(ROOT / "sources/sections/geology_map.png", OUT / "geology.png")
+        meta["geology"] = {**geology, "image": "geology.png"}
     (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     total = sum(p.stat().st_size for p in OUT.iterdir())
     print(f"section: {len(ages)} ages, grid {nx}×{ny}, {total / 1e6:.1f} MB")

@@ -1,0 +1,161 @@
+{
+ "source": "Cox, S. C., Smith Lyttle, B., Elkind, S., Smith Siddoway, C. S., Morin, P., Capponi, G., et al., 2023. The GeoMAP (v.2022-08) continent-wide detailed geological dataset of Antarctica. PANGAEA, doi:10.1594/PANGAEA.951482. Described in: A continent-wide detailed geological map dataset of Antarctica, Scientific Data 10, 250, doi:10.1038/s41597-023-02152-9. CC BY 4.0.",
+ "method": "GeoMAP geological units by simplified class (SIMPCODE), grouped by age; drawn at 0.5 km and kept at 2 km (each pixel: its most common class, and the share of it that is rock as alpha) over the section grid in the block's along/across km (scripts/geology_geomap.py). Moraine, other unconsolidated deposits, ice and unclassified rock are left out. Present-day outcrop, carried with plate 802.",
+ "pixel_km": 2.0,
+ "along_km": [
+  -3891.822,
+  2002.178
+ ],
+ "across_km": [
+  -668.517,
+  2557.483
+ ],
+ "size": [
+  2947,
+  1613
+ ],
+ "classes": [
+  {
+   "index": 1,
+   "id": "shield",
+   "age": [
+    4000,
+    2500
+   ],
+   "colour": "#e0608a",
+   "name": {
+    "ko": "선캄브리아 순상지 기반암 (주로 시생누대 편마암·그래뉼라이트)",
+    "en": "Precambrian shield basement (mainly Archean gneiss, granulite)"
+   },
+   "simpcodes": [
+    70
+   ],
+   "area_km2": 2542
+  },
+  {
+   "index": 2,
+   "id": "metamorphic",
+   "age": [
+    1000,
+    485
+   ],
+   "colour": "#b07ab8",
+   "name": {
+    "ko": "원생누대–캄브리아기 변성암 (편마암·편암, 로스 조산운동 때 변성된 것 포함)",
+    "en": "Proterozoic–Cambrian metamorphic rock (gneiss, schist; some metamorphosed in the Ross orogeny)"
+   },
+   "simpcodes": [
+    62,
+    63
+   ],
+   "area_km2": 9710
+  },
+  {
+   "index": 3,
+   "id": "lowgrade",
+   "age": [
+    541,
+    444
+   ],
+   "colour": "#7fae5a",
+   "name": {
+    "ko": "캄브리아기–오르도비스기 저변성 퇴적암 (버드층군, 로버트슨 베이층군 등)",
+    "en": "Cambrian–Ordovician low-grade metasedimentary rock (Byrd Group, Robertson Bay Group, …)"
+   },
+   "simpcodes": [
+    61
+   ],
+   "area_km2": 10781
+  },
+  {
+   "index": 4,
+   "id": "granite",
+   "age": [
+    541,
+    470
+   ],
+   "colour": "#e8504a",
+   "name": {
+    "ko": "로스 조산대 화강암류 (그래닛 하버 관입암 등)",
+    "en": "Ross orogen granitoids (Granite Harbour Intrusives, …)"
+   },
+   "simpcodes": [
+    60
+   ],
+   "area_km2": 12973
+  },
+  {
+   "index": 5,
+   "id": "beacon",
+   "age": [
+    419,
+    201
+   ],
+   "colour": "#d8a35a",
+   "name": {
+    "ko": "비컨 누층군 (데본기–트라이아스기 사암)",
+    "en": "Beacon Supergroup (Devonian–Triassic sandstone)"
+   },
+   "simpcodes": [
+    50
+   ],
+   "area_km2": 7053
+  },
+  {
+   "index": 6,
+   "id": "ferrar",
+   "age": [
+    183,
+    174
+   ],
+   "colour": "#3fb6d0",
+   "name": {
+    "ko": "페라 대화성암구 (쥐라기 조립현무암·현무암)",
+    "en": "Ferrar large igneous province (Jurassic dolerite, basalt)"
+   },
+   "simpcodes": [
+    42,
+    43
+   ],
+   "area_km2": 7377
+  },
+  {
+   "index": 7,
+   "id": "cretaceous",
+   "age": [
+    145,
+    95
+   ],
+   "colour": "#8fd16a",
+   "name": {
+    "ko": "백악기 화강암·미그마타이트",
+    "en": "Cretaceous granite, migmatite"
+   },
+   "simpcodes": [
+    41,
+    44,
+    45
+   ],
+   "area_km2": 425
+  },
+  {
+   "index": 8,
+   "id": "volcanic",
+   "age": [
+    66,
+    0
+   ],
+   "colour": "#f6d04d",
+   "name": {
+    "ko": "신생대 화산암 (맥머도 화산암군 등)",
+    "en": "Cenozoic volcanic rock (McMurdo Volcanic Group, …)"
+   },
+   "simpcodes": [
+    30,
+    31,
+    32
+   ],
+   "area_km2": 2692
+  }
+ ]
+}

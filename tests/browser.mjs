@@ -487,6 +487,31 @@ async function openSection(viewport, query) {
     await page.click('#show-outcrops');
     await page.waitForTimeout(200);
   }
+  // Rock by age from SCAR GeoMAP, laid on the surface; rock still to come is greyed.
+  {
+    await page.evaluate(() => window.cplates.goTo(520));
+    await page.click('#show-geology');
+    await page.waitForFunction(() => window.cplates.geology().visible, null, { timeout: 20000 });
+    await page.waitForTimeout(400);
+    check(new URL(page.url()).searchParams.get('geology') === '1', 'the address should remember the rock layer');
+    check(!(await page.locator('#geology-note').isHidden()), 'the rock layer note should say what it shows');
+    const legend = await page.locator('#legend').innerText();
+    check(legend.includes('비컨 누층군') && legend.includes('로스 조산대 화강암류'), `the legend should list the rock classes: ${legend}`);
+    const states = (await page.evaluate(() => window.cplates.geology().states)).split(',');
+    const ids = await page.evaluate(() => window.cplates.state.data.meta.geology.classes.map((c) => c.id));
+    const at = (id) => states[ids.indexOf(id)];
+    check(at('granite') === 'forming' && at('beacon') === 'later' && at('shield') === 'formed',
+          `at 520 Ma: granites forming, Beacon still to come, the shield there: ${states}`);
+    await page.screenshot({ path: 'test-results/section-geology-520.png' });
+    await page.evaluate(() => window.cplates.closeUp());
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: 'test-results/section-geology-closeup.png' });
+    await page.click('#whole');
+    await page.waitForTimeout(800);
+    await page.click('#show-geology');
+    await page.waitForTimeout(200);
+    check(!(await page.evaluate(() => window.cplates.geology().visible)), 'unticked, the rock layer should go');
+  }
   // Merdith's trench and PaleoDEM disagree: marked; and, on request, the trench fitted to PaleoDEM.
   {
     await page.evaluate(() => window.cplates.goTo(520));

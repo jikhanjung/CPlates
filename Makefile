@@ -26,9 +26,10 @@ phanerozoic:      ## the same globe for 540–0 Ma into site/data/phanerozoic/ (
 section:          ## the A–A′ section block into site/data/section/ (after `make frames`)
 	$(PY) scripts/build_section.py
 
-outcrops:         ## Byrd Group outcrops from SCAR GeoMAP (fetches 187 MB) into sources/sections/; then `make section`
+outcrops:         ## Byrd Group outcrops and rock by age from SCAR GeoMAP (fetches 187 MB) into sources/sections/; then `make section`
 	$(PY) scripts/fetch_dataset.py geomap
 	$(PY) scripts/outcrops_geomap.py
+	$(PY) scripts/geology_geomap.py
 
 fixture:          ## pygplates reference values for tests/pygplates.test.mjs
 	$(PY) scripts/make_test_fixture.py merdith2021 muller2022
