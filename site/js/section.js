@@ -22,6 +22,7 @@ import { continentalShare, crustKm, OCEANIC_CRUST_KM } from './isostasy.js';
 import { slabUV, slabSD, outsidePieces, insidePieces, carve } from './slabcut.js';
 import { MISMATCH_M, SLOPE_FOOT_M, heightAt, slopeFoot, smoothRows } from './trenchfit.js';
 import { format, initialLanguage, keepLanguage } from './i18n.js';
+import { SURFACE_GLSL, contour, fineGrid, fineLine, smoothAt, splineAt } from './surface.js';
 
 const BASE = '../data/section/';
 const VES = [1, 2, 5, 10, 25, 50, 100];
@@ -235,14 +236,16 @@ const colour = (hex) => {
   if (!parsedColours.has(hex)) parsedColours.set(hex, new THREE.Color(hex));
   return parsedColours.get(hex).clone();
 };
-const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-// The top surface is coloured by height per pixel, not per vertex: coloured per vertex, the
-// sharp steps of the scale (the coast, the shelf edge) followed the 27.8 km grid's triangles in
-// zigzags. The fragment shader reads the heights (a float texture, one texel per grid point),
-// interpolates them with Catmull–Rom splines (through every grid point, smooth between; held
-// within the four nearest points so they do not overshoot) and looks the colour up in the
-// hypsometric scale (a 1D texture). Tints (other continents, the limestone) stay per vertex:
-// the vertex colour is the tint and aTint how much of it.
+// The top surface, drawn PER times finer than the data's grid and shaped in the shaders: the
+// heights (a float texture, one texel per grid point) are read between the points with the
+// smooth spline of surface.js for each vertex (its height and slope, so the relief is shaded
+// smoothly); each pixel's colour comes from that height in the hypsometric scale (a 1D texture).
+// Drawn straight from the grid, the coast (where the translucent sea meets the relief) and the
+// colour steps followed the 27.8 km grid's triangles in zigzags. Areas given per grid point
+// (other continents, the Shackleton Limestone) are masks read the same way, with smooth edges.
+const PER = 4;
+const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }));
+top.frustumCulled = false;
 const HYPSO_RANGE = [-6000, 4000];
 const hypsoTexture = (() => {
   const n = 4096;
@@ -258,55 +261,112 @@ const hypsoTexture = (() => {
   texture.needsUpdate = true;
   return texture;
 })();
-const heightTexture = new THREE.DataTexture(new Float32Array(1), 1, 1, THREE.RedFormat, THREE.FloatType);
+// One value per grid point (read with texelFetch, so never filtered).
+const gridTexture = () => new THREE.DataTexture(new Float32Array(1), 1, 1, THREE.RedFormat, THREE.FloatType);
+function setGridTexture(texture, values, nx, ny) {
+  texture.image = { data: values, width: nx, height: ny };
+  texture.needsUpdate = true;
+}
+const heightTexture = gridTexture();
+const otherTexture = gridTexture();
+const lensTexture = gridTexture();
+// Shared by the top and the layers laid on it: metres → scene y, grid step and origin in the scene.
+const surfaceUniforms = { uHeights: { value: heightTexture }, uScaleY: { value: 0 }, uStep: { value: 1 }, uOrigin: { value: new THREE.Vector2() } };
+const SURFACE_VERTEX = `${SURFACE_GLSL}
+uniform sampler2D uHeights;
+uniform float uScaleY;
+uniform float uStep;
+uniform vec2 uOrigin;
+attribute vec2 aGrid;
+varying vec2 vGrid;
+varying float vHeight;
+vec3 surfacePoint(vec3 s) { return vec3(uOrigin.x + aGrid.x * uStep, s.x * uScaleY, uOrigin.y - aGrid.y * uStep); }
+vec3 surfaceNormal(vec3 s) { return normalize(vec3(-s.y * uScaleY / uStep, 1.0, s.z * uScaleY / uStep)); }
+`;
+const topUniforms = {
+  uOther: { value: otherTexture }, uLens: { value: lensTexture }, uLensAmount: { value: 0 },
+  uHypso: { value: hypsoTexture }, uRange: { value: new THREE.Vector2(...HYPSO_RANGE) },
+  uOtherColour: { value: colour('#8b8a86') }, uLimestone: { value: colour('#bdeef7') },
+};
 top.material.onBeforeCompile = (shader) => {
-  Object.assign(shader.uniforms, { uHeights: { value: heightTexture }, uHypso: { value: hypsoTexture },
-                                   uRange: { value: new THREE.Vector2(...HYPSO_RANGE) } });
-  shader.vertexShader = `attribute vec2 aGrid;\nattribute float aTint;\nvarying vec2 vGrid;\nvarying float vTint;\n${
-    shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGrid = aGrid;\n  vTint = aTint;')}`;
-  shader.fragmentShader = `uniform sampler2D uHeights;
+  Object.assign(shader.uniforms, surfaceUniforms, topUniforms);
+  shader.vertexShader = SURFACE_VERTEX + shader.vertexShader
+    .replace('#include <beginnormal_vertex>', 'vec3 surface = splineValue(uHeights, aGrid);\n  vGrid = aGrid;\n  vHeight = surface.x;\n  vec3 objectNormal = surfaceNormal(surface);')
+    .replace('#include <begin_vertex>', 'vec3 transformed = surfacePoint(surface);');
+  shader.fragmentShader = `${SURFACE_GLSL}
+uniform sampler2D uHeights;
+uniform sampler2D uOther;
+uniform sampler2D uLens;
 uniform sampler2D uHypso;
 uniform vec2 uRange;
+uniform float uLensAmount;
+uniform vec3 uOtherColour;
+uniform vec3 uLimestone;
 varying vec2 vGrid;
-varying float vTint;
-float gridHeight(ivec2 p) {
-  return texelFetch(uHeights, clamp(p, ivec2(0), textureSize(uHeights, 0) - 1), 0).r;
-}
-// Catmull–Rom weights for the points at -1, 0, 1, 2 around t in [0, 1).
-vec4 catmullRom(float t) {
-  float t2 = t * t;
-  float t3 = t2 * t;
-  return 0.5 * vec4(-t3 + 2.0 * t2 - t, 3.0 * t3 - 5.0 * t2 + 2.0, -3.0 * t3 + 4.0 * t2 + t, t3 - t2);
-}
-float smoothHeight(vec2 g) {
-  vec2 cell = floor(g);
-  ivec2 b = ivec2(cell);
-  vec4 wx = catmullRom(g.x - cell.x);
-  vec4 wy = catmullRom(g.y - cell.y);
-  float sum = 0.0;
-  for (int j = 0; j < 4; j++) {
-    float row = 0.0;
-    for (int i = 0; i < 4; i++) row += wx[i] * gridHeight(b + ivec2(i - 1, j - 1));
-    sum += wy[j] * row;
-  }
-  float h00 = gridHeight(b), h10 = gridHeight(b + ivec2(1, 0)), h01 = gridHeight(b + ivec2(0, 1)), h11 = gridHeight(b + ivec2(1, 1));
-  return clamp(sum, min(min(h00, h10), min(h01, h11)), max(max(h00, h10), max(h01, h11)));
-}
+varying float vHeight;
 ${shader.fragmentShader.replace('#include <color_fragment>', `
-  float surfaceHeight = smoothHeight(vGrid);
-  vec3 scaleColour = texture2D(uHypso, vec2((surfaceHeight - uRange.x) / (uRange.y - uRange.x), 0.5)).rgb;
-  diffuseColor.rgb *= mix(scaleColour, vColor.rgb, vTint);`)}`;
+  // The height from the vertices, which are only 7 km apart.
+  float surfaceHeight = vHeight;
+  vec3 surfaceColour = texture(uHypso, vec2((surfaceHeight - uRange.x) / (uRange.y - uRange.x), 0.5)).rgb;
+  // Other continents greyed (land and shelf), then the limestone's area.
+  surfaceColour = mix(surfaceColour, uOtherColour, 0.6 * smoothstep(0.4, 0.6, maskValue(uOther, vGrid)) * step(-1000.0, surfaceHeight));
+  if (uLensAmount > 0.0) surfaceColour = mix(surfaceColour, uLimestone, uLensAmount * smoothstep(0.4, 0.6, maskValue(uLens, vGrid)));
+  diffuseColor.rgb *= surfaceColour;`)}`;
 };
-// GeoMAP layers as pictures with one texel per grid cell, laid on the top surface: each cell
-// (centred on its grid point, like the Shackleton Limestone's area) is filled whole.
+// GeoMAP layers laid on the top surface: per grid cell a colour and whether the layer is
+// there (a mask); the mask is read smoothly, so an area of cells has a smooth edge.
 function cellOverlay(order, offsetUnits) {
-  const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
-  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
-    map: texture, transparent: true, premultipliedAlpha: true, depthWrite: false, side: THREE.DoubleSide,
-    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: offsetUnits }));
+  const colourTexture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
+  colourTexture.colorSpace = THREE.SRGBColorSpace;
+  const cover = gridTexture();
+  const material = new THREE.ShaderMaterial({
+    uniforms: { ...surfaceUniforms, uColour: { value: colourTexture }, uCover: { value: cover } },
+    vertexShader: `${SURFACE_VERTEX}
+void main() {
+  vec3 surface = splineValue(uHeights, aGrid);
+  vGrid = aGrid;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(surfacePoint(surface), 1.0);
+}`,
+    fragmentShader: `${SURFACE_GLSL}
+uniform sampler2D uColour;
+uniform sampler2D uCover;
+varying vec2 vGrid;
+void main() {
+  float edge = smoothstep(0.4, 0.6, maskValue(uCover, vGrid));
+  if (edge <= 0.0) discard;
+  // The colour of the class with the most weight among the four cells around (bilinear
+  // weights): classes keep their own colours, with rounded boundaries between them.
+  ivec2 size = textureSize(uCover, 0);
+  vec2 g = clamp(vGrid, vec2(0.0), vec2(size - 1));
+  ivec2 b = ivec2(min(floor(g), vec2(size - 2)));
+  vec2 f = g - vec2(b);
+  vec4 c[4];
+  c[0] = texelFetch(uColour, b, 0);
+  c[1] = texelFetch(uColour, b + ivec2(1, 0), 0);
+  c[2] = texelFetch(uColour, b + ivec2(0, 1), 0);
+  c[3] = texelFetch(uColour, b + ivec2(1, 1), 0);
+  float w[4];
+  w[0] = (1.0 - f.x) * (1.0 - f.y);
+  w[1] = f.x * (1.0 - f.y);
+  w[2] = (1.0 - f.x) * f.y;
+  w[3] = f.x * f.y;
+  vec4 best = c[0];
+  float bestWeight = -1.0;
+  for (int i = 0; i < 4; i++) {
+    float sum = 0.0;
+    for (int j = 0; j < 4; j++) if (c[j] == c[i]) sum += w[j];
+    if (sum > bestWeight) { bestWeight = sum; best = c[i]; }
+  }
+  gl_FragColor = vec4(best.rgb, best.a * edge);
+  #include <colorspace_fragment>
+}`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: offsetUnits });
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+  mesh.frustumCulled = false;
   mesh.renderOrder = order;
   mesh.visible = false;
-  return { mesh, texture, key: '' };
+  return { mesh, colour: colourTexture, cover, key: '' };
 }
 // Rock by age, and over it the lower and upper Byrd Group.
 const geologyLayer = cellOverlay(1, -4);
@@ -383,39 +443,33 @@ async function load() {
            boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
 }
 
-// A cell picture: colour (sRGB bytes, premultiplied by alpha) per grid cell, row j = across.
+// A cell layer: colour (sRGB bytes) and opacity per grid cell, row j = across.
 function paintCell(out, n, c, alpha) {
   const rgb = c.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
-  out[n * 4] = rgb[0] * alpha;
-  out[n * 4 + 1] = rgb[1] * alpha;
-  out[n * 4 + 2] = rgb[2] * alpha;
-  out[n * 4 + 3] = alpha * 255;
+  out.set([rgb[0], rgb[1], rgb[2], Math.round(alpha * 255)], n * 4);
 }
+// Cells with a colour are the layer's area (its mask). Each empty cell beside them takes a
+// neighbour's colour, so the colour chosen just outside a cell's edge is never an empty one.
 function setCells(layer, out, key) {
   const { nx, ny } = state.data.meta;
-  layer.texture.image = { data: out, width: nx, height: ny };
-  layer.texture.colorSpace = THREE.SRGBColorSpace;
-  layer.texture.generateMipmaps = false;
-  // Nearest: each cell is one flat colour with a sharp edge halfway between grid points.
-  layer.texture.minFilter = THREE.NearestFilter;
-  layer.texture.magFilter = THREE.NearestFilter;
-  layer.texture.needsUpdate = true;
-  layer.key = key;
-}
-// The layer on the top surface: same triangles, each grid point at the middle of its texel.
-function layOnTop(layer, pos, index) {
-  const { nx, ny } = state.data.meta;
-  if (!layer.uv) {
-    layer.uv = new Float32Array(nx * ny * 2);
-    for (let j = 0; j < ny; j++) {
-      for (let i = 0; i < nx; i++) {
-        layer.uv[(j * nx + i) * 2] = (i + 0.5) / nx;
-        layer.uv[(j * nx + i) * 2 + 1] = (j + 0.5) / ny;
+  const cover = new Float32Array(nx * ny);
+  for (let n = 0; n < nx * ny; n++) cover[n] = out[n * 4 + 3] > 0 ? 1 : 0;
+  const filled = out.slice();
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      if (cover[j * nx + i]) continue;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const [ii, jj] = [i + di, j + dj];
+        if (ii < 0 || jj < 0 || ii >= nx || jj >= ny || !cover[jj * nx + ii]) continue;
+        filled.set(out.subarray((jj * nx + ii) * 4, (jj * nx + ii) * 4 + 4), (j * nx + i) * 4);
+        break;
       }
     }
   }
-  setGeometry(layer.mesh, pos, null, index);
-  layer.mesh.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(layer.uv, 2));
+  layer.colour.image = { data: filled, width: nx, height: ny };
+  layer.colour.needsUpdate = true;
+  setGridTexture(layer.cover, cover, nx, ny);
+  layer.key = key;
 }
 
 // When each class's rock formed, against the age on screen: 'later' (not yet), else shown.
@@ -455,6 +509,16 @@ function byrdAt(n) {
   }
   const bits = byrdBits[n];
   return { lower: bits !== 0, upper: (bits & (BYRD.upper.bit | BYRD.undivided.bit)) !== 0 };
+}
+// The Byrd Group's areas as masks (1 in a cell, 0 out): 'lower' (any Byrd Group) and 'upper'.
+const byrdMasks = {};
+function byrdMask(kind) {
+  if (!byrdMasks[kind]) {
+    const { nx, ny } = state.data.meta;
+    byrdMasks[kind] = new Float32Array(nx * ny);
+    for (let n = 0; n < nx * ny; n++) byrdMasks[kind][n] = byrdAt(n)[kind] ? 1 : 0;
+  }
+  return byrdMasks[kind];
 }
 // How much of each is laid down at the age on screen (0–1), evenly over its span.
 function byrdGrowth() {
@@ -523,25 +587,6 @@ function setGeometry(mesh, positions, colours, index) {
   if (mesh.isMesh) g.computeVertexNormals();
   mesh.geometry = g;
   return g;
-}
-
-// Cell by cell along a row: each grid point's value held flat over its cell (halfway to the
-// next point), so a band drawn on these steps has straight sides at the cell edges. The surface
-// is kept as it is, with points at the cell edges between.
-function cellSteps(xs, surface, values) {
-  const out = { xs: [], surface: [], values: values.map(() => []) };
-  const last = xs.length - 1;
-  for (let n = 0; n <= last; n++) {
-    const left = n > 0 ? [(xs[n - 1] + xs[n]) / 2, (surface[n - 1] + surface[n]) / 2] : null;
-    const right = n < last ? [(xs[n] + xs[n + 1]) / 2, (surface[n] + surface[n + 1]) / 2] : null;
-    for (const point of [left, [xs[n], surface[n]], right]) {
-      if (!point) continue;
-      out.xs.push(point[0]);
-      out.surface.push(point[1]);
-      values.forEach((v, k) => out.values[k].push(v[n]));
-    }
-  }
-  return out;
 }
 
 // A band between two curves along the section face (z = 0), coloured per column.
@@ -871,32 +916,17 @@ function update() {
   // One crust solid for the box: relief on top, the Airy/oceanic base beneath, walls where
   // the box cuts it. Other continents are tinted grey so Antarctica stands out.
   // Per grid point, filled only inside the box (the grid reaches beyond it).
-  const pos = new Float32Array(nx * ny * 3);
-  const col = new Float32Array(nx * ny * 3);
-  const tint = new Float32Array(nx * ny);
   const low = new Float32Array(nx * ny * 3);
   const crustColour = new Float32Array(nx * ny * 3);
-  const [oceanicColour, continentalColour, otherColour] = [colour(COLOURS.oceanic), colour(COLOURS.continental), colour('#8b8a86')];
+  const [oceanicColour, continentalColour] = [colour(COLOURS.oceanic), colour(COLOURS.continental)];
   const set3 = (array, n, a, b, c) => { array[n * 3] = a; array[n * 3 + 1] = b; array[n * 3 + 2] = c; };
   for (let j = cj0; j <= cj1; j++) {
     for (let i = ci0; i <= ci1; i++) {
       const n = j * nx + i;
       const height = h[n];
-      set3(pos, n, xAt(i), yOf(height / 1000), zAt(j));
       set3(low, n, xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
       const cc = oceanicColour.clone().lerp(continentalColour, continentalShare(height));
       set3(crustColour, n, cc.r, cc.g, cc.b);
-      // The tints over the height colour (drawn in the shader): grey for other continents,
-      // then the limestone; as one colour and how much of it.
-      const w = data.lens[n] / 255;
-      const a1 = other(n) && height > -1000 ? 0.6 : 0;
-      const a2 = state.shackleton && w > 0 ? (grown > 0 ? 0.85 : 0.45) : 0;
-      const amount = 1 - (1 - a1) * (1 - a2);
-      tint[n] = amount;
-      if (amount > 0) {
-        const c = otherColour.clone().multiplyScalar(a1 * (1 - a2)).add(limestone.clone().multiplyScalar(a2)).multiplyScalar(1 / amount);
-        set3(col, n, c.r, c.g, c.b);
-      }
     }
   }
   const index = [];
@@ -914,34 +944,61 @@ function update() {
   const rim = [];
   for (let i = ci0; i < ci1; i++) rim.push([cj1 * nx + i, cj1 * nx + i + 1]);
   for (let j = cj0; j < cj1; j++) rim.push([j * nx + ci0, (j + 1) * nx + ci0], [j * nx + ci1, (j + 1) * nx + ci1]);
-  setGeometry(top, pos, col, index);
-  if (!state.gridCoords) {
-    state.gridCoords = new Float32Array(nx * ny * 2);
-    for (let n = 0; n < nx * ny; n++) { state.gridCoords[n * 2] = n % nx; state.gridCoords[n * 2 + 1] = Math.floor(n / nx); }
+  // The top surface: its finer grid is made again only when the box changes; for each age
+  // only the heights and masks change.
+  const cropKey = [ci0, ci1, cj0, cj1].join();
+  if (state.topKey !== cropKey) {
+    state.topKey = cropKey;
+    const fine = fineGrid(ci0, ci1, cj0, cj1, PER);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(fine.count * 3), 3));
+    g.setAttribute('aGrid', new THREE.Float32BufferAttribute(fine.grid, 2));
+    g.setIndex(new THREE.BufferAttribute(fine.index, 1));
+    top.geometry.dispose();
+    top.geometry = g;
+    geologyLayer.mesh.geometry = g;
+    byrdLayer.mesh.geometry = g;
   }
-  top.geometry.setAttribute('aGrid', new THREE.Float32BufferAttribute(state.gridCoords, 2));
-  top.geometry.setAttribute('aTint', new THREE.Float32BufferAttribute(tint, 1));
-  heightTexture.image = { data: h, width: nx, height: ny };
-  heightTexture.needsUpdate = true;
-  // Rock by age and the Byrd Group, cell by cell on the same surface.
+  setGridTexture(heightTexture, h, nx, ny);
+  surfaceUniforms.uScaleY.value = state.ve / 1e6;
+  surfaceUniforms.uStep.value = meta.step_km / 1000;
+  surfaceUniforms.uOrigin.value.set(meta.along_km[0] / 1000, -meta.across_km[0] / 1000);
+  const otherMask = new Float32Array(nx * ny);
+  for (let n = 0; n < nx * ny; n++) otherMask[n] = other(n) ? 1 : 0;
+  setGridTexture(otherTexture, otherMask, nx, ny);
+  if (!state.lensMask) {
+    state.lensMask = Float32Array.from(data.lens, (w) => (w > 0 ? 1 : 0));
+    state.lensWeight = Float32Array.from(data.lens, (w) => w / 255);
+    setGridTexture(lensTexture, state.lensMask, nx, ny);
+  }
+  topUniforms.uLensAmount.value = state.shackleton ? (grown > 0 ? 0.85 : 0.45) : 0;
+  // The surface between grid points, as the shaders draw it.
+  const hAt = (gx, gy) => splineAt(h, nx, ny, gx, gy);
+  // Rock by age and the Byrd Group, on the same surface.
   geologyLayer.mesh.visible = Boolean(state.geology && meta.geology?.cells);
-  if (geologyLayer.mesh.visible) {
-    colourGeology(geologyStates(state.age));
-    layOnTop(geologyLayer, pos, index);
-  }
+  if (geologyLayer.mesh.visible) colourGeology(geologyStates(state.age));
   byrdLayer.mesh.visible = Boolean(state.outcrops && meta.outcrops?.cells);
-  if (byrdLayer.mesh.visible) {
-    colourByrd();
-    layOnTop(byrdLayer, pos, index);
-  }
+  if (byrdLayer.mesh.visible) colourByrd();
   setGeometry(base, low, null, lowIndex);
   const wall = [];
   const wallColours = [];
+  // Each piece of the rim drawn PER times finer: its top on the smooth surface, its foot along
+  // the crust's base as the base and the mantle solids have it (straight between grid points).
   for (const [a, b] of rim) {
     const ca = crustColour.slice(a * 3, a * 3 + 3);
     const cb = crustColour.slice(b * 3, b * 3 + 3);
-    cutInto([vtx(pos.slice(a * 3, a * 3 + 3), ca), vtx(pos.slice(b * 3, b * 3 + 3), cb),
-             vtx(low.slice(b * 3, b * 3 + 3), cb), vtx(low.slice(a * 3, a * 3 + 3), ca)], wall, wallColours);
+    const [la, lb] = [low[a * 3 + 1], low[b * 3 + 1]];
+    const points = fineLine(a % nx, Math.floor(a / nx), b % nx, Math.floor(b / nx), PER);
+    const at = (q) => {
+      const f = q / (points.length - 1);
+      const [gx, gy] = points[q];
+      return { top: [xAt(gx), yOf(hAt(gx, gy) / 1000), zAt(gy)], low: [xAt(gx), la + (lb - la) * f, zAt(gy)],
+               c: [0, 1, 2].map((m) => ca[m] + (cb[m] - ca[m]) * f) };
+    };
+    for (let q = 0; q + 1 < points.length; q++) {
+      const [u, v] = [at(q), at(q + 1)];
+      cutInto([vtx(u.top, u.c), vtx(v.top, v.c), vtx(v.low, v.c), vtx(u.low, u.c)], wall, wallColours);
+    }
   }
   setGeometry(walls, wall, wallColours);
 
@@ -986,28 +1043,38 @@ function update() {
   setGeometry(lithosphereSolid, solid(low, lithBase));
   setGeometry(mantleSolid, solid(lithBase, floor));
 
-  // The Shackleton Limestone's area, outlined, inside the box.
-  const outline = [];
-  if (state.shackleton) {
-    const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && data.lens[j * nx + i] > 0 && inCrop(i, j);
-    const half = (xAt(1) - xAt(0)) / 2;
-    const halfZ = (zAt(1) - zAt(0)) / 2;
+  // An area's outline on the surface: where its mask, read smoothly, crosses one half (the
+  // edge the shaders draw), and along the box's sides where the area reaches them.
+  const outlineOf = (mask, lift) => {
+    const out = [];
+    let [a0, a1, b0, b1] = [Infinity, -Infinity, Infinity, -Infinity];
     for (let j = cj0; j <= cj1; j++) {
       for (let i = ci0; i <= ci1; i++) {
-        if (!cellIn(j, i)) continue;
-        const cx = xAt(i);
-        const cz = zAt(j);
-        const y = yOf(h[j * nx + i] / 1000) + 0.004;
-        const [xl, xr] = [Math.max(xAt(ci0), cx - half), Math.min(xAt(ci1), cx + half)];
-        const [zl, zr] = [Math.min(zAt(cj0), cz - halfZ), Math.max(zAt(cj1), cz + halfZ)];
-        if (!cellIn(j, i - 1)) outline.push(xl, y, zl, xl, y, zr);
-        if (!cellIn(j, i + 1)) outline.push(xr, y, zl, xr, y, zr);
-        if (!cellIn(j - 1, i)) outline.push(xl, y, zl, xr, y, zl);
-        if (!cellIn(j + 1, i)) outline.push(xl, y, zr, xr, y, zr);
+        if (!mask[j * nx + i]) continue;
+        [a0, a1, b0, b1] = [Math.min(a0, i), Math.max(a1, i), Math.min(b0, j), Math.max(b1, j)];
       }
     }
-  }
-  setGeometry(limestoneEdge, outline);
+    if (a0 > a1) return out;
+    const field = (gx, gy) => smoothAt(mask, nx, ny, gx, gy) - 0.5;
+    const push = ([ax, ay], [bx, by]) => out.push(xAt(ax), yOf(hAt(ax, ay) / 1000) + lift, zAt(ay), xAt(bx), yOf(hAt(bx, by) / 1000) + lift, zAt(by));
+    const [i0, i1, j0, j1] = [Math.max(ci0, a0 - 1), Math.min(ci1, a1 + 1), Math.max(cj0, b0 - 1), Math.min(cj1, b1 + 1)];
+    for (const [p, q] of contour(field, i0, i1, j0, j1, PER, 0)) push(p, q);
+    for (const [sx, sy, ex, ey] of [[ci0, cj0, ci1, cj0], [ci0, cj1, ci1, cj1], [ci0, cj0, ci0, cj1], [ci1, cj0, ci1, cj1]]) {
+      const points = fineLine(sx, sy, ex, ey, PER);
+      for (let q = 0; q + 1 < points.length; q++) {
+        const [p, r] = [points[q], points[q + 1]];
+        const [fp, fr] = [field(...p), field(...r)];
+        if (fp <= 0 && fr <= 0) continue;
+        if (fp > 0 && fr > 0) { push(p, r); continue; }
+        const f = fp / (fp - fr);
+        const c = [p[0] + (r[0] - p[0]) * f, p[1] + (r[1] - p[1]) * f];
+        if (fp > 0) push(p, c); else push(c, r);
+      }
+    }
+    return out;
+  };
+  // The Shackleton Limestone's area, outlined, inside the box.
+  setGeometry(limestoneEdge, state.shackleton ? outlineOf(state.lensMask, 0.004) : []);
   // Where to name it: the middle of the part of its area inside the box, on the surface.
   state.limestoneAt = null;
   if (state.shackleton) {
@@ -1039,26 +1106,16 @@ function update() {
       const z = (v(j, i) * (1 - fi) + v(j, i + 1) * fi) * (1 - fj) + (v(j + 1, i) * (1 - fi) + v(j + 1, i + 1) * fi) * fj;
       return Math.max(0, yOf(z / 1000)) + 0.006;
     };
-    const cellIn = (j, i) => j >= 0 && i >= 0 && j < ny && i < nx && inCrop(i, j) && byrdAt(j * nx + i).lower;
-    const half = (xAt(1) - xAt(0)) / 2;
-    const halfZ = (zAt(1) - zAt(0)) / 2;
     let [sumX, sumZ, topY, count, upperHere] = [0, 0, 0, 0, false];
     for (let j = cj0; j <= cj1; j++) {
       for (let i = ci0; i <= ci1; i++) {
-        if (!cellIn(j, i)) continue;
-        const [cx, cz] = [xAt(i), zAt(j)];
-        const y = yOf(h[j * nx + i] / 1000) + 0.005;
-        // The cell's edges, cut at the box (its outer cells are half inside).
-        const [xl, xr] = [Math.max(xAt(ci0), cx - half), Math.min(xAt(ci1), cx + half)];
-        const [zl, zr] = [Math.min(zAt(cj0), cz - halfZ), Math.max(zAt(cj1), cz + halfZ)];
-        if (!cellIn(j, i - 1)) byrdOutline.push(xl, y, zl, xl, y, zr);
-        if (!cellIn(j, i + 1)) byrdOutline.push(xr, y, zl, xr, y, zr);
-        if (!cellIn(j - 1, i)) byrdOutline.push(xl, y, zl, xr, y, zl);
-        if (!cellIn(j + 1, i)) byrdOutline.push(xl, y, zr, xr, y, zr);
-        sumX += cx; sumZ += cz; topY = Math.max(topY, y); count++;
-        upperHere ||= byrdAt(j * nx + i).upper;
+        const units = byrdAt(j * nx + i);
+        if (!units.lower) continue;
+        sumX += xAt(i); sumZ += zAt(j); topY = Math.max(topY, yOf(h[j * nx + i] / 1000) + 0.005); count++;
+        upperHere ||= units.upper;
       }
     }
+    byrdOutline.push(...outlineOf(byrdMask('lower'), 0.005));
     if (count) {
       const { gl, gu } = byrdGrowth();
       const upper = upperHere && gu > 0 ? format(t().byrdUpperPart, { km: (state.byrdUpperKm * gu).toFixed(1) }) : '';
@@ -1083,11 +1140,14 @@ function update() {
   // face too) the water between sea level and the sea floor. Nothing where the surface is above
   // sea level; a wall piece is cut where the surface crosses it.
   const sea = [x0, 0, zf, x1, 0, zf, x1, 0, zb, x0, 0, zf, x1, 0, zb, x0, 0, zb];
-  const front = [];
-  for (let i = ci0; i < ci1; i++) front.push([cj0 * nx + i, cj0 * nx + i + 1]);
-  for (const [a, b] of [...front, ...rim]) {
-    const [xa, ya, za] = pos.slice(a * 3, a * 3 + 3);
-    const [xb, yb, zb2] = pos.slice(b * 3, b * 3 + 3);
+  const sides = [[ci0, cj0, ci1, cj0], [ci0, cj1, ci1, cj1], [ci0, cj0, ci0, cj1], [ci1, cj0, ci1, cj1]];
+  const seaPieces = sides.flatMap(([sx, sy, ex, ey]) => {
+    const points = fineLine(sx, sy, ex, ey, PER);
+    return points.slice(1).map((r, q) => [points[q], r]);
+  });
+  for (const [[ga, ja], [gb, jb]] of seaPieces) {
+    const [xa, ya, za] = [xAt(ga), yOf(hAt(ga, ja) / 1000), zAt(ja)];
+    const [xb, yb, zb2] = [xAt(gb), yOf(hAt(gb, jb) / 1000), zAt(jb)];
     if (ya >= 0 && yb >= 0) continue;
     if (ya < 0 && yb < 0) {
       sea.push(xa, 0, za, xb, 0, zb2, xb, yb, zb2, xa, 0, za, xb, yb, zb2, xa, ya, za);
@@ -1122,17 +1182,13 @@ function update() {
   const surfaceY = [];
   const crustBottomY = [];
   const lithY = [];
-  const mantleTopY = [];
-  const bottomY = [];
   const share = [];
-  const lensRow = [];
   for (let i = ci0; i <= ci1; i++) {
     const height = h[cj0 * nx + i];
     xs.push(xAt(i));
     surfaceY.push(yOf(height / 1000));
     share.push(continentalShare(height));
     crustBottomY.push(Math.max(bottom, yOf(height / 1000 - crustKm(height))));
-    lensRow.push(data.lens[cj0 * nx + i] / 255);
   }
   for (let n = 0; n < xs.length; n++) {
     let sum = 0;
@@ -1140,30 +1196,49 @@ function update() {
     for (let m = Math.max(0, n - 6); m <= Math.min(xs.length - 1, n + 6); m++) { sum += share[m]; count++; }
     const f = sum / count;
     lithY.push(Math.max(bottom, Math.min(crustBottomY[n], yOf(-(f * 160 + (1 - f) * 90)))));
-    mantleTopY.push(lithY[n]);
-    bottomY.push(bottom);
+  }
+  // The face is drawn PER times finer than the grid, its top on the smooth surface; the crust's
+  // base from the surface there, the plate's base between the grid points' values.
+  const facePoints = fineLine(ci0, cj0, ci1, cj0, PER).map(([gx]) => gx);
+  const lerpRow = (values, gx) => {
+    const u = gx - ci0;
+    const n = Math.min(values.length - 2, Math.max(0, Math.floor(u)));
+    return values[n] + (values[n + 1] - values[n]) * (u - n);
+  };
+  const fine = { xs: [], surface: [], crustBottom: [], lith: [], bottom: [], share: [] };
+  for (const gx of facePoints) {
+    const height = hAt(gx, cj0);
+    const crustBottom = Math.max(bottom, yOf(height / 1000 - crustKm(height)));
+    fine.xs.push(xAt(gx));
+    fine.surface.push(yOf(height / 1000));
+    fine.share.push(continentalShare(height));
+    fine.crustBottom.push(crustBottom);
+    fine.lith.push(Math.max(bottom, Math.min(crustBottom, lerpRow(lithY, gx))));
+    fine.bottom.push(bottom);
   }
   const out = { p: [], c: [] };
   const faceCut = (poly, o) => cutInto(poly.map((v) => vtx(v.p, v.c, cj0)), o.p, o.c);
-  band(out, xs, mantleTopY, bottomY, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0005, faceCut);
-  band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere), faceZ + 0.0005, faceCut);
-  band(out, xs, surfaceY, crustBottomY, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[n]), faceZ + 0.0005, faceCut);
+  band(out, fine.xs, fine.lith, fine.bottom, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0005, faceCut);
+  band(out, fine.xs, fine.crustBottom, fine.lith, () => colour(COLOURS.lithosphere), faceZ + 0.0005, faceCut);
+  band(out, fine.xs, fine.surface, fine.crustBottom, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), fine.share[n]), faceZ + 0.0005, faceCut);
+  // How much of an area (a mask) is at a point of the face: its smooth edge, as on the top.
+  const edgeOf = (mask, gx) => {
+    const t = Math.min(1, Math.max(0, (smoothAt(mask, nx, ny, gx, cj0) - 0.4) / 0.2));
+    return t * t * (3 - 2 * t);
+  };
   if (state.outcrops && meta.outcrops?.cells) {
-    // The Byrd Group on the face, cell by cell: the upper on top of the lower laid down
-    // before it. The surface stays at PaleoDEM's height; the pile builds downward.
+    // The Byrd Group on the face: the upper on top of the lower laid down before it. The
+    // surface stays at PaleoDEM's height; the pile builds downward.
     const { gl, gu } = byrdGrowth();
-    const units = xs.map((_, n) => byrdAt(cj0 * nx + ci0 + n));
-    const steps = cellSteps(xs, surfaceY, [units.map((u) => (u.upper ? yOf(state.byrdUpperKm * gu) : 0)),
-                                           units.map((u) => (u.lower ? yOf(state.limestoneKm * gl) : 0))]);
-    const [upperThick, lowerThick] = steps.values;
-    const upperBase = steps.surface.map((y, n) => y - upperThick[n]);
-    const lowerBase = upperBase.map((y, n) => y - lowerThick[n]);
-    if (gl > 0) band(out, steps.xs, upperBase, lowerBase, () => colour(BYRD.lower.colour), faceZ + 0.0007, faceCut);
-    if (gu > 0) band(out, steps.xs, steps.surface, upperBase, () => colour(BYRD.upper.colour), faceZ + 0.0007, faceCut);
+    const upperBase = fine.surface.map((y, n) => y - yOf(state.byrdUpperKm * gu) * edgeOf(byrdMask('upper'), facePoints[n]));
+    const lowerBase = upperBase.map((y, n) => y - yOf(state.limestoneKm * gl) * edgeOf(byrdMask('lower'), facePoints[n]));
+    if (gl > 0) band(out, fine.xs, upperBase, lowerBase, () => colour(BYRD.lower.colour), faceZ + 0.0007, faceCut);
+    if (gu > 0) band(out, fine.xs, fine.surface, upperBase, () => colour(BYRD.upper.colour), faceZ + 0.0007, faceCut);
   } else if (state.shackleton && grown > 0) {
-    // The Shackleton Limestone's area alone (the Byrd Group layer, when on, draws it instead).
-    const lower = surfaceY.map((y, n) => y - yOf(state.limestoneKm * lensRow[n] * grown));
-    band(out, xs, surfaceY, lower, () => limestone, faceZ + 0.0007, faceCut);
+    // The Shackleton Limestone's area alone (the Byrd Group layer, when on, draws it instead),
+    // thinning over its outer part as the build's lens weight has it.
+    const lower = fine.surface.map((y, n) => y - yOf(state.limestoneKm * smoothAt(state.lensWeight, nx, ny, facePoints[n], cj0) * grown));
+    band(out, fine.xs, fine.surface, lower, () => limestone, faceZ + 0.0007, faceCut);
   }
   setGeometry(face, out.p, out.c);
   state.profile = { xs, surfaceY, crustBottomY, lithY, bottom, share, z: faceZ };

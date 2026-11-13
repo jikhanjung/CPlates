@@ -485,9 +485,10 @@ async function openSection(viewport, query) {
     const byrd = await page.evaluate(() => window.cplates.byrd());
     check(byrd.visible && byrd.cells > 20, `the Byrd Group cells should be drawn: ${JSON.stringify(byrd)}`);
     const label = () => page.evaluate(() => [...document.querySelectorAll('#labels span.outcrop')].map((s) => s.textContent).join(' | '));
-    check(byrd.state === 'none' && (await label()).includes('아직 쌓이기 전'), `530 Ma: nothing laid down yet: ${byrd.state}, ${await label()}`);
     // Labels follow on the next frames: wait for them rather than a fixed time.
-    const labelHas = (text) => page.waitForFunction((x) => [...document.querySelectorAll('#labels span.outcrop')].some((s) => s.textContent.includes(x)), text, { timeout: 10000 }).catch(() => null);
+    const labelHas = (text) => page.waitForFunction((x) => [...document.querySelectorAll('#labels span.outcrop')].some((s) => s.textContent.includes(x)), text, { timeout: 15000 }).catch(() => null);
+    await labelHas('아직 쌓이기 전');
+    check(byrd.state === 'none' && (await label()).includes('아직 쌓이기 전'), `530 Ma: nothing laid down yet: ${byrd.state}, ${await label()}`);
     await page.evaluate(() => window.cplates.goTo(518));
     await labelHas('하부 1.1 km');
     check((await page.evaluate(() => window.cplates.byrd().state)) === 'lower' && /하부 [\d.]+ km/.test(await label()) && !(await label()).includes('상부'),
@@ -560,7 +561,7 @@ async function openSection(viewport, query) {
   check(new URL(page.url()).searchParams.get('shackleton') === '1', 'the address should remember the limestone toggle');
   check(await page.evaluate(() => { const n = document.querySelector('#limestone-note'); const box = document.querySelector('#show-limestone').closest('.tools');
     return !n.hidden && n.previousElementSibling === box; }), 'the limestone note should show right under its checkbox');
-  check(await page.evaluate(() => [...document.querySelectorAll('#labels span')].some((s) => s.textContent.includes('지금 두께'))),
+  check(await page.waitForFunction(() => [...document.querySelectorAll('#labels span')].some((s) => s.textContent.includes('지금 두께')), null, { timeout: 15000 }).then(() => true, () => false),
         'the limestone should be named over its area with its thickness so far');
   const grown520 = await page.evaluate(() => window.cplates.state.limestone.grown);
   check(grown520 > 0.3 && grown520 < 0.5, `520 Ma: about 5/13 of the limestone laid down, got ${grown520}`);
