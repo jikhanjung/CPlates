@@ -942,7 +942,27 @@ function update() {
   const x1 = xAt(ci1);
   const zf = zAt(cj0);
   const zb = zAt(cj1);
-  setGeometry(water, [x0, 0, zf, x1, 0, zf, x1, 0, zb, x0, 0, zf, x1, 0, zb, x0, 0, zb]);
+  // The sea as one translucent body: its surface, and on every side of the box (the section
+  // face too) the water between sea level and the sea floor. Nothing where the surface is above
+  // sea level; a wall piece is cut where the surface crosses it.
+  const sea = [x0, 0, zf, x1, 0, zf, x1, 0, zb, x0, 0, zf, x1, 0, zb, x0, 0, zb];
+  const front = [];
+  for (let i = ci0; i < ci1; i++) front.push([cj0 * nx + i, cj0 * nx + i + 1]);
+  for (const [a, b] of [...front, ...rim]) {
+    const [xa, ya, za] = pos.slice(a * 3, a * 3 + 3);
+    const [xb, yb, zb2] = pos.slice(b * 3, b * 3 + 3);
+    if (ya >= 0 && yb >= 0) continue;
+    if (ya < 0 && yb < 0) {
+      sea.push(xa, 0, za, xb, 0, zb2, xb, yb, zb2, xa, 0, za, xb, yb, zb2, xa, ya, za);
+      continue;
+    }
+    // The surface crosses sea level between a and b: water only on the low side.
+    const f = ya / (ya - yb);
+    const [xc, zc] = [xa + f * (xb - xa), za + f * (zb2 - za)];
+    if (ya < 0) sea.push(xa, 0, za, xc, 0, zc, xa, ya, za);
+    else sea.push(xc, 0, zc, xb, 0, zb2, xb, yb, zb2);
+  }
+  setGeometry(water, sea);
   const corners = [[x0, zf], [x1, zf], [x1, zb], [x0, zb]];
   const frame = [];
   for (let c = 0; c < 4; c++) {
@@ -963,7 +983,6 @@ function update() {
   const faceZ = zf;
   const xs = [];
   const surfaceY = [];
-  const seaY = [];
   const crustBottomY = [];
   const lithY = [];
   const mantleTopY = [];
@@ -974,7 +993,6 @@ function update() {
     const height = h[cj0 * nx + i];
     xs.push(xAt(i));
     surfaceY.push(yOf(height / 1000));
-    seaY.push(Math.max(0, yOf(height / 1000)));
     share.push(continentalShare(height));
     crustBottomY.push(Math.max(bottom, yOf(height / 1000 - crustKm(height))));
     lensRow.push(data.lens[cj0 * nx + i] / 255);
@@ -993,7 +1011,6 @@ function update() {
   band(out, xs, mantleTopY, bottomY, () => colour(COLOURS.mantleTop).lerp(colour(COLOURS.mantleBottom), Math.min(1, depth / 700)), faceZ + 0.0005, faceCut);
   band(out, xs, crustBottomY, lithY, () => colour(COLOURS.lithosphere), faceZ + 0.0005, faceCut);
   band(out, xs, surfaceY, crustBottomY, (n) => colour(COLOURS.oceanic).lerp(colour(COLOURS.continental), share[n]), faceZ + 0.0005, faceCut);
-  band(out, xs, seaY, surfaceY.map((y) => Math.min(0, y)), () => colour(COLOURS.water).multiplyScalar(0.8), faceZ + 0.0005, faceCut);
   if (state.shackleton && grown > 0) {
     const lower = surfaceY.map((y, n) => y - yOf(state.limestoneKm * lensRow[n] * grown));
     band(out, xs, surfaceY, lower, () => limestone, faceZ + 0.0007, faceCut);
