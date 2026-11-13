@@ -257,7 +257,6 @@ def main():
         h, w = image.shape[:2]
         px = np.clip(((lon + 180) / 360 * w).astype(int), 0, w - 1)
         py = np.clip(((90 - lat) / 180 * h).astype(int), 0, h - 1)
-        index = image[py, px, 0]
         continental = image[py, px, 1].astype(float) / 255.0
         crust[k] = (continental * 255).astype(np.uint8).reshape(ny, nx)
         # Which continental block is here: Merdith's continent polygons reconstructed to t
@@ -280,10 +279,13 @@ def main():
         heights = np.zeros(len(flat_grid))
         R802p = {g: paleomap.m(frame_plate, g) for g in (older, younger)}
         for n in range(len(flat_grid)):
-            plate = int(block[n]) if block[n] and merdith.m(int(block[n]), t) is not None \
-                else index_to_plate.get(int(index[n]))
+            # Only rock inside one of Merdith's continent polygons is followed. On the edge of
+            # the crust mask (the frame's raster) a point can be continental with no polygon;
+            # its resolved plate (a large, mostly oceanic one) carried it to unrelated PaleoDEM
+            # land, single cells 1–2 km above the sea around them. Those are read like the sea.
+            plate = int(block[n])
             value = {}
-            if continental[n] >= 0.5 and plate is not None and merdith.m(plate, t) is not None:
+            if continental[n] >= 0.5 and plate and merdith.m(plate, t) is not None:
                 present = merdith.m(plate, t).T @ where[n]
                 plon, plat = lon_lat(present)
                 pplate = paleomap_plate(plon, plat)
