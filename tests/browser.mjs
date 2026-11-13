@@ -486,18 +486,20 @@ async function openSection(viewport, query) {
     check(byrd.visible && byrd.cells > 20, `the Byrd Group cells should be drawn: ${JSON.stringify(byrd)}`);
     const label = () => page.evaluate(() => [...document.querySelectorAll('#labels span.outcrop')].map((s) => s.textContent).join(' | '));
     check(byrd.state === 'none' && (await label()).includes('아직 쌓이기 전'), `530 Ma: nothing laid down yet: ${byrd.state}, ${await label()}`);
+    // Labels follow on the next frames: wait for them rather than a fixed time.
+    const labelHas = (text) => page.waitForFunction((x) => [...document.querySelectorAll('#labels span.outcrop')].some((s) => s.textContent.includes(x)), text, { timeout: 10000 }).catch(() => null);
     await page.evaluate(() => window.cplates.goTo(518));
-    await page.waitForTimeout(300);
+    await labelHas('하부 1.1 km');
     check((await page.evaluate(() => window.cplates.byrd().state)) === 'lower' && /하부 [\d.]+ km/.test(await label()) && !(await label()).includes('상부'),
           `518 Ma: the lower Byrd Group only: ${await label()}`);
     await page.evaluate(() => window.cplates.goTo(500));
-    await page.waitForTimeout(300);
+    await labelHas('상부');
     check((await page.evaluate(() => window.cplates.byrd().state)) === 'upper' && (await label()).includes('하부 2.0 km + 상부'),
           `500 Ma: the upper on top of the whole lower: ${await label()}`);
     // The lower is the Shackleton Limestone: one thickness for both menus.
     await page.selectOption('#byrd-lower-km', '5.4');
     await page.selectOption('#byrd-upper-km', '3');
-    await page.waitForTimeout(300);
+    await labelHas('하부 5.4 km');
     const params = new URL(page.url()).searchParams;
     check(params.get('limestone') === '5.4' && params.get('upper') === '3' && (await page.inputValue('#limestone-km')) === '5.4',
           `the thickness menus should be kept in the address and in step: ${params}`);

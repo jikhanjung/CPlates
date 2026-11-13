@@ -236,6 +236,67 @@ const colour = (hex) => {
   return parsedColours.get(hex).clone();
 };
 const top = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+// The top surface is coloured by height per pixel, not per vertex: coloured per vertex, the
+// sharp steps of the scale (the coast, the shelf edge) followed the 27.8 km grid's triangles in
+// zigzags. The fragment shader reads the heights (a float texture, one texel per grid point),
+// interpolates them with Catmull–Rom splines (through every grid point, smooth between; held
+// within the four nearest points so they do not overshoot) and looks the colour up in the
+// hypsometric scale (a 1D texture). Tints (other continents, the limestone) stay per vertex:
+// the vertex colour is the tint and aTint how much of it.
+const HYPSO_RANGE = [-6000, 4000];
+const hypsoTexture = (() => {
+  const n = 4096;
+  const data = new Uint8Array(n * 4);
+  for (let k = 0; k < n; k++) {
+    const height = HYPSO_RANGE[0] + ((k + 0.5) / n) * (HYPSO_RANGE[1] - HYPSO_RANGE[0]);
+    data.set([...hypsometric(height).getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number), 255], k * 4);
+  }
+  const texture = new THREE.DataTexture(data, n, 1, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+})();
+const heightTexture = new THREE.DataTexture(new Float32Array(1), 1, 1, THREE.RedFormat, THREE.FloatType);
+top.material.onBeforeCompile = (shader) => {
+  Object.assign(shader.uniforms, { uHeights: { value: heightTexture }, uHypso: { value: hypsoTexture },
+                                   uRange: { value: new THREE.Vector2(...HYPSO_RANGE) } });
+  shader.vertexShader = `attribute vec2 aGrid;\nattribute float aTint;\nvarying vec2 vGrid;\nvarying float vTint;\n${
+    shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGrid = aGrid;\n  vTint = aTint;')}`;
+  shader.fragmentShader = `uniform sampler2D uHeights;
+uniform sampler2D uHypso;
+uniform vec2 uRange;
+varying vec2 vGrid;
+varying float vTint;
+float gridHeight(ivec2 p) {
+  return texelFetch(uHeights, clamp(p, ivec2(0), textureSize(uHeights, 0) - 1), 0).r;
+}
+// Catmull–Rom weights for the points at -1, 0, 1, 2 around t in [0, 1).
+vec4 catmullRom(float t) {
+  float t2 = t * t;
+  float t3 = t2 * t;
+  return 0.5 * vec4(-t3 + 2.0 * t2 - t, 3.0 * t3 - 5.0 * t2 + 2.0, -3.0 * t3 + 4.0 * t2 + t, t3 - t2);
+}
+float smoothHeight(vec2 g) {
+  vec2 cell = floor(g);
+  ivec2 b = ivec2(cell);
+  vec4 wx = catmullRom(g.x - cell.x);
+  vec4 wy = catmullRom(g.y - cell.y);
+  float sum = 0.0;
+  for (int j = 0; j < 4; j++) {
+    float row = 0.0;
+    for (int i = 0; i < 4; i++) row += wx[i] * gridHeight(b + ivec2(i - 1, j - 1));
+    sum += wy[j] * row;
+  }
+  float h00 = gridHeight(b), h10 = gridHeight(b + ivec2(1, 0)), h01 = gridHeight(b + ivec2(0, 1)), h11 = gridHeight(b + ivec2(1, 1));
+  return clamp(sum, min(min(h00, h10), min(h01, h11)), max(max(h00, h10), max(h01, h11)));
+}
+${shader.fragmentShader.replace('#include <color_fragment>', `
+  float surfaceHeight = smoothHeight(vGrid);
+  vec3 scaleColour = texture2D(uHypso, vec2((surfaceHeight - uRange.x) / (uRange.y - uRange.x), 0.5)).rgb;
+  diffuseColor.rgb *= mix(scaleColour, vColor.rgb, vTint);`)}`;
+};
 // GeoMAP layers as pictures with one texel per grid cell, laid on the top surface: each cell
 // (centred on its grid point, like the Shackleton Limestone's area) is filled whole.
 function cellOverlay(order, offsetUnits) {
@@ -464,8 +525,6 @@ function setGeometry(mesh, positions, colours, index) {
   return g;
 }
 
-// A band between two curves along the section face (z = 0), coloured per column.
-// With `cut`, each quad goes through it instead (to leave out the slab).
 // Cell by cell along a row: each grid point's value held flat over its cell (halfway to the
 // next point), so a band drawn on these steps has straight sides at the cell edges. The surface
 // is kept as it is, with points at the cell edges between.
@@ -485,6 +544,8 @@ function cellSteps(xs, surface, values) {
   return out;
 }
 
+// A band between two curves along the section face (z = 0), coloured per column.
+// With `cut`, each quad goes through it instead (to leave out the slab).
 function band(out, xs, upper, lower, colourAt, z = 0.0005, cut = null) {
   for (let i = 0; i < xs.length - 1; i++) {
     const c0 = colourAt(i);
@@ -653,13 +714,15 @@ function keepBox() {
   history.replaceState(null, '', `?${params}`);
 }
 
-// Handles in the middle of the four side faces: drag one to move that face.
+// Handles in the middle of the four side faces: drag one to move that face. Lit balls, set
+// partly into the face and depth-tested like the rest: the part inside the box is hidden by
+// opaque rock, and seen through translucent layers (mantle, sea) it is shaded by them.
 const handleGroup = new THREE.Group();
-const handleShape = new THREE.SphereGeometry(0.035, 20, 12);
+const handleShape = new THREE.SphereGeometry(0.035, 32, 20);
+const handleMaterial = new THREE.MeshPhongMaterial({ color: 0xffd23f, specular: 0x777766, shininess: 60, emissive: 0x6a4f00 });
 const handles = {};
 for (const side of ['front', 'back', 'left', 'right']) {
-  const mesh = new THREE.Mesh(handleShape, new THREE.MeshBasicMaterial({ color: 0xffd23f, depthTest: false, transparent: true, opacity: 0.95 }));
-  mesh.renderOrder = 10;
+  const mesh = new THREE.Mesh(handleShape, handleMaterial);
   mesh.userData.side = side;
   handles[side] = mesh;
   handleGroup.add(mesh);
@@ -810,6 +873,7 @@ function update() {
   // Per grid point, filled only inside the box (the grid reaches beyond it).
   const pos = new Float32Array(nx * ny * 3);
   const col = new Float32Array(nx * ny * 3);
+  const tint = new Float32Array(nx * ny);
   const low = new Float32Array(nx * ny * 3);
   const crustColour = new Float32Array(nx * ny * 3);
   const [oceanicColour, continentalColour, otherColour] = [colour(COLOURS.oceanic), colour(COLOURS.continental), colour('#8b8a86')];
@@ -822,11 +886,17 @@ function update() {
       set3(low, n, xAt(i), Math.max(bottom, yOf(height / 1000 - crustKm(height))), zAt(j));
       const cc = oceanicColour.clone().lerp(continentalColour, continentalShare(height));
       set3(crustColour, n, cc.r, cc.g, cc.b);
-      const c = hypsometric(height);
+      // The tints over the height colour (drawn in the shader): grey for other continents,
+      // then the limestone; as one colour and how much of it.
       const w = data.lens[n] / 255;
-      if (other(n) && height > -1000) c.lerp(otherColour, 0.6);
-      if (state.shackleton && w > 0) c.lerp(limestone, grown > 0 ? 0.85 : 0.45);
-      set3(col, n, c.r, c.g, c.b);
+      const a1 = other(n) && height > -1000 ? 0.6 : 0;
+      const a2 = state.shackleton && w > 0 ? (grown > 0 ? 0.85 : 0.45) : 0;
+      const amount = 1 - (1 - a1) * (1 - a2);
+      tint[n] = amount;
+      if (amount > 0) {
+        const c = otherColour.clone().multiplyScalar(a1 * (1 - a2)).add(limestone.clone().multiplyScalar(a2)).multiplyScalar(1 / amount);
+        set3(col, n, c.r, c.g, c.b);
+      }
     }
   }
   const index = [];
@@ -845,6 +915,14 @@ function update() {
   for (let i = ci0; i < ci1; i++) rim.push([cj1 * nx + i, cj1 * nx + i + 1]);
   for (let j = cj0; j < cj1; j++) rim.push([j * nx + ci0, (j + 1) * nx + ci0], [j * nx + ci1, (j + 1) * nx + ci1]);
   setGeometry(top, pos, col, index);
+  if (!state.gridCoords) {
+    state.gridCoords = new Float32Array(nx * ny * 2);
+    for (let n = 0; n < nx * ny; n++) { state.gridCoords[n * 2] = n % nx; state.gridCoords[n * 2 + 1] = Math.floor(n / nx); }
+  }
+  top.geometry.setAttribute('aGrid', new THREE.Float32BufferAttribute(state.gridCoords, 2));
+  top.geometry.setAttribute('aTint', new THREE.Float32BufferAttribute(tint, 1));
+  heightTexture.image = { data: h, width: nx, height: ny };
+  heightTexture.needsUpdate = true;
   // Rock by age and the Byrd Group, cell by cell on the same surface.
   geologyLayer.mesh.visible = Boolean(state.geology && meta.geology?.cells);
   if (geologyLayer.mesh.visible) {
