@@ -528,7 +528,7 @@ async function openSection(viewport, query) {
     await page.waitForTimeout(200);
     check(!(await page.evaluate(() => window.cplates.byrd().visible)), 'unticked, the Byrd Group cells should go');
   }
-  // Rock by age from SCAR GeoMAP, cell by cell on the surface; rock still to come is greyed.
+  // Rock by age from SCAR GeoMAP, cell by cell on the surface; rock still to come is only outlined.
   {
     await page.evaluate(() => window.cplates.goTo(520));
     await page.click('#show-geology');
@@ -543,6 +543,7 @@ async function openSection(viewport, query) {
     const at = (id) => states[ids.indexOf(id)];
     check(at('granite') === 'forming' && at('beacon') === 'later' && at('shield') === 'formed',
           `at 520 Ma: granites forming, Beacon still to come, the shield there: ${states}`);
+    check((await page.evaluate(() => window.cplates.geology().outlined)) > 0, 'at 520 Ma the rock still to come (Beacon, Ferrar, …) should be outlined');
     await page.screenshot({ path: 'test-results/section-geology-520.png' });
     await page.evaluate(() => window.cplates.closeUp());
     await page.waitForTimeout(1500);
