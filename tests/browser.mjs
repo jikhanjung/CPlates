@@ -462,8 +462,9 @@ async function openSection(viewport, query) {
           'from the front, the side handles should be hidden behind the box and the front one shown');
     // Turn to look from the A end: its handle comes out from behind the box.
     await page.evaluate(() => { const c = window.cplates; c.camera.position.set(-7.5, 2.5, 3.5); c.controls.target.set(-1, -0.3, -0.9); c.controls.update(); });
-    await page.waitForTimeout(400);
-    check(await page.evaluate(() => window.cplates.handles.left.visible), 'from the A end, the left handle should show');
+    // Which handles show is worked out each frame: wait for one (frames are slow in SwiftShader).
+    check(await page.waitForFunction(() => window.cplates.handles.left.visible, null, { timeout: 15000 }).then(() => true, () => false),
+          'from the A end, the left handle should show');
     await drag('left', -60, 0);
     await drag('front', 0, 80);
     const out = await page.evaluate(() => ({ ...window.cplates.state.crop }));
