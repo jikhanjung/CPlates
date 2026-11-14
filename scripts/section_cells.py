@@ -9,7 +9,9 @@ the whole cell it lies in instead of a speck:
   it, as bits: 1 lower Byrd Group (Shackleton Limestone), 2 upper Byrd Group (Starshot
   Formation, Douglas Conglomerate), 4 Byrd Group not divided.
 - Rock by age (sources/sections/geology_map.png, 2 km pixels: class, share of rock): per
-  cell, the class with the most rock and the rock's area.
+  cell, the class with the most rock, the rock's area, and when that rock formed: the
+  medians, weighted by area, of its GeoMAP units' oldest and youngest ages
+  (geology_ages.png).
 
 Called by build_section.py; run alone, it updates site/data/section/meta.json in place.
 
@@ -24,6 +26,7 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "site/data/section"
 GEOLOGY_PNG = ROOT / "sources/sections/geology_map.png"
+GEOLOGY_AGES = ROOT / "sources/sections/geology_ages.png"
 BYRD_BITS = {"shackleton": 1, "starshot": 2, "douglas": 2, "byrd": 4}
 
 
@@ -55,8 +58,15 @@ def byrd_cells(meta, fine=8):
     return [[int(i), int(j), int(bits[j, i])] for j, i in zip(*np.nonzero(bits))]
 
 
-def geology_cells(meta, png=GEOLOGY_PNG):
-    """[[i, j, class, rock km²], …] for every cell with any rock in GeoMAP's classes."""
+def weighted_median(values, weights):
+    order = np.argsort(values)
+    cumulative = np.cumsum(weights[order])
+    return float(values[order][np.searchsorted(cumulative, cumulative[-1] / 2)])
+
+
+def geology_cells(meta, png=GEOLOGY_PNG, ages_png=GEOLOGY_AGES):
+    """[[i, j, class, rock km², oldest Ma, youngest Ma], …] for every cell with any rock in
+    GeoMAP's classes."""
     g = meta["geology"]
     nx, ny = meta["nx"], meta["ny"]
     pixels = np.asarray(Image.open(png))
@@ -74,8 +84,19 @@ def geology_cells(meta, png=GEOLOGY_PNG):
     np.add.at(area, (j[keep], i[keep], cls[keep]), share[keep] * p * p)
     total = area.sum(axis=2)
     top = area.argmax(axis=2)
-    return [[int(ii), int(jj), int(top[jj, ii]), round(float(total[jj, ii]), 1)]
-            for jj, ii in zip(*np.nonzero(total > 0))]
+    ages = np.asarray(Image.open(ages_png)).astype(float)
+    oldest, youngest = ages[:, :w], ages[:, w:]
+    cells = []
+    for jj, ii in zip(*np.nonzero(total > 0)):
+        k = top[jj, ii]
+        here = keep & (j == jj) & (i == ii) & (cls == k) & (oldest > 0)
+        if here.any():
+            old = weighted_median(oldest[here], share[here])
+            young = weighted_median(youngest[here], share[here])
+        else:
+            old, young = g["classes"][k - 1]["age"]
+        cells.append([int(ii), int(jj), int(k), round(float(total[jj, ii]), 1), round(old), round(young)])
+    return cells
 
 
 def add_cells(meta):

@@ -529,7 +529,7 @@ async function openSection(viewport, query) {
     await page.waitForTimeout(200);
     check(!(await page.evaluate(() => window.cplates.byrd().visible)), 'unticked, the Byrd Group cells should go');
   }
-  // Rock by age from SCAR GeoMAP, cell by cell on the surface; rock still to come is only outlined.
+  // Rock by age from SCAR GeoMAP, cell by cell: formed filled, forming hatched, still to come outlined.
   {
     await page.evaluate(() => window.cplates.goTo(520));
     await page.click('#show-geology');
@@ -537,14 +537,36 @@ async function openSection(viewport, query) {
     await page.waitForTimeout(400);
     check(new URL(page.url()).searchParams.get('geology') === '1', 'the address should remember the rock layer');
     check(!(await page.locator('#geology-note').isHidden()), 'the rock layer note should say what it shows');
-    const legend = await page.locator('#legend').innerText();
+    // Its legend is a panel on the right, with a checkbox per class.
+    check(await page.locator('#rock-legend').isVisible(), 'the rock legend should show on the right');
+    const box = await page.locator('#rock-legend').boundingBox();
+    check(box && box.x > 900, `the rock legend should be on the right: ${JSON.stringify(box)}`);
+    const legend = await page.locator('#rock-classes').innerText();
     check(legend.includes('비컨 누층군') && legend.includes('로스 조산대 화강암류'), `the legend should list the rock classes: ${legend}`);
-    const states = (await page.evaluate(() => window.cplates.geology().states)).split(',');
-    const ids = await page.evaluate(() => window.cplates.state.data.meta.geology.classes.map((c) => c.id));
-    const at = (id) => states[ids.indexOf(id)];
-    check(at('granite') === 'forming' && at('beacon') === 'later' && at('shield') === 'formed',
-          `at 520 Ma: granites forming, Beacon still to come, the shield there: ${states}`);
-    check((await page.evaluate(() => window.cplates.geology().outlined)) > 0, 'at 520 Ma the rock still to come (Beacon, Ferrar, …) should be outlined');
+    const at520 = await page.evaluate(() => window.cplates.geology());
+    check(at520.counts.formed > 0 && at520.counts.forming > 0 && at520.counts.later > 0 && at520.outlined > 0,
+          `at 520 Ma some rock formed (filled), some forming (hatched), some still to come (outlined): ${JSON.stringify(at520)}`);
+    // Per cell, from GeoMAP's unit ages: the Cambrian units (541–485 Ma) have formed by 480 Ma.
+    await page.evaluate(() => window.cplates.goTo(480));
+    await page.waitForTimeout(300);
+    const at480 = await page.evaluate(() => window.cplates.geology());
+    check(at480.counts.formed > at520.counts.formed + 50, `more rock formed at 480 than at 520 Ma: ${at520.counts.formed} → ${at480.counts.formed}`);
+    await page.evaluate(() => window.cplates.goTo(520));
+    // Only the ticked classes are shown.
+    await page.click('#rock-classes input[data-rock="granite"]');
+    await page.waitForTimeout(300);
+    check(new URL(page.url()).searchParams.get('rocks')?.split(',').includes('granite') === false,
+          `unticking a class should leave it out of the address: ${new URL(page.url()).searchParams.get('rocks')}`);
+    const without = await page.evaluate(() => window.cplates.geology());
+    check(without.counts.formed + without.counts.forming + without.counts.later < at520.counts.formed + at520.counts.forming + at520.counts.later,
+          'unticking the granites should hide their cells');
+    await page.click('#rock-none');
+    await page.waitForTimeout(300);
+    const none = await page.evaluate(() => window.cplates.geology());
+    check(none.counts.formed + none.counts.forming + none.counts.later === 0 && none.outlined === 0, 'None should hide every class');
+    await page.click('#rock-all');
+    await page.waitForTimeout(300);
+    check(new URL(page.url()).searchParams.get('rocks') === null, 'All should clear the address');
     await page.screenshot({ path: 'test-results/section-geology-520.png' });
     await page.evaluate(() => window.cplates.closeUp());
     await page.waitForTimeout(1500);
@@ -554,6 +576,7 @@ async function openSection(viewport, query) {
     await page.click('#show-geology');
     await page.waitForTimeout(200);
     check(!(await page.evaluate(() => window.cplates.geology().visible)), 'unticked, the rock layer should go');
+    check(await page.locator('#rock-legend').isHidden(), 'unticked, the rock legend should go too');
   }
   // Merdith's trench and PaleoDEM disagree: marked; and, on request, the trench fitted to PaleoDEM.
   {

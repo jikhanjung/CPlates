@@ -81,8 +81,9 @@ const STRINGS = {
     byrdLabel: '버드층군 · 하부 {lower} km{upper} (모식)', byrdUpperPart: ' + 상부 {km} km', byrdNotYet: '버드층군 분포 (아직 쌓이기 전)',
     outcropSections: '측정 단면 S1·S2·HR (Myrow 2002)',
     showGeology: '시대별 암석 분포 (GeoMAP)',
-    geologyNote: '지금 드러난 암석을 SCAR GeoMAP v2022-08(Cox et al. 2023)의 간추린 분류(SIMPCODE)로 나눠 생긴 때 순으로 칠했습니다. 단면 격자 칸(약 28 km)마다 그 칸에서 가장 넓게 드러난 암석의 색으로 칸 전체를 칠합니다(암석이 조금이라도 있으면 칠함). 빙퇴석·얼음·분류 안 된 것은 뺐습니다. 화면의 나이에 아직 생기지 않은 암석(비컨 누층군, 페라 등)은 칸을 채우지 않고 그 분류 색의 테두리만 그립니다. 동남극(판 802)과 함께 옮긴 지금의 자리이며, 그 시대에 그 암석이 있던 범위가 아닙니다. 대륙 대부분이 얼음 밑이라 드러난 곳은 산맥에 몰려 있습니다.',
-    lgGeologyLater: '테두리만: 이 나이에는 아직 생기지 않은 암석',
+    geologyNote: '지금 드러난 암석을 SCAR GeoMAP v2022-08(Cox et al. 2023)의 간추린 분류(SIMPCODE)로 나눠 생긴 때 순으로 칠했습니다. 단면 격자 칸(약 28 km)마다 그 칸에서 가장 넓게 드러난 암석의 색으로 칸 전체를 칠합니다(암석이 조금이라도 있으면 칠함). 빙퇴석·얼음·분류 안 된 것은 뺐습니다. 칸의 암석이 언제 생겼는지는 그 칸에서 가장 넓은 분류에 든 GeoMAP 지질 단위들의 나이(가장 오래된–가장 젊은, 넓이로 가중한 중앙값)를 따릅니다. 화면의 나이에 이미 생긴 것은 채우고, 생기는 중인 것은 빗금으로, 아직 생기지 않은 것(비컨 누층군, 페라 등)은 그 분류 색의 테두리만 그립니다. 오른쪽 범례에서 분류를 골라 볼 수 있습니다. GeoMAP 단위의 나이는 대개 지질 시대 단위(예: 541–485 Ma)라 485 Ma 같은 시대 경계에서 한꺼번에 바뀝니다. 동남극(판 802)과 함께 옮긴 지금의 자리이며, 그 시대에 그 암석이 있던 범위가 아닙니다. 대륙 대부분이 얼음 밑이라 드러난 곳은 산맥에 몰려 있습니다.',
+    rockLegend: '시대별 암석 (GeoMAP)', rockFormed: '채움: 이미 생김', rockForming: '빗금: 생기는 중', rockLater: '테두리: 아직 생기기 전',
+    rockAll: '모두', rockNone: '없음',
     fitTrench: '해구를 PaleoDEM 지형에 맞추기 (해석)',
     fitNote: '해구를 줄마다 가장 가까운 PaleoDEM −2,000 m 선(대륙 사면 발치)으로 옮겨 그립니다. 옮긴 위치는 해석이고, 섭입 방향·시기·수렴 속도는 Merdith 2021 그대로입니다. 회색 점선이 Merdith의 원래 해구입니다.',
     mismatchNote: '해구는 Merdith 2021, 지형은 PaleoDEM(PALEOMAP)에서 옵니다. 두 복원이 대륙 가장자리를 다른 곳에 두어, 빨간 해구 구간은 PaleoDEM의 대륙붕이나 육지 위에 놓입니다.',
@@ -151,8 +152,9 @@ const STRINGS = {
     byrdLabel: 'Byrd Group · lower {lower} km{upper} (sketch)', byrdUpperPart: ' + upper {km} km', byrdNotYet: 'Byrd Group area (not yet laid down)',
     outcropSections: 'Measured sections S1, S2, HR (Myrow 2002)',
     showGeology: 'Rock by age (GeoMAP)',
-    geologyNote: 'Rock exposed today, in the simplified classes (SIMPCODE) of SCAR GeoMAP v2022-08 (Cox et al. 2023), coloured in order of when it formed. Each cell of the section grid (about 28 km) is filled whole with the colour of the rock exposed over most of it (any rock at all is shown); moraine, ice and unclassified rock are left out. Rock that did not yet exist at the age on screen (the Beacon Supergroup, the Ferrar, …) is not filled: only its outline is drawn, in its class’s colour. The places are today’s, carried with East Antarctica (plate 802), not where the rock was at the time. Most of the continent is under ice, so what is exposed lies mostly in the mountains.',
-    lgGeologyLater: 'Outline only: rock not yet formed at this age',
+    geologyNote: 'Rock exposed today, in the simplified classes (SIMPCODE) of SCAR GeoMAP v2022-08 (Cox et al. 2023), coloured in order of when it formed. Each cell of the section grid (about 28 km) is filled whole with the colour of the rock exposed over most of it (any rock at all is shown); moraine, ice and unclassified rock are left out. When a cell’s rock formed follows the ages of the GeoMAP units in its main class there (oldest to youngest, medians weighted by area). Rock already formed at the age on screen is filled, rock forming is hatched, and rock still to come (the Beacon Supergroup, the Ferrar, …) is only outlined, in its class’s colour. Pick the classes to show in the legend on the right. GeoMAP units are mostly dated by period (e.g. 541–485 Ma), so many cells change at once at such boundaries (485 Ma). The places are today’s, carried with East Antarctica (plate 802), not where the rock was at the time. Most of the continent is under ice, so what is exposed lies mostly in the mountains.',
+    rockLegend: 'Rock by age (GeoMAP)', rockFormed: 'Filled: formed', rockForming: 'Hatched: forming', rockLater: 'Outline: still to come',
+    rockAll: 'All', rockNone: 'None',
     fitTrench: 'Fit the trench to PaleoDEM relief (interpretation)',
     fitNote: 'Moves the trench, row by row, to the nearest PaleoDEM −2,000 m contour (the foot of the slope). The moved position is an interpretation; subduction polarity, timing and convergence stay Merdith 2021’s. The grey dashed line is Merdith’s own trench.',
     mismatchNote: 'The trench comes from Merdith 2021, the relief from PaleoDEM (PALEOMAP). The two reconstructions put the margin in different places, so the red stretches of trench lie on PaleoDEM shelf or land.',
@@ -202,6 +204,8 @@ const state = {
   // Upper Byrd Group thickness (km, sketch); the lower one is the Shackleton Limestone's (limestoneKm).
   byrdUpperKm: Number(ASKED.get('upper')) || 2,
   geology: ASKED.get('geology') === '1',
+  // Rock classes shown (ids), from ?rocks=a,b; all when not given.
+  rocks: ASKED.has('rocks') ? new Set(ASKED.get('rocks').split(',').filter(Boolean)) : null,
 };
 const t = () => STRINGS[state.lang];
 
@@ -328,7 +332,7 @@ function cellOverlay(order, offsetUnits) {
   colourTexture.colorSpace = THREE.SRGBColorSpace;
   const cover = gridTexture();
   const material = new THREE.ShaderMaterial({
-    uniforms: { ...surfaceUniforms, uColour: { value: colourTexture }, uCover: { value: cover } },
+    uniforms: { ...surfaceUniforms, uColour: { value: colourTexture }, uCover: { value: cover }, uHatch: { value: 0 } },
     vertexShader: `${SURFACE_VERTEX}
 uniform sampler2D uCover;
 varying float vCover;
@@ -341,6 +345,7 @@ void main() {
     fragmentShader: `${SURFACE_GLSL}
 uniform sampler2D uColour;
 uniform sampler2D uCover;
+uniform float uHatch;
 varying vec2 vGrid;
 varying float vCover;
 void main() {
@@ -370,7 +375,10 @@ void main() {
     for (int j = 0; j < 4; j++) if (c[j] == c[i]) sum += w[j];
     if (sum > bestWeight) { bestWeight = sum; best = c[i]; }
   }
-  gl_FragColor = vec4(best.rgb, best.a * edge);
+  // With uHatch, a cell of lower opacity (rock still forming) is drawn in diagonal stripes.
+  float alpha = best.a;
+  if (uHatch > 0.5 && best.a < 0.75) alpha = mix(0.15, 0.9, step(0.5, fract((gl_FragCoord.x + gl_FragCoord.y) / 8.0)));
+  gl_FragColor = vec4(best.rgb, alpha * edge);
   #include <colorspace_fragment>
 }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -384,6 +392,7 @@ void main() {
 // Rock by age, and over it the lower and upper Byrd Group.
 const geologyLayer = cellOverlay(1, -4);
 const byrdLayer = cellOverlay(2, -8);
+geologyLayer.mesh.material.uniforms.uHatch.value = 1;
 const water = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({
   color: colour(COLOURS.water), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
 const face = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
@@ -534,26 +543,105 @@ function setCells(layer, out, key) {
   layer.key = key;
 }
 
-// When each class's rock formed, against the age on screen: 'later' (not yet), else shown.
-function geologyStates(age) {
-  return state.data.meta.geology.classes.map((c) => (age > c.age[0] ? 'later' : age >= c.age[1] ? 'forming' : 'formed'));
-}
+// A rock cell (meta.geology.cells: i, j, class, rock km², oldest Ma, youngest Ma) against the
+// age on screen: 'later' (not yet formed), 'forming' or 'formed'.
+const rockState = (cell, age) => (age > cell[4] ? 'later' : age >= cell[5] ? 'forming' : 'formed');
+const rockShown = (index) => {
+  const c = state.data.meta.geology.classes[index - 1];
+  return !state.rocks || state.rocks.has(c.id);
+};
 
-// Rock by age: each cell (meta.geology.cells: i, j, class, rock km²) in its class's colour,
-// when that rock has formed by the age on screen.
-function colourGeology(states) {
-  const key = states.join();
-  if (key === geologyLayer.key) return;
+// Rock by age: formed cells filled in their class's colour, forming cells marked for hatching
+// (a lower opacity the shader reads as "hatch"), cells still to come left out (outlined in
+// update()). Classes unticked in the legend are left out altogether.
+const FORMED_ALPHA = 0.9;
+const FORMING_ALPHA = 0.6;
+function colourGeology() {
   const { nx, ny, geology } = state.data.meta;
-  // Only rock already formed (or forming) fills its cells; rock still to come is outlined (update()).
-  const palette = new Map(geology.classes.filter((c, k) => states[k] !== 'later').map((c) => [c.index, { c: colour(c.colour), alpha: 0.9 }]));
+  const code = { formed: 'D', forming: 'F', later: 'L' };
+  const states = geology.cells.map((c) => (rockShown(c[2]) ? code[rockState(c, state.age)] : '-'));
+  const key = states.join('');
+  if (key === geologyLayer.key) return;
+  const palette = new Map(geology.classes.map((c) => [c.index, colour(c.colour)]));
   const out = new Uint8Array(nx * ny * 4);
-  for (const [i, j, k] of geology.cells) {
-    const entry = palette.get(k);
-    if (entry) paintCell(out, j * nx + i, entry.c, entry.alpha);
-  }
+  geology.cells.forEach(([i, j, k], n) => {
+    if (states[n] === 'D') paintCell(out, j * nx + i, palette.get(k), FORMED_ALPHA);
+    else if (states[n] === 'F') paintCell(out, j * nx + i, palette.get(k), FORMING_ALPHA);
+  });
   setCells(geologyLayer, out, key);
 }
+// How many shown cells are in each state (for the checks).
+function rockCounts() {
+  const counts = { formed: 0, forming: 0, later: 0 };
+  for (const c of state.data.meta.geology.cells) if (rockShown(c[2])) counts[rockState(c, state.age)]++;
+  return counts;
+}
+
+// The legend on the right: what fill, hatching and outline mean, and a checkbox per class.
+function renderRockLegend() {
+  const panel = $('rock-legend');
+  const geology = state.data?.meta.geology;
+  panel.hidden = !state.geology || !geology;
+  lastFrame = '';
+  if (panel.hidden) return;
+  if (window.innerWidth < 640 && !panel.dataset.opened) $('rock-details').open = false;
+  panel.dataset.opened = '1';
+  const key = $('rock-key');
+  key.replaceChildren();
+  for (const [shape, text] of [['solid', t().rockFormed], ['hatch', t().rockForming], ['outline', t().rockLater]]) {
+    const li = document.createElement('li');
+    const sw = document.createElement('span');
+    sw.className = `sw ${shape}`;
+    sw.style.color = '#c9ccd2';
+    if (shape === 'solid') sw.style.background = '#c9ccd2';
+    const label = document.createElement('span');
+    label.textContent = text;
+    li.append(sw, label);
+    key.append(li);
+  }
+  const list = $('rock-classes');
+  list.replaceChildren();
+  for (const c of geology.classes.filter((x) => x.area_km2 > 0)) {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !state.rocks || state.rocks.has(c.id);
+    box.dataset.rock = c.id;
+    box.addEventListener('change', () => {
+      const ids = geology.classes.map((x) => x.id);
+      const on = new Set(state.rocks ?? ids);
+      if (box.checked) on.add(c.id); else on.delete(c.id);
+      state.rocks = on.size === ids.length ? null : on;
+      keepParams(); update();
+    });
+    const sw = document.createElement('span');
+    sw.className = 'sw solid';
+    sw.style.background = c.colour;
+    const name = document.createElement('span');
+    const age = c.age[1] >= 1000 ? `${c.age[0] / 1000}–${c.age[1] / 1000} Ga` : `${c.age[0]}–${c.age[1]} Ma`;
+    name.append(document.createTextNode(`${c.name[state.lang]} `));
+    const span = document.createElement('span');
+    span.className = 'rock-age';
+    span.textContent = age;
+    name.append(span);
+    label.append(box, sw, name);
+    li.append(label);
+    list.append(li);
+  }
+  fitRockLegend();
+}
+// Above the small globe, so the two never overlap.
+function fitRockLegend() {
+  const panel = $('rock-legend');
+  if (panel.hidden) return;
+  panel.style.maxHeight = `${Math.max(120, insetRect().top - 64 - 16)}px`;
+  lastFrame = '';
+}
+const setRocks = (ids) => {
+  state.rocks = ids;
+  keepParams(); renderRockLegend(); update();
+};
 
 // The Byrd Group per cell (meta.outcrops.cells: i, j, bits). Where the upper crops out the
 // lower lies beneath it; a cell of Byrd Group not divided holds both.
@@ -1038,7 +1126,7 @@ function update() {
   const hAt = (gx, gy) => splineAt(h, nx, ny, gx, gy);
   // Rock by age and the Byrd Group, on the same surface.
   geologyLayer.mesh.visible = Boolean(state.geology && meta.geology?.cells);
-  if (geologyLayer.mesh.visible) { colourGeology(geologyStates(state.age)); layOn(geologyLayer); }
+  if (geologyLayer.mesh.visible) { colourGeology(); layOn(geologyLayer); }
   byrdLayer.mesh.visible = Boolean(state.outcrops && meta.outcrops?.cells);
   if (byrdLayer.mesh.visible) { colourByrd(); layOn(byrdLayer); }
   setGeometry(base, low, null, lowIndex);
@@ -1137,26 +1225,28 @@ function update() {
   };
   // The Shackleton Limestone's area, outlined, inside the box.
   setGeometry(limestoneEdge, state.shackleton ? outlineOf(state.lensMask, 0) : []);
-  // Rock by age not yet formed: each class's cells outlined in its colour.
-  const geologyLines = [];
-  const geologyLineColours = [];
-  if (geologyLayer.mesh.visible) {
-    const states = geologyStates(state.age);
-    meta.geology.classes.forEach((c, k) => {
-      if (states[k] !== 'later') return;
-      state.geologyMasks ??= {};
-      if (!state.geologyMasks[c.index]) {
-        const mask = new Float32Array(nx * ny);
-        for (const [i, j, cls] of meta.geology.cells) if (cls === c.index) mask[j * nx + i] = 1;
-        state.geologyMasks[c.index] = mask;
+  // Rock by age still to come: per class (of those shown), its cells not yet formed, outlined in
+  // its colour. Made again only when that set of cells changes.
+  if (!geologyLayer.mesh.visible) setGeometry(geologyEdge, []);
+  else if (state.geologyEdgeKey !== `${geologyLayer.key}|${state.topKey}`) {
+    state.geologyEdgeKey = `${geologyLayer.key}|${state.topKey}`;
+    const geologyLines = [];
+    const geologyLineColours = [];
+    for (const c of meta.geology.classes) {
+      if (!rockShown(c.index)) continue;
+      const mask = new Float32Array(nx * ny);
+      let any = false;
+      for (const cell of meta.geology.cells) {
+        if (cell[2] === c.index && rockState(cell, state.age) === 'later') { mask[cell[1] * nx + cell[0]] = 1; any = true; }
       }
-      const lines = outlineOf(state.geologyMasks[c.index], 0);
+      if (!any) continue;
+      const lines = outlineOf(mask, 0);
       const c3 = colour(c.colour);
       geologyLines.push(...lines);
       for (let n = 0; n < lines.length / 3; n++) geologyLineColours.push(c3.r, c3.g, c3.b);
-    });
+    }
+    setGeometry(geologyEdge, geologyLines, geologyLineColours);
   }
-  setGeometry(geologyEdge, geologyLines, geologyLineColours);
   // Where to name it: the middle of the part of its area inside the box, on the surface.
   state.limestoneAt = null;
   if (state.shackleton) {
@@ -2233,11 +2323,7 @@ function renderLegend() {
                    ? [['fill', BYRD.lower.colour, t().lgByrdLower], ['fill', BYRD.upper.colour, t().lgByrdUpper],
                       ['fill', '#7d8a90', t().lgByrdNotYet]]
                    : []),
-                 ...(state.geology && state.data?.meta.geology
-                   ? [...state.data.meta.geology.classes.filter((c) => c.area_km2 > 0).map((c) =>
-                       ['fill', c.colour, `${c.name[state.lang]} · ${c.age[1] >= 1000 ? `${c.age[0] / 1000}–${c.age[1] / 1000} Ga` : `${c.age[0]}–${c.age[1]} Ma`}`]),
-                     ['line', '#c9ccd2', t().lgGeologyLater]]
-                   : [])];
+                 ];
   const list = $('legend');
   list.replaceChildren();
   for (const [shape, c, text] of items) {
@@ -2321,7 +2407,7 @@ function applyLanguage() {
   renderVe();
   renderLegend();
   renderPeriods();
-  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); renderOutcropNote(); renderGeologyNote(); renderLegend(); update(); }
+  if (state.data) { renderUnits(); renderSources(); renderLimestoneNote(); renderOutcropNote(); renderGeologyNote(); renderRockLegend(); renderLegend(); update(); }
 }
 
 // ---------- controls ----------
@@ -2347,7 +2433,9 @@ $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.ta
 $('show-outcrops').checked = state.outcrops;
 $('show-outcrops').addEventListener('change', (e) => { state.outcrops = e.target.checked; keepParams(); renderLegend(); renderOutcropNote(); update(); });
 $('show-geology').checked = state.geology;
-$('show-geology').addEventListener('change', (e) => { state.geology = e.target.checked; keepParams(); renderLegend(); renderGeologyNote(); update(); });
+$('show-geology').addEventListener('change', (e) => { state.geology = e.target.checked; keepParams(); renderLegend(); renderGeologyNote(); renderRockLegend(); update(); });
+$('rock-all').addEventListener('click', () => setRocks(null));
+$('rock-none').addEventListener('click', () => setRocks(new Set()));
 function renderGeologyNote() {
   const note = $('geology-note');
   note.hidden = !state.geology || !state.data?.meta.geology;
@@ -2366,6 +2454,7 @@ function keepParams() {
   if (state.fit) params.set('trench', 'paleodem'); else params.delete('trench');
   if (state.outcrops) params.set('outcrops', '1'); else params.delete('outcrops');
   if (state.geology) params.set('geology', '1'); else params.delete('geology');
+  if (state.rocks) params.set('rocks', [...state.rocks].join(',')); else params.delete('rocks');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
   if (state.outcrops) params.set('upper', String(state.byrdUpperKm)); else params.delete('upper');
@@ -2402,6 +2491,8 @@ function visibleRect() {
   const timeline = document.querySelector('.timeline').getBoundingClientRect();
   const r = { left: 0, top: 0, right: W, bottom: Math.min(H, timeline.top) };
   if (panel.width < W * 0.6) r.left = panel.right; else r.top = panel.bottom;
+  const rocks = $('rock-legend');
+  if (!rocks.hidden && W >= 900) r.right = rocks.getBoundingClientRect().left;
   return r;
 }
 let lastFrame = '';
@@ -2472,6 +2563,7 @@ function stepFlight(dt) {
 
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
+  fitRockLegend();
   lastFrame = '';
   frameView();
 }
@@ -2520,6 +2612,6 @@ async function start() {
 start();
 window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, handles, update, globeShown: () => globeShown,
   flowCount: () => particles.life.filter((v) => v > 0).length,
-  geology: () => ({ visible: geologyLayer.mesh.visible, states: geologyLayer.key, outlined: geologyEdge.geometry.getAttribute('position')?.count ?? 0 }),
+  geology: () => ({ visible: geologyLayer.mesh.visible, counts: rockCounts(), outlined: geologyEdge.geometry.getAttribute('position')?.count ?? 0 }),
   lineAA: () => lineAA.geometry.getAttribute('position')?.count > 0,
   byrd: () => ({ visible: byrdLayer.mesh.visible, state: byrdLayer.key, cells: state.data.meta.outcrops.cells.length }) };

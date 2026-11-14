@@ -14,6 +14,17 @@
 <body class="section-page">
   <canvas id="globe" aria-label="3D block diagram of section A–A′"></canvas>
   <div id="labels" class="labels" aria-hidden="true"></div>
+  <aside class="panel rock-legend" id="rock-legend" hidden>
+    <details id="rock-details" open>
+      <summary data-t="rockLegend"></summary>
+      <ul class="rock-key" id="rock-key"></ul>
+      <ul class="rock-classes" id="rock-classes"></ul>
+      <div class="tools">
+        <button type="button" class="chip" id="rock-all" data-t="rockAll"></button>
+        <button type="button" class="chip" id="rock-none" data-t="rockNone"></button>
+      </div>
+    </details>
+  </aside>
   <div class="inset" id="inset" aria-label="Small globe"><span id="inset-caption"></span><i class="grip" id="inset-grip" title="Resize"></i></div>
 
   <header class="panel top wide" id="panel">

@@ -29,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SECTION = ROOT / "sources/sections/tam_a.json"
 OUT_PNG = ROOT / "sources/sections/geology_map.png"
 OUT_JSON = ROOT / "sources/sections/geology_map.json"
+# GeoMAP's own ages of the rock in each pixel (ABSMAX_MA, ABSMIN_MA of its unit), 16-bit, Ma.
+OUT_AGES = ROOT / "sources/sections/geology_ages.png"
 EARTH_KM = 6371.0
 PIXEL_KM = 2.0
 # Drawn this many times finer, then each pixel keeps its most common class and the share of
@@ -119,14 +121,18 @@ def main():
     by_code = {code: k + 1 for k, c in enumerate(CLASSES) for code in c["codes"]}
     db = sqlite3.connect(f"file:{GPKG}?mode=ro", uri=True)
     rows = db.execute(
-        f'SELECT t.SIMPCODE, t.geom FROM "{TABLE}" t JOIN "rtree_{TABLE}_geom" r ON t.fid = r.id '
+        f'SELECT t.SIMPCODE, t.ABSMAX_MA, t.ABSMIN_MA, t.geom FROM "{TABLE}" t JOIN "rtree_{TABLE}_geom" r ON t.fid = r.id '
         "WHERE r.maxx >= ? AND r.minx <= ? AND r.maxy >= ? AND r.miny <= ?",
         (min(xs), max(xs), min(ys), max(ys))).fetchall()
     fine_km = PIXEL_KM / FINE
     image = Image.new("L", (width * FINE, height * FINE), 0)
     draw = ImageDraw.Draw(image)
+    # The unit's ages, drawn the same way (0 where there is no rock or no age).
+    oldest = Image.new("I", (width * FINE, height * FINE), 0)
+    youngest = Image.new("I", (width * FINE, height * FINE), 0)
+    draw_old, draw_young = ImageDraw.Draw(oldest), ImageDraw.Draw(youngest)
     counts = [0] * (len(CLASSES) + 1)
-    for code, blob in rows:
+    for code, age_max, age_min, blob in rows:
         k = by_code.get(code)
         if not k:
             continue
@@ -139,7 +145,13 @@ def main():
                 if px.max() < 0 or px.min() > width * FINE or py.max() < 0 or py.min() > height * FINE:
                     continue
                 # Holes (inner rings) are cleared; whatever fills them is its own polygon.
-                draw.polygon(list(zip(px.tolist(), py.tolist())), fill=0 if r else k)
+                points = list(zip(px.tolist(), py.tolist()))
+                draw.polygon(points, fill=0 if r else k)
+                # A unit without ages takes its class's span (CLASSES).
+                old = round(age_max) if age_max is not None else CLASSES[k - 1]["age"][0]
+                young = round(age_min) if age_min is not None else CLASSES[k - 1]["age"][1]
+                draw_old.polygon(points, fill=0 if r else old)
+                draw_young.polygon(points, fill=0 if r else young)
                 counts[k] += 0 if r else 1
     fine = np.asarray(image).reshape(height, FINE, width, FINE).transpose(0, 2, 1, 3).reshape(height, width, FINE * FINE)
     votes = np.stack([(fine == k).sum(axis=2) for k in range(len(CLASSES) + 1)], axis=-1)
@@ -148,6 +160,19 @@ def main():
     share = (fine > 0).sum(axis=2) / (FINE * FINE)
     alpha = np.round(share * 255).astype(np.uint8)
     Image.fromarray(np.stack([pixels, alpha], axis=-1), "LA").save(OUT_PNG, optimize=True)
+    # Each pixel's ages: the median, over its fine pixels of its own class, of their units' ages.
+    def pixel_ages(img):
+        a = np.asarray(img, dtype=float).reshape(height, FINE, width, FINE).transpose(0, 2, 1, 3).reshape(height, width, FINE * FINE)
+        a = np.where((fine == pixels[..., None]) & (pixels[..., None] > 0), a, np.nan)
+        with np.errstate(all="ignore"):
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                m = np.nanmedian(a, axis=2)
+        return np.nan_to_num(m, nan=0).round().astype(np.uint16)
+    ages = np.stack([pixel_ages(oldest), pixel_ages(youngest)], axis=0)
+    # Two 16-bit grey images side by side: oldest ages on the left, youngest on the right.
+    Image.fromarray(np.concatenate([ages[0], ages[1]], axis=1)).save(OUT_AGES, optimize=True)
     document = {
         "source": manifest["citation"] + ". CC BY 4.0.",
         "method": f"GeoMAP geological units by simplified class (SIMPCODE), grouped by age; drawn at "
