@@ -320,3 +320,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   5cb00b3) → 정리로 96b5b33 삭제. 남은 것 5cb00b3 b220681 247855e. 디스크 여유 23 GB.
 - 배포 뒤: 운영 `/js/section.js`, `/data/section/meta.json`이 로컬과 같음. `tests/browser.mjs`를 https에 대고 전체 통과.
   earththrutime `/healthz` 200, cdgts 200.
+
+## prune.sh: 옛 릴리스가 없으면 조용히 멈추던 것 (2026-11-14)
+
+반장 세션 전달(korea-rivers 세션이 같은 구조를 쓰다 발견): `deploy/prune.sh`의 `kept=` 줄. 현재 릴리스 말고 남은 것이 없으면
+`grep -vx`가 아무것도 내지 않고 1로 끝나, `set -o pipefail` 때문에 그 자리에서 아무 말 없이 exit 1. 바로 위 `old=` 줄에는
+`|| true`가 있었는데 이 줄에는 없었다. 지금은 릴리스가 3개라 드러나지 않았다.
+
+- 같은 파이프로 재현(릴리스 하나뿐인 디렉터리) → exit 1, 출력 없음.
+- 고침: `kept=` 줄에도 `|| true`. 원격 스크립트를 로컬 가짜 디렉터리에서 dry-run으로 돌려 확인: 하나뿐일 때 "keeping none;
+  removing none", 넷일 때 둘 남기고 하나 삭제 예정. 서버에 `deploy/prune.sh --dry-run`(지우지 않음): "current 5cb00b3;
+  keeping b220681 247855e; removing none".

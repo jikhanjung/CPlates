@@ -18,7 +18,9 @@ ssh "$HOST" "set -euo pipefail
   [ -n \"\$current\" ] && [ -d \"\$current\" ] || { echo 'no current release; nothing removed' >&2; exit 1; }
   # Newest first; only commit-named directories, never the current one.
   old=\$(ls -1t | grep -E '^[0-9a-f]{7,40}\$' | grep -vx \"\$current\" | tail -n +$((KEEP + 1)) || true)
-  kept=\$(ls -1t | grep -E '^[0-9a-f]{7,40}\$' | grep -vx \"\$current\" | head -n $KEEP | tr '\n' ' ')
+  # || true: with no older release grep finds nothing and exits 1, which pipefail would turn
+  # into a silent stop here (as on line 'old=' above).
+  kept=\$(ls -1t | grep -E '^[0-9a-f]{7,40}\$' | grep -vx \"\$current\" | head -n $KEEP | tr '\n' ' ' || true)
   echo \"current \$current; keeping \${kept:-none}; removing \$(echo \${old:-none})\"
   [ $DRY = 1 ] && exit 0
   for r in \$old; do
