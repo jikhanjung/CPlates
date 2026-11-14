@@ -272,3 +272,18 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   5674ad0) → 정리로 e3297b0 삭제. 남은 것 5674ad0 c309ee5 7860567. 디스크 여유 24 GB.
 - 배포 뒤: 운영 `/js/section.js`가 커밋과 같음. `tests/browser.mjs`를 https에 대고 전체 통과. earththrutime `/healthz` 200,
   cdgts 200.
+
+## 재배포: 96b5b33 (다른 대륙 이름·경계, A–A′ 선, 지형 위 판 경계)
+
+2026-11-14, 사용자 직접 지시(이 세션): "push/배포해줘".
+
+- push 전 점검: 1커밋(96b5b33, `build_section.py`, `section.js`, `section.css`, 시험, devlog). 단면 자료를 다시 빌드했다
+  (`region.bin`에 대륙 코드, meta에 `continents`; 남극/없음 칸은 그대로). node 시험 39개, 로컬 브라우저 시험 통과.
+  `694071b..96b5b33` push.
+- `deploy/deploy.sh 96b5b33`: 릴리스 162 MB → `current -> releases/96b5b33`(이전 5674ad0) → 스모크 통과(version.json
+  96b5b33) → 정리로 7860567 삭제. 남은 것 96b5b33 5674ad0 c309ee5. 디스크 여유 23 GB.
+- 배포 뒤: 운영 `/js/section.js`, `/data/section/meta.json`, `/data/section/region.bin`이 로컬과 같음. earththrutime
+  `/healthz` 200, cdgts 200. **`tests/browser.mjs`를 https에 대고 돌린 것은 실패**: 시대별 암석 레이어를 켜고 "섀클턴 지역
+  확대"로 다가간 화면의 스크린샷이 30초 안에 끝나지 않음(`browser.mjs:545`, TimeoutError). 시험용 소프트웨어 렌더러
+  (SwiftShader)에서 화면 가득 찬 윗면·암석 레이어 한 프레임이 너무 느린 것 — 기능 오류는 아니고 파일과 쪽은 정상. 되돌리지
+  않고 사용자에게 알림; 원인(화소마다 마스크 스플라인)을 줄이는 수정을 이어서 한다.
