@@ -309,3 +309,14 @@ CPlates는 서버 코드도 DB도 없는 정적 사이트라 컨테이너 없이
   처음 돌린 것은 3건 실패: "A 쪽에서 보면 왼쪽 핸들이 보여야" 와 그 핸들 끌기에 딸린 2건. 핸들 보임은 렌더 루프에서 프레임마다
   정하는데 시험은 카메라를 돌린 뒤 400 ms만 기다렸고, 운영 쪽 실행에서는 프레임이 더 느려 그 사이 갱신되지 않았다(로컬은
   통과). 시험이 핸들이 보일 때까지 기다리게 고쳐 운영에 대고 다시 돌려 전체 통과. 쪽은 그대로.
+
+## 재배포: 5cb00b3 (시대별 암석: 칸마다 GeoMAP 나이, 빗금, 오른쪽 범례)
+
+2026-11-14, 사용자 직접 지시(이 세션): "push/배포 해줘".
+
+- push 전 점검: 1커밋(5cb00b3; 새 `sources/sections/geology_ages.png` 106 KB, GeoMAP CC BY 4.0 파생, 비밀값 없음). 단면 자료를
+  처음부터 다시 빌드해 meta가 같음을 확인. node 시험 39개, 로컬 브라우저 시험 통과. `fdde9ed..5cb00b3` push.
+- `deploy/deploy.sh 5cb00b3`: 릴리스 162 MB → `current -> releases/5cb00b3`(이전 b220681) → 스모크 통과(version.json
+  5cb00b3) → 정리로 96b5b33 삭제. 남은 것 5cb00b3 b220681 247855e. 디스크 여유 23 GB.
+- 배포 뒤: 운영 `/js/section.js`, `/data/section/meta.json`이 로컬과 같음. `tests/browser.mjs`를 https에 대고 전체 통과.
+  earththrutime `/healthz` 200, cdgts 200.
