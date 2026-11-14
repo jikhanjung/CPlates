@@ -291,8 +291,8 @@ const topUniforms = {
 };
 top.material.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, surfaceUniforms, topUniforms);
-  shader.vertexShader = `${SURFACE_VERTEX}uniform sampler2D uOther;\n` + shader.vertexShader
-    .replace('#include <beginnormal_vertex>', 'vec3 surface = splineValue(uHeights, aGrid);\n  vGrid = aGrid;\n  vHeight = surface.x;\n  vOther = splineValue(uOther, aGrid).x;\n  vec3 objectNormal = surfaceNormal(surface);')
+  shader.vertexShader = `${SURFACE_VERTEX}uniform sampler2D uOther;\nuniform sampler2D uLens;\nvarying float vLens;\n` + shader.vertexShader
+    .replace('#include <beginnormal_vertex>', 'vec3 surface = splineValue(uHeights, aGrid);\n  vGrid = aGrid;\n  vHeight = surface.x;\n  vOther = splineValue(uOther, aGrid).x;\n  vLens = smoothValue(uLens, aGrid).x;\n  vec3 objectNormal = surfaceNormal(surface);')
     .replace('#include <begin_vertex>', 'vec3 transformed = surfacePoint(surface);');
   shader.fragmentShader = `${SURFACE_GLSL}
 uniform sampler2D uHeights;
@@ -306,6 +306,7 @@ uniform vec3 uLimestone;
 varying vec2 vGrid;
 varying float vHeight;
 varying float vOther;
+varying float vLens;
 ${shader.fragmentShader.replace('#include <color_fragment>', `
   // The height from the vertices, which are only 7 km apart.
   float surfaceHeight = vHeight;
@@ -317,7 +318,7 @@ ${shader.fragmentShader.replace('#include <color_fragment>', `
   float shelfBand = 150.0 + fwidth(surfaceHeight);
   float shelf = smoothstep(-1000.0 - shelfBand, -1000.0 + shelfBand, surfaceHeight);
   surfaceColour = mix(surfaceColour, uOtherColour, 0.6 * smoothstep(0.4, 0.6, vOther) * shelf);
-  if (uLensAmount > 0.0) surfaceColour = mix(surfaceColour, uLimestone, uLensAmount * smoothstep(0.4, 0.6, maskValue(uLens, vGrid)));
+  if (uLensAmount > 0.0) surfaceColour = mix(surfaceColour, uLimestone, uLensAmount * smoothstep(0.4, 0.6, vLens));
   diffuseColor.rgb *= surfaceColour;`)}`;
 };
 // GeoMAP layers laid on the top surface: per grid cell a colour and whether the layer is
@@ -329,17 +330,22 @@ function cellOverlay(order, offsetUnits) {
   const material = new THREE.ShaderMaterial({
     uniforms: { ...surfaceUniforms, uColour: { value: colourTexture }, uCover: { value: cover } },
     vertexShader: `${SURFACE_VERTEX}
+uniform sampler2D uCover;
+varying float vCover;
 void main() {
   vec3 surface = splineValue(uHeights, aGrid);
   vGrid = aGrid;
+  vCover = smoothValue(uCover, aGrid).x;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(surfacePoint(surface), 1.0);
 }`,
     fragmentShader: `${SURFACE_GLSL}
 uniform sampler2D uColour;
 uniform sampler2D uCover;
 varying vec2 vGrid;
+varying float vCover;
 void main() {
-  float edge = smoothstep(0.4, 0.6, maskValue(uCover, vGrid));
+  // The mask read per vertex (7 km apart) and interpolated: its edge is smooth at this scale.
+  float edge = smoothstep(0.4, 0.6, vCover);
   if (edge <= 0.0) discard;
   // The colour of the class with the most weight among the four cells around (bilinear
   // weights): classes keep their own colours, with rounded boundaries between them.
@@ -452,6 +458,39 @@ async function load() {
            boundaries, cells, lens: new Uint8Array(lens), merdith: new RotationModel(rotations) };
 }
 
+// A cell layer on the top's finer mesh: the same vertices, but only the triangles near its
+// cells (within a cell), so its shaders run on a small part of the mesh. Made again only when
+// the box or the layer's cells change.
+function layOn(layer) {
+  const fine = state.fine;
+  const key = `${state.topKey}|${layer.key}`;
+  if (!fine || !layer.coverCells || layer.onKey === key) return;
+  layer.onKey = key;
+  const { nx, ny } = state.data.meta;
+  const near = (i, j) => {
+    for (let b = j - 1; b <= j + 2; b++) {
+      for (let a = i - 1; a <= i + 2; a++) {
+        if (a >= 0 && b >= 0 && a < nx && b < ny && layer.coverCells[b * nx + a]) return true;
+      }
+    }
+    return false;
+  };
+  const index = [];
+  for (let r = 0; r < fine.rows - 1; r++) {
+    for (let c = 0; c < fine.cols - 1; c++) {
+      if (!near(fine.ci0 + Math.floor(c / PER), fine.cj0 + Math.floor(r / PER))) continue;
+      const a = r * fine.cols + c;
+      index.push(a, a + 1, a + fine.cols, a + 1, a + fine.cols + 1, a + fine.cols);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', fine.geometry.getAttribute('position'));
+  g.setAttribute('aGrid', fine.geometry.getAttribute('aGrid'));
+  g.setIndex(index);
+  // The old one is not disposed: its vertex buffers are the top's.
+  layer.mesh.geometry = g;
+}
+
 // A cell layer: colour (sRGB bytes) and opacity per grid cell, row j = across.
 function paintCell(out, n, c, alpha) {
   const rgb = c.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
@@ -478,6 +517,7 @@ function setCells(layer, out, key) {
   layer.colour.image = { data: filled, width: nx, height: ny };
   layer.colour.needsUpdate = true;
   setGridTexture(layer.cover, cover, nx, ny);
+  layer.coverCells = cover;
   layer.key = key;
 }
 
@@ -971,8 +1011,7 @@ function update() {
     g.setIndex(new THREE.BufferAttribute(fine.index, 1));
     top.geometry.dispose();
     top.geometry = g;
-    geologyLayer.mesh.geometry = g;
-    byrdLayer.mesh.geometry = g;
+    state.fine = { cols: (ci1 - ci0) * PER + 1, rows: (cj1 - cj0) * PER + 1, ci0, cj0, geometry: g };
   }
   setGridTexture(heightTexture, h, nx, ny);
   surfaceUniforms.uScaleY.value = state.ve / 1e6;
@@ -991,9 +1030,9 @@ function update() {
   const hAt = (gx, gy) => splineAt(h, nx, ny, gx, gy);
   // Rock by age and the Byrd Group, on the same surface.
   geologyLayer.mesh.visible = Boolean(state.geology && meta.geology?.cells);
-  if (geologyLayer.mesh.visible) colourGeology(geologyStates(state.age));
+  if (geologyLayer.mesh.visible) { colourGeology(geologyStates(state.age)); layOn(geologyLayer); }
   byrdLayer.mesh.visible = Boolean(state.outcrops && meta.outcrops?.cells);
-  if (byrdLayer.mesh.visible) colourByrd();
+  if (byrdLayer.mesh.visible) { colourByrd(); layOn(byrdLayer); }
   setGeometry(base, low, null, lowIndex);
   const wall = [];
   const wallColours = [];

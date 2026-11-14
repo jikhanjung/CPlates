@@ -370,6 +370,10 @@ for (const [viewport, tag] of [[{ width: 1400, height: 900 }, 'desktop'], [{ wid
 // The A–A′ section page.
 async function openSection(viewport, query) {
   const page = await browser.newPage({ viewport });
+  // In the software renderer (SwiftShader) a screenshot of the section page waits on frames that
+  // each take about a second (the mantle-flow particles keep it drawing): 15–25 s, more on a
+  // loaded machine. The default 30 s was too tight.
+  page.setDefaultTimeout(90000);
   page.on('pageerror', (error) => failures.push(`section pageerror: ${error.message}`));
   page.on('console', (message) => { if (message.type() === 'error') failures.push(`section console: ${message.text()}`); });
   await page.goto(`${base}section/${query}`);
