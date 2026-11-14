@@ -384,6 +384,10 @@ async function openSection(viewport, query) {
   check(s.flow > 100, `520 Ma at 5×: mantle-flow particles should be moving, got ${s.flow}`);
   check((await page.locator('#now').innerText()).includes('섀클턴 석회암'), '520 Ma: the Shackleton Limestone is being laid down');
   check(await page.evaluate(() => window.cplates.globeShown() === 520), 'the small globe should show the 520 Ma frame');
+  check(await page.waitForFunction(() => {
+    const texts = [...document.querySelectorAll('#labels span.continent')].map((s) => s.textContent);
+    return texts.includes('인도') && texts.includes('오스트레일리아');
+  }, null, { timeout: 15000 }).then(() => true, () => false), 'India and Australia should be named on the block at 520 Ma');
   // The small globe: drag inside turns it, the top-left corner resizes it.
   {
     const box = await page.locator('#inset').boundingBox();
@@ -431,6 +435,8 @@ async function openSection(viewport, query) {
     check(cam.every((v, i) => Math.abs(v - after.cam[i]) < 1e-6), 'dragging a handle should not turn the view');
     check((new URL(page.url()).searchParams.get('box') || '').split(',').length === 4, 'the address should remember the box');
     check((await page.locator('#now').innerText()).includes('A–A′에서'), 'the panel should say where the face is');
+    // The face moved in: the line is outside the box, and so are its marks.
+    check(!(await page.evaluate(() => window.cplates.lineAA())), 'with the box moved off the line, A–A′ should not be drawn');
     await page.screenshot({ path: 'test-results/section-box-moved.png' });
     await page.click('#reset-box');
     await page.waitForTimeout(300);
@@ -462,6 +468,12 @@ async function openSection(viewport, query) {
     const asked = (new URL(page.url()).searchParams.get('box') || '').split(',').map(Number);
     check(asked[2] < 0 && asked[0] < 0, `the address should count from the A–A′ box: ${asked}`);
     check((await page.locator('#now').innerText()).includes('바깥쪽'), 'the panel should say the face is outside the line');
+    // The box reaches beyond the line: the line, its ends and the locality show on its top.
+    const shown = await page.waitForFunction(() => {
+      const texts = [...document.querySelectorAll('#labels span')].filter((s) => s.style.display !== 'none').map((s) => s.textContent);
+      return texts.includes('A') && texts.some((x) => x.includes('섀클턴')) ? texts : null;
+    }, null, { timeout: 15000 }).then((h) => h.jsonValue(), () => null);
+    check(shown && (await page.evaluate(() => window.cplates.lineAA())), 'with the face out beyond the line, A–A′, A and the locality should show on the top');
     await page.screenshot({ path: 'test-results/section-box-widened.png' });
     await page.click('#reset-box');
     await page.waitForTimeout(300);

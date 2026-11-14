@@ -280,6 +280,7 @@ uniform vec2 uOrigin;
 attribute vec2 aGrid;
 varying vec2 vGrid;
 varying float vHeight;
+varying float vOther;
 vec3 surfacePoint(vec3 s) { return vec3(uOrigin.x + aGrid.x * uStep, s.x * uScaleY, uOrigin.y - aGrid.y * uStep); }
 vec3 surfaceNormal(vec3 s) { return normalize(vec3(-s.y * uScaleY / uStep, 1.0, s.z * uScaleY / uStep)); }
 `;
@@ -290,8 +291,8 @@ const topUniforms = {
 };
 top.material.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, surfaceUniforms, topUniforms);
-  shader.vertexShader = SURFACE_VERTEX + shader.vertexShader
-    .replace('#include <beginnormal_vertex>', 'vec3 surface = splineValue(uHeights, aGrid);\n  vGrid = aGrid;\n  vHeight = surface.x;\n  vec3 objectNormal = surfaceNormal(surface);')
+  shader.vertexShader = `${SURFACE_VERTEX}uniform sampler2D uOther;\n` + shader.vertexShader
+    .replace('#include <beginnormal_vertex>', 'vec3 surface = splineValue(uHeights, aGrid);\n  vGrid = aGrid;\n  vHeight = surface.x;\n  vOther = splineValue(uOther, aGrid).x;\n  vec3 objectNormal = surfaceNormal(surface);')
     .replace('#include <begin_vertex>', 'vec3 transformed = surfacePoint(surface);');
   shader.fragmentShader = `${SURFACE_GLSL}
 uniform sampler2D uHeights;
@@ -304,12 +305,18 @@ uniform vec3 uOtherColour;
 uniform vec3 uLimestone;
 varying vec2 vGrid;
 varying float vHeight;
+varying float vOther;
 ${shader.fragmentShader.replace('#include <color_fragment>', `
   // The height from the vertices, which are only 7 km apart.
   float surfaceHeight = vHeight;
   vec3 surfaceColour = texture(uHypso, vec2((surfaceHeight - uRange.x) / (uRange.y - uRange.x), 0.5)).rgb;
-  // Other continents greyed (land and shelf), then the limestone's area.
-  surfaceColour = mix(surfaceColour, uOtherColour, 0.6 * smoothstep(0.4, 0.6, maskValue(uOther, vGrid)) * step(-1000.0, surfaceHeight));
+  // Other continents greyed (land and shelf, down to about −1000 m, faded over a band so its
+  // edge does not follow the mesh's triangles), then the limestone's area. The continents'
+  // mask is read with the B-spline (per vertex): given cell by cell, a diagonal coast is a
+  // staircase, which the smoother spline turns into a near-straight edge.
+  float shelfBand = 150.0 + fwidth(surfaceHeight);
+  float shelf = smoothstep(-1000.0 - shelfBand, -1000.0 + shelfBand, surfaceHeight);
+  surfaceColour = mix(surfaceColour, uOtherColour, 0.6 * smoothstep(0.4, 0.6, vOther) * shelf);
   if (uLensAmount > 0.0) surfaceColour = mix(surfaceColour, uLimestone, uLensAmount * smoothstep(0.4, 0.6, maskValue(uLens, vGrid)));
   diffuseColor.rgb *= surfaceColour;`)}`;
 };
@@ -413,6 +420,8 @@ const BYRD = { lower: { bit: 1, colour: '#5fc8ee' }, upper: { bit: 2, colour: '#
 const merdithLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xb8b8b8, dashSize: 0.02, gapSize: 0.014 }));
 // The Shackleton Limestone's area outlined on the surface.
 const limestoneEdge = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
+// The section line A–A′, drawn on the surface wherever it crosses the box.
+const lineAA = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff6b6b }));
 const pin = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 12), new THREE.MeshBasicMaterial({ color: 0xff9f43 }));
 pin.rotation.x = Math.PI;
 // Tracers fade in and out (alpha in the colour attribute) instead of popping.
@@ -421,7 +430,7 @@ const flowPoints = new THREE.Points(new THREE.BufferGeometry(), new THREE.Points
 face.renderOrder = 1;
 slab.renderOrder = 0;
 flowPoints.renderOrder = 5;
-scene.add(lithosphereSolid, mantleSolid, slabSheet, top, geologyLayer.mesh, byrdLayer.mesh, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, byrdEdge, limestoneEdge, pin, streamlines, flowPoints);
+scene.add(lithosphereSolid, mantleSolid, slabSheet, top, geologyLayer.mesh, byrdLayer.mesh, base, walls, box, water, face, slab, boundaryLines, cobLines, merdithLine, scaleBar, byrdEdge, limestoneEdge, lineAA, pin, streamlines, flowPoints);
 
 // ---------- data ----------
 
@@ -909,7 +918,8 @@ function update() {
       if (colours) colours.push(v.c[0], v.c[1], v.c[2]);
     }
   });
-  const other = (n) => data.region[k * data.cells + n] === 2;
+  // Region codes: 1 Antarctica, 2 or more another continent (3 + n: meta.continents[n]).
+  const other = (n) => data.region[k * data.cells + n] >= 2;
   const inCrop = (i, j) => i >= ci0 && i <= ci1 && j >= cj0 && j <= cj1;
 
   // Shackleton Limestone: laid down evenly over 525–512 Ma (sketch), lens weight from the build.
@@ -1136,6 +1146,57 @@ function update() {
   }
   setGeometry(byrdEdge, byrdOutline);
 
+  // The other continents in the box, each named once, in the middle of its largest patch; a
+  // name that would sit on top of another (within 8 cells) is left out.
+  state.continentLabels = [];
+  const patches = [];
+  const seen = new Uint8Array(nx * ny);
+  for (let j = cj0; j <= cj1; j++) {
+    for (let i = ci0; i <= ci1; i++) {
+      const code = data.region[k * data.cells + j * nx + i];
+      const continent = meta.continents?.find((c) => c.code === code);
+      if (!continent || seen[j * nx + i]) continue;
+      const patch = [];
+      const queue = [[i, j]];
+      seen[j * nx + i] = 1;
+      while (queue.length) {
+        const [a, b] = queue.pop();
+        patch.push([a, b]);
+        for (const [da, db] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          const [aa, bb] = [a + da, b + db];
+          if (!inCrop(aa, bb) || seen[bb * nx + aa] || data.region[k * data.cells + bb * nx + aa] !== code) continue;
+          seen[bb * nx + aa] = 1;
+          queue.push([aa, bb]);
+        }
+      }
+      if (patch.length < 6) continue;
+      patches.push({ continent, size: patch.length,
+                     gx: patch.reduce((m, [a]) => m + a, 0) / patch.length, gy: patch.reduce((m, [, b]) => m + b, 0) / patch.length });
+    }
+  }
+  patches.sort((a, b) => b.size - a.size);
+  const named = [];
+  for (const p of patches) {
+    if (named.some((q) => q.continent === p.continent || Math.hypot(q.gx - p.gx, q.gy - p.gy) < 8)) continue;
+    named.push(p);
+    state.continentLabels.push({ id: `continent-${p.continent.id}-${named.length}`, cls: 'continent', text: p.continent.name[state.lang],
+                                 at: [xAt(p.gx), Math.max(0, yOf(hAt(p.gx, p.gy) / 1000)) + 0.05, zAt(p.gy)] });
+  }
+
+  // The line A–A′ and its ends, wherever they are inside the box (the face need not be on
+  // the line: the box can reach beyond it). On the surface, or the sea's.
+  const home = defaultBox();
+  const onLine = (gx) => gx >= ci0 && gx <= ci1 && home.j0 >= cj0 && home.j0 <= cj1;
+  const lineY = (gx) => Math.max(0, yOf(hAt(gx, home.j0) / 1000));
+  const linePoints = fineLine(home.i0, home.j0, home.i1, home.j0, PER).filter(([gx]) => onLine(gx));
+  const linePositions = [];
+  for (let q = 0; q + 1 < linePoints.length; q++) {
+    for (const [gx] of [linePoints[q], linePoints[q + 1]]) linePositions.push(xAt(gx), lineY(gx) + 0.006, zAt(home.j0));
+  }
+  setGeometry(lineAA, linePositions);
+  state.lineEnds = [['A', home.i0, 'A'], ['A2', home.i1, 'A′']].filter(([, i]) => onLine(i))
+    .map(([id, i, text]) => ({ id, text, cls: 'end', at: [xAt(i), lineY(i) + 0.08, zAt(home.j0)] }));
+
   // Sea level and the box, at the box's extent.
   const x0 = xAt(ci0);
   const x1 = xAt(ci1);
@@ -1262,8 +1323,20 @@ function update() {
   cobLines.computeLineDistances();
   state.cob = cob.length ? cob[0] : null;
 
-  // Plate boundaries on the top surface, inside the box.
+  // Plate boundaries on the top surface, inside the box: draped on the relief (or the sea),
+  // each segment split into pieces a quarter of a grid cell long.
   const rowB = (j) => meta.across_km[0] + j * meta.step_km;
+  const drape = (out, colours, a0, b0, a1, b1, c, lift) => {
+    const g = (a, b) => [(a - meta.along_km[0]) / meta.step_km, (b - meta.across_km[0]) / meta.step_km];
+    const y = (a, b) => Math.max(0, yOf(hAt(...g(a, b)) / 1000)) + lift;
+    const n = Math.max(1, Math.ceil((Math.hypot(a1 - a0, b1 - b0) / meta.step_km) * PER));
+    for (let q = 0; q < n; q++) {
+      const [pa, pb] = [a0 + ((a1 - a0) * q) / n, b0 + ((b1 - b0) * q) / n];
+      const [qa, qb] = [a0 + ((a1 - a0) * (q + 1)) / n, b0 + ((b1 - b0) * (q + 1)) / n];
+      out.push(pa / 1000, y(pa, pb), -pb / 1000, qa / 1000, y(qa, qb), -qb / 1000);
+      if (colours) colours.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    }
+  };
   const [ka0, ka1] = [x0 * 1000, x1 * 1000];
   const [kb0, kb1] = [rowB(cj0), rowB(cj1)];
   const inside = (a, b) => a >= ka0 && a <= ka1 && b >= kb0 && b <= kb1;
@@ -1276,8 +1349,7 @@ function update() {
       const c = colour('#' + KINDS[piece.k].toString(16).padStart(6, '0'));
       for (let n = 0; n + 3 < piece.xy.length; n += 2) {
         if (!inside(piece.xy[n], piece.xy[n + 1]) || !inside(piece.xy[n + 2], piece.xy[n + 3])) continue;
-        lines.push(piece.xy[n] / 1000, 0.004, -piece.xy[n + 1] / 1000, piece.xy[n + 2] / 1000, 0.004, -piece.xy[n + 3] / 1000);
-        lineColours.push(c.r, c.g, c.b, c.r, c.g, c.b);
+        drape(lines, lineColours, piece.xy[n], piece.xy[n + 1], piece.xy[n + 2], piece.xy[n + 3], c, 0.004);
       }
     }
   }
@@ -1293,8 +1365,7 @@ function update() {
       const p = trench.rows[j];
       const q = trench.rows[j + 1];
       const lc = mismatchRow(j) || mismatchRow(j + 1) ? red : c;
-      lines.push(p.a / 1000, 0.004, -rowB(j) / 1000, q.a / 1000, 0.004, -rowB(j + 1) / 1000);
-      lineColours.push(lc.r, lc.g, lc.b, lc.r, lc.g, lc.b);
+      drape(lines, lineColours, p.a, rowB(j), q.a, rowB(j + 1), lc, 0.004);
     }
   }
   setGeometry(boundaryLines, lines, lineColours);
@@ -1303,7 +1374,7 @@ function update() {
     const inBox = (j) => j >= cj0 && j <= cj1 && merdithTrench.rows[j] && inside(merdithTrench.rows[j].a, rowB(j));
     for (let j = cj0; j < cj1; j++) {
       if (!inBox(j) || !inBox(j + 1)) continue;
-      own.push(merdithTrench.rows[j].a / 1000, 0.006, -rowB(j) / 1000, merdithTrench.rows[j + 1].a / 1000, 0.006, -rowB(j + 1) / 1000);
+      drape(own, null, merdithTrench.rows[j].a, rowB(j), merdithTrench.rows[j + 1].a, rowB(j + 1), null, 0.006);
     }
   }
   setGeometry(merdithLine, own).computeBoundingSphere();
@@ -1397,11 +1468,11 @@ function update() {
   setGeometry(slab, sp, sc);
   flowPoints.visible = state.flow && Boolean(flow);
 
-  // The locality pin, when the face is the line A–A′ and the locality is inside the box.
+  // The locality pin, whenever the locality is inside the box.
   const iLoc = localityColumn();
   const nLoc = lineRow() * nx + iLoc;
-  pin.visible = cj0 === lineRow() && iLoc >= ci0 && iLoc <= ci1;
-  pin.position.set(0, Math.max(0, yOf(h[nLoc] / 1000)) + 0.05, 0.001);
+  pin.visible = onLine(iLoc);
+  pin.position.set(0, lineY(iLoc) + 0.05, zAt(lineRow()) + 0.001);
 
   updateGlobe();
   $('inset-caption').textContent = `${format(t().globeCaption, { age: Math.round(state.age) })} · ${t().boxNote}`;
@@ -1769,14 +1840,10 @@ function placeLabels() {
   const x0 = xAt(crop.i0);
   const x1 = xAt(crop.i1);
   const depth = depthShownKm(state.ve);
-  // A and A′ name the ends of the line itself, so only while the face is on it.
-  const home = defaultBox();
-  if (crop.j0 === home.j0) {
-    for (const [id, i, text] of [['A', home.i0, 'A'], ['A2', home.i1, 'A′']]) {
-      if (i >= crop.i0 && i <= crop.i1) anchors.push({ id, at: [xAt(i), 0.08, faceZ], text, cls: 'end' });
-    }
-  }
-  if (!state.shackleton && pin.visible) anchors.push({ id: 'loc', at: [0, 0.16, 0], text: t().locality, cls: 'obs' });
+  // A and A′ name the ends of the line, wherever the box is.
+  for (const end of state.lineEnds ?? []) anchors.push(end);
+  if (!state.shackleton && pin.visible) anchors.push({ id: 'loc', at: [pin.position.x, pin.position.y + 0.11, pin.position.z], text: t().locality, cls: 'obs' });
+  for (const label of state.continentLabels ?? []) anchors.push(label);
   if (x0 < -1.8 && x1 > -1.8) anchors.push({ id: 'interior', at: [-1.8, 0.1, faceZ], text: t().interior, cls: '' });
   if (state.faceTrench) anchors.push({ id: 'trench', at: [state.faceTrench.s_km / 1000, 0.08, faceZ], text: t().trench, cls: '' });
   if (flow && depth >= 200) {
@@ -1826,6 +1893,8 @@ function placeLabels() {
   const seen = new Set();
   // Labels on the section face only make sense from in front of it (z > 0).
   const behind = camera.position.z < faceZ;
+  // Continent names (largest first) that would overlap one already placed on screen are hidden.
+  const continentBoxes = [];
   for (const a of anchors) {
     if (behind && ['layer', 'boundary', 'depth'].includes(a.cls)) continue;
     seen.add(a.id);
@@ -1834,9 +1903,16 @@ function placeLabels() {
     node.textContent = a.text;
     node.className = a.cls;
     const v = new THREE.Vector3(...a.at).project(camera);
-    node.style.display = v.z < 1 ? '' : 'none';
-    node.style.left = `${((v.x + 1) / 2) * window.innerWidth}px`;
-    node.style.top = `${((1 - v.y) / 2) * window.innerHeight}px`;
+    const [sx, sy] = [((v.x + 1) / 2) * window.innerWidth, ((1 - v.y) / 2) * window.innerHeight];
+    let shown = v.z < 1;
+    if (shown && a.cls === 'continent') {
+      const half = [a.text.length * 4.5 + 6, 10];
+      if (continentBoxes.some(([x, y]) => Math.abs(x - sx) < half[0] * 2 && Math.abs(y - sy) < half[1] * 2)) shown = false;
+      else continentBoxes.push([sx, sy]);
+    }
+    node.style.display = shown ? '' : 'none';
+    node.style.left = `${sx}px`;
+    node.style.top = `${sy}px`;
   }
   for (const [id, node] of labelNodes) if (!seen.has(id)) { node.remove(); labelNodes.delete(id); }
 }
@@ -2377,4 +2453,5 @@ start();
 window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, handles, update, globeShown: () => globeShown,
   flowCount: () => particles.life.filter((v) => v > 0).length,
   geology: () => ({ visible: geologyLayer.mesh.visible, states: geologyLayer.key }),
+  lineAA: () => lineAA.geometry.getAttribute('position')?.count > 0,
   byrd: () => ({ visible: byrdLayer.mesh.visible, state: byrdLayer.key, cells: state.data.meta.outcrops.cells.length }) };

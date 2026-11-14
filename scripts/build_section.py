@@ -51,6 +51,20 @@ DATASETS = ROOT / "data/sources/datasets"
 EARTH_KM = 6371.0
 
 
+# The other continents that reach the grid, by their Merdith 2021 plate IDs (found by
+# partitioning the grid's points at 540–460 Ma): India with Greater India, Sri Lanka,
+# Australia, Tasmania, the South and East Tasman rises, the Lhasa block, South China.
+CONTINENTS = [
+    {"id": "india", "plates": [501, 5011, 5014], "name": {"ko": "인도", "en": "India"}},
+    {"id": "srilanka", "plates": [502], "name": {"ko": "스리랑카", "en": "Sri Lanka"}},
+    {"id": "australia", "plates": [801], "name": {"ko": "오스트레일리아", "en": "Australia"}},
+    {"id": "tasmania", "plates": [8013], "name": {"ko": "태즈메이니아", "en": "Tasmania"}},
+    {"id": "tasmanrise", "plates": [851, 852], "name": {"ko": "태즈먼 해대", "en": "Tasman rises"}},
+    {"id": "lhasa", "plates": [606], "name": {"ko": "라싸 지괴", "en": "Lhasa block"}},
+    {"id": "southchina", "plates": [602, 6023, 6024, 6025, 60201], "name": {"ko": "남중국", "en": "South China"}},
+]
+
+
 def files(model, role):
     document = plates.manifest(model)
     return [str(plates.member_path(model, m)) for m in document["members"] if m["role"] == role]
@@ -243,6 +257,7 @@ def main():
     # Per grid point: 1 on an Antarctic block, 2 on another continent, 0 neither. The page
     # draws Antarctica only (and the shelf joined to it), leaving Australia and India out.
     antarctic_plates = set(section.get("antarctic_plates", []))
+    continent_code = {plate: 3 + n for n, c in enumerate(CONTINENTS) for plate in c["plates"]}
     region = np.zeros((len(ages), ny, nx), np.uint8)
     lines = {}
     for k, t in enumerate(ages):
@@ -268,8 +283,9 @@ def main():
             lo_, la_ = float(lon[n]), float(lat[n])
             found = blocks.partition_point(pygplates.PointOnSphere(la_, lo_))
             block[n] = found.get_feature().get_reconstruction_plate_id() if found else 0
-        # 1: an Antarctic block; 2: another continent (Australia, India, ...); 0: neither.
-        region[k] = np.array([1 if b in antarctic_plates else (2 if b else 0) for b in block],
+        # 1: an Antarctic block; 3 + n: the n-th of CONTINENTS; 2: another continent not
+        # listed there; 0: neither.
+        region[k] = np.array([1 if b in antarctic_plates else (continent_code.get(int(b), 2) if b else 0) for b in block],
                              np.uint8).reshape(ny, nx)
 
         # 3. heights: the two PaleoDEM grids around t, and the weight between them
@@ -396,6 +412,8 @@ def main():
                  "A_prime": [round(v, 3) for v in lon_lat(grid[box["j0"], box["i1"]])],
                  "anchor": section["anchor"]},
         "built_with": f"pygplates {pygplates.__version__}",
+        # Names for region codes 3, 4, … (region.bin): the other continents on the grid.
+        "continents": [{"code": 3 + n, "id": c["id"], "name": c["name"], "plates": c["plates"]} for n, c in enumerate(CONTINENTS)],
     }
     # Byrd Group outcrops (SCAR GeoMAP, scripts/outcrops_geomap.py), in the block's
     # along/across km; only rings that reach into the grid.
