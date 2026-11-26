@@ -52,7 +52,7 @@ const STRINGS = {
     age: '{age} Ma', play: '재생', pause: '일시정지', speed: '속도',
     veHeading: '수직 과장',
     veNote: '수직 {ve}배 · 보이는 깊이 {depth} km. 과장을 낮추면 맨틀, 높이면 지각과 지형이 잘 보입니다.',
-    showFlow: '맨틀 흐름 (모식)', showBoundaries: '판 경계',
+    showFlow: '맨틀 흐름 (모식)', showBoundaries: '판 경계', showGlobe: '작은 지구본', showHandles: '상자 크기 핸들',
     observedBadge: '관측', modelBadge: '재구성', sketchBadge: '모식',
     columnHeading: '섀클턴 석회암 산지의 기록',
     columnObserved: '관측 · Myrow et al. 2002 개정 층서', columnModel: 'PaleoDEM 환경',
@@ -71,7 +71,7 @@ const STRINGS = {
     layerMantle: '맨틀 (연약권 이하)', moho: '모호면',
     trenchEased: '모델에서는 {from}→{to} Ma 사이에 해구가 (선을 따라) 약 {km} km 한 번에 옮겨집니다. 화면은 해구선의 각 점을 앞뒤 5백만 년에 걸쳐 이어 그린 보간입니다.',
     showLimestone: '섀클턴 석회암 분포', limestoneThickness: '두께', closeUp: '섀클턴 지역 확대', whole: '블록 전체',
-    resetBox: '상자 원래대로', boxHint: '상자 옆면 가운데의 공(면마다 색이 다름)을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 앞면이 단면입니다.',
+    resetBox: '상자 원래대로', boxHint: '상자 옆면 가운데의 공(면마다 색이 다름)을 끌면 그 면이 옮겨 갑니다. 안으로 끌면 좁아지고, 밖으로 끌면 처음 상자보다 사방으로 약 670 km까지 넓어집니다. 바닥면 가운데의 흰 공은 블록을 돌려 아래에서 보며 위아래로 끌면 보이는 깊이가 바뀝니다. 앞면이 단면입니다.',
     faceAt: '앞면 단면', faceAtValue: 'A–A′에서 {km} km 안쪽', faceAtOut: 'A–A′에서 {km} km 바깥쪽',
     showOutcrops: '버드층군 하부·상부 (GeoMAP)',
     byrdLowerKm: '하부', byrdUpperKm: '상부',
@@ -123,7 +123,7 @@ const STRINGS = {
     age: '{age} Ma', play: 'Play', pause: 'Pause', speed: 'Speed',
     veHeading: 'Vertical exaggeration',
     veNote: '{ve}× vertical · {depth} km deep shown. Low exaggeration shows the mantle, high shows crust and relief.',
-    showFlow: 'Mantle flow (sketch)', showBoundaries: 'Plate boundaries',
+    showFlow: 'Mantle flow (sketch)', showBoundaries: 'Plate boundaries', showGlobe: 'Small globe', showHandles: 'Box handles',
     observedBadge: 'Observed', modelBadge: 'Reconstructed', sketchBadge: 'Sketch',
     columnHeading: 'Record at the Shackleton Limestone area',
     columnObserved: 'Observed · Myrow et al. 2002, revised', columnModel: 'PaleoDEM setting',
@@ -142,7 +142,7 @@ const STRINGS = {
     layerMantle: 'Mantle (asthenosphere and below)', moho: 'Moho',
     trenchEased: 'In the model the trench moves about {km} km (along its length) at once between {from} and {to} Ma; the screen eases each point of the line over 5 Myr either side (interpolation).',
     showLimestone: 'Shackleton Limestone', limestoneThickness: 'Thickness', closeUp: 'Zoom to Shackleton', whole: 'Whole block',
-    resetBox: 'Reset box', boxHint: 'Drag the ball in the middle of a box side (each side its own colour) to move that face: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The front face is the section.',
+    resetBox: 'Reset box', boxHint: 'Drag the ball in the middle of a box side (each side its own colour) to move that face: in to narrow the box, out to widen it up to about 670 km beyond the first box on every side. The white ball in the middle of the floor (turn the block to see its underside), dragged up or down, sets the depth shown. The front face is the section.',
     faceAt: 'Front section', faceAtValue: '{km} km in from A–A′', faceAtOut: '{km} km out from A–A′',
     showOutcrops: 'Lower and upper Byrd Group (GeoMAP)',
     byrdLowerKm: 'Lower', byrdUpperKm: 'Upper',
@@ -204,12 +204,22 @@ const state = {
   // Upper Byrd Group thickness (km, sketch); the lower one is the Shackleton Limestone's (limestoneKm).
   byrdUpperKm: Number(ASKED.get('upper')) || 2,
   geology: ASKED.get('geology') === '1',
+  depthKm: Number(ASKED.get('depth')) > 0 ? Number(ASKED.get('depth')) : null,
+  // The small globe (bottom right) and the box's handles: shown unless ?globe=0, ?handles=0.
+  globe: ASKED.get('globe') !== '0',
+  handles: ASKED.get('handles') !== '0',
   // Rock classes shown (ids), from ?rocks=a,b; all when not given.
   rocks: ASKED.has('rocks') ? new Set(ASKED.get('rocks').split(',').filter(Boolean)) : null,
 };
 const t = () => STRINGS[state.lang];
 
-function depthShownKm(ve) { return Math.min(700, 1400 / ve); }
+// How deep the block goes: by default from the exaggeration (1.4 scene units tall, at most
+// 700 km); the bottom handle sets it (?depth=), between 5 km and twice the default height.
+const maxDepthKm = (ve) => Math.min(700, 2800 / ve);
+const MIN_DEPTH_KM = 5;
+function depthShownKm(ve) {
+  return state.depthKm === null ? Math.min(700, 1400 / ve) : Math.min(maxDepthKm(ve), Math.max(MIN_DEPTH_KM, state.depthKm));
+}
 
 // ---------- scene ----------
 
@@ -635,7 +645,9 @@ function renderRockLegend() {
 function fitRockLegend() {
   const panel = $('rock-legend');
   if (panel.hidden) return;
-  panel.style.maxHeight = `${Math.max(120, insetRect().top - 64 - 16)}px`;
+  // Above the small globe and its caption, or above the timeline when the globe is hidden.
+  const below = state.globe ? insetRect().top - 64 : document.querySelector('.timeline').getBoundingClientRect().top - 16;
+  panel.style.maxHeight = `${Math.max(120, below - 16)}px`;
   lastFrame = '';
 }
 const setRocks = (ids) => {
@@ -895,6 +907,11 @@ function cropOf() {
   c.j1 = Math.max(c.j0 + MIN_ROWS, Math.min(ny - 1, Math.round(c.j1)));
   return c;
 }
+function keepDepth() {
+  const params = new URLSearchParams(location.search);
+  if (state.depthKm === null) params.delete('depth'); else params.set('depth', String(Math.round(state.depthKm)));
+  history.replaceState(null, '', `?${params}`);
+}
 function keepBox() {
   const home = defaultBox();
   const c = state.crop;
@@ -910,9 +927,11 @@ function keepBox() {
 // translucent layers (mantle, sea) it is shaded by them.
 const handleGroup = new THREE.Group();
 const handleShape = new THREE.SphereGeometry(0.035, 32, 20);
-const HANDLE_COLOURS = { front: 0xffd23f, back: 0x4fd1e8, left: 0xff6fae, right: 0x7ee07e };
+// The bottom one, in the middle of the floor (in view when the block is turned to show its
+// underside), sets how deep the block goes.
+const HANDLE_COLOURS = { front: 0xffd23f, back: 0x4fd1e8, left: 0xff6fae, right: 0x7ee07e, bottom: 0xe4e4ea };
 const handles = {};
-for (const side of ['front', 'back', 'left', 'right']) {
+for (const side of ['front', 'back', 'left', 'right', 'bottom']) {
   const c = new THREE.Color(HANDLE_COLOURS[side]);
   const material = new THREE.MeshPhongMaterial({ color: c, specular: 0x777766, shininess: 60, emissive: c.clone().multiplyScalar(0.3) });
   const mesh = new THREE.Mesh(handleShape, material);
@@ -930,6 +949,7 @@ function placeHandles(x0, x1, zf, zb, bottom) {
   handles.back.position.set((x0 + x1) / 2, y, zb);
   handles.left.position.set(x0, y, (zf + zb) / 2);
   handles.right.position.set(x1, y, (zf + zb) / 2);
+  handles.bottom.position.set((x0 + x1) / 2, bottom, (zf + zb) / 2);
 }
 // A handle the box stands in front of is hidden: the line from the camera to it passes
 // through the box first. Hidden handles are neither drawn nor picked.
@@ -937,6 +957,8 @@ const sightRay = new THREE.Ray();
 const sightHit = new THREE.Vector3();
 function showHandles() {
   for (const m of Object.values(handles)) {
+    // Hidden from the panel: neither drawn nor picked (pointer code picks visible ones only).
+    if (!state.handles) { m.visible = false; continue; }
     const distance = camera.position.distanceTo(m.position);
     sightRay.origin.copy(camera.position);
     sightRay.direction.subVectors(m.position, camera.position).normalize();
@@ -970,6 +992,12 @@ const shownHandles = () => Object.values(handles).filter((m) => m.visible);
     canvas.setPointerCapture(event.pointerId);
     const side = hit.object.userData.side;
     dragging = { side, plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), -hit.object.position.y) };
+    if (side === 'bottom') {
+      // Up and down: a vertical plane through the handle, facing the camera.
+      const facing = camera.getWorldDirection(new THREE.Vector3()).setY(0);
+      if (facing.lengthSq() < 1e-6) facing.set(0, 0, -1);
+      dragging.plane.setFromNormalAndCoplanarPoint(facing.normalize(), hit.object.position);
+    }
     document.body.style.cursor = side === 'left' || side === 'right' ? 'ew-resize' : 'ns-resize';
   }, { capture: true });
   canvas.addEventListener('pointermove', (event) => {
@@ -984,6 +1012,15 @@ const shownHandles = () => Object.values(handles).filter((m) => m.visible);
     ndc(event);
     const point = new THREE.Vector3();
     if (!ray.ray.intersectPlane(dragging.plane, point)) return;
+    if (dragging.side === 'bottom') {
+      state.depthKm = Math.min(maxDepthKm(state.ve), Math.max(MIN_DEPTH_KM, (-point.y * 1000) / state.ve));
+      renderVe();
+      if (!pending) {
+        pending = true;
+        requestAnimationFrame(() => { pending = false; update(); });
+      }
+      return;
+    }
     const { meta } = state.data;
     const i = (point.x * 1000 - meta.along_km[0]) / meta.step_km;
     const j = (-point.z * 1000 - meta.across_km[0]) / meta.step_km;
@@ -999,10 +1036,11 @@ const shownHandles = () => Object.values(handles).filter((m) => m.visible);
   });
   const end = () => {
     if (!dragging) return;
+    const side = dragging.side;
     dragging = null;
     controls.enabled = true;
     document.body.style.cursor = '';
-    keepBox();
+    if (side === 'bottom') keepDepth(); else keepBox();
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
@@ -2390,9 +2428,12 @@ function renderVe() {
 
 function setVe(v) {
   state.ve = v;
+  // A depth set with the bottom handle was for the old exaggeration: back to the default.
+  state.depthKm = null;
   renderVe();
   const params = new URLSearchParams(location.search);
   params.set('ve', String(v));
+  params.delete('depth');
   history.replaceState(null, '', `?${params}`);
   update();
   aim(false);
@@ -2430,6 +2471,15 @@ $('play').addEventListener('click', () => {
 $('slider').addEventListener('input', (e) => { setPlaying(false); goTo(state.oldest - Number(e.target.value)); });
 $('show-flow').addEventListener('change', (e) => { state.flow = e.target.checked; update(); });
 $('show-boundaries').addEventListener('change', (e) => { state.boundaries = e.target.checked; update(); });
+$('show-globe').checked = state.globe;
+$('inset').hidden = !state.globe;
+$('show-globe').addEventListener('change', (e) => {
+  state.globe = e.target.checked;
+  $('inset').hidden = !state.globe;
+  keepParams(); fitRockLegend();
+});
+$('show-handles').checked = state.handles;
+$('show-handles').addEventListener('change', (e) => { state.handles = e.target.checked; keepParams(); });
 $('show-outcrops').checked = state.outcrops;
 $('show-outcrops').addEventListener('change', (e) => { state.outcrops = e.target.checked; keepParams(); renderLegend(); renderOutcropNote(); update(); });
 $('show-geology').checked = state.geology;
@@ -2455,6 +2505,8 @@ function keepParams() {
   if (state.outcrops) params.set('outcrops', '1'); else params.delete('outcrops');
   if (state.geology) params.set('geology', '1'); else params.delete('geology');
   if (state.rocks) params.set('rocks', [...state.rocks].join(',')); else params.delete('rocks');
+  if (state.globe) params.delete('globe'); else params.set('globe', '0');
+  if (state.handles) params.delete('handles'); else params.set('handles', '0');
   if (state.shackleton) params.set('shackleton', '1'); else params.delete('shackleton');
   params.set('limestone', String(state.limestoneKm));
   if (state.outcrops) params.set('upper', String(state.byrdUpperKm)); else params.delete('upper');
@@ -2550,7 +2602,7 @@ function wholeBlock() {
   flyTo(...to);
 }
 $('close-up').addEventListener('click', closeUp);
-$('reset-box').addEventListener('click', () => { state.crop = null; cropOf(); keepBox(); update(); });
+$('reset-box').addEventListener('click', () => { state.crop = null; cropOf(); keepBox(); state.depthKm = null; keepDepth(); renderVe(); update(); });
 $('whole').addEventListener('click', wholeBlock);
 function stepFlight(dt) {
   if (!flight) return;
@@ -2585,7 +2637,7 @@ renderer.setAnimationLoop((now) => {
   controls.update();
   showHandles();
   renderer.render(scene, camera);
-  renderInset();
+  if (state.globe) renderInset();
   placeLabels();
 });
 
@@ -2613,5 +2665,6 @@ start();
 window.cplates = { state, goTo, setVe, camera, controls, visibleRect, insetRect, closeUp, globeView, globeCamera, handles, update, globeShown: () => globeShown,
   flowCount: () => particles.life.filter((v) => v > 0).length,
   geology: () => ({ visible: geologyLayer.mesh.visible, counts: rockCounts(), outlined: geologyEdge.geometry.getAttribute('position')?.count ?? 0 }),
+  depth: () => depthShownKm(state.ve),
   lineAA: () => lineAA.geometry.getAttribute('position')?.count > 0,
   byrd: () => ({ visible: byrdLayer.mesh.visible, state: byrdLayer.key, cells: state.data.meta.outcrops.cells.length }) };

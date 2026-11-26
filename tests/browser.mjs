@@ -490,6 +490,48 @@ async function openSection(viewport, query) {
     const shown = await page.evaluate(() => Object.fromEntries(Object.entries(window.cplates.handles).map(([k, m]) => [k, m.visible])));
     check(shown.front && !shown.back, `from the front, the back handle should be hidden: ${JSON.stringify(shown)}`);
   }
+  // The floor's handle, seen from below, sets how deep the block goes.
+  {
+    const before = await page.evaluate(() => { const c = window.cplates; const t = c.controls.target;
+      const saved = [t.toArray(), c.camera.position.toArray()];
+      c.camera.position.set(t.x + 0.6, t.y - 3.2, t.z + 2.6); c.controls.update(); return saved; });
+    const seen = await page.waitForFunction(() => window.cplates.handles.bottom.visible, null, { timeout: 15000 }).then(() => true, () => false);
+    check(seen, 'from below, the floor handle should show');
+    const depth0 = await page.evaluate(() => window.cplates.depth());
+    const at = await page.evaluate(() => { const c = window.cplates; const v = c.handles.bottom.position.clone().project(c.camera);
+      return [((v.x + 1) / 2) * innerWidth, ((1 - v.y) / 2) * innerHeight]; });
+    await page.mouse.move(at[0], at[1]);
+    await page.mouse.down();
+    await page.mouse.move(at[0], at[1] - 80, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    const depth1 = await page.evaluate(() => window.cplates.depth());
+    check(Math.abs(depth1 - depth0) > 2, `dragging the floor handle should change the depth shown: ${depth0} → ${depth1}`);
+    check(Number(new URL(page.url()).searchParams.get('depth')) === Math.round(depth1), 'the address should remember the depth');
+    check((await page.locator('#ve-note').innerText()).includes(`${Math.round(depth1)} km`), 'the note should give the depth shown');
+    await page.screenshot({ path: 'test-results/section-floor-handle.png' });
+    await page.click('#reset-box');
+    await page.waitForTimeout(300);
+    check(await page.evaluate(() => window.cplates.depth()) === depth0 && new URL(page.url()).searchParams.get('depth') === null,
+          'reset should bring the depth back');
+    await page.evaluate((saved) => { const c = window.cplates; c.controls.target.fromArray(saved[0]); c.camera.position.fromArray(saved[1]); c.controls.update(); }, before);
+    await page.waitForTimeout(400);
+  }
+  // The small globe and the box handles can be hidden from the panel.
+  {
+    await page.click('#show-globe');
+    await page.click('#show-handles');
+    const hidden = await page.waitForFunction(() => Object.values(window.cplates.handles).every((m) => !m.visible), null, { timeout: 15000 }).then(() => true, () => false);
+    const params = new URL(page.url()).searchParams;
+    check(await page.locator('#inset').isHidden() && hidden, 'unticked, the small globe and every handle should be hidden');
+    check(params.get('globe') === '0' && params.get('handles') === '0', `the address should remember them: ${params}`);
+    await page.screenshot({ path: 'test-results/section-no-globe-handles.png' });
+    await page.click('#show-globe');
+    await page.click('#show-handles');
+    const back = await page.waitForFunction(() => window.cplates.handles.front.visible, null, { timeout: 15000 }).then(() => true, () => false);
+    check(back && await page.locator('#inset').isVisible() && new URL(page.url()).searchParams.get('globe') === null,
+          'ticked again, the globe and the front handle should come back and the address drop them');
+  }
   // The lower and upper Byrd Group from SCAR GeoMAP outcrops, cell by cell, laid down in turn.
   {
     await page.evaluate(() => window.cplates.goTo(530));
